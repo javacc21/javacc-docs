@@ -1,2 +1,3 @@
-# javacc-docs
-Repository for work on JavaCC documentation
+Repository for work on the sorely missing and much needed https://javacc.com/[JavaCC] documentation. I was originally going to use Markdown, but then, on some investigation, decided (at least provisionally, we'll see...) that https://asciidoc.org/[Asciidoc] would be a better choice.
+
+The intention is to work up a step-by-step tutorial and more detailed reference documentation. It may well be that this will ultimately culminate in a book.
