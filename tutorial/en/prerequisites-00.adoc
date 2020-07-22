@@ -47,8 +47,7 @@ Of the options above, I would probably lean towards the second one. If you don't
 *Tangent:* The __good enough__ text editor I refer to above is `nano`, not `vim`. You have that as well, but unless you are already familiar with it, it would be masochistic to use that!
 ====
 
-NOTE: I am not at all suggesting that this toolset (JDK + command line) is optimal. IDE's like Eclipse and IntelliJ exist for a reason (or
-_many_ reasons) and so do modern build tools like Maven or Gradle. This tutorial takes this _lowest common denominator_ approach because the ability to do everything with JDK + command line seems like the best way to demystify what is really going on.
+NOTE: I am not at all suggesting that this toolset (JDK + command line) is optimal. IDE's like Eclipse and IntelliJ exist for a reason (for _many_ reasons) and so do modern build tools like Maven or Gradle. This tutorial takes this _lowest common denominator_ approach because the ability to do everything with JDK + command line seems like the best way to demystify what is really going on.
 
 === Before the Next Step
 
@@ -72,7 +71,7 @@ And assuming you are on a Unixy command line, one (or either) of the
 following commands in your shell should also do the trick:
 
 ....
-% curl -O wget https://javacc.com/download/javacc-full.jar
+% curl -O https://javacc.com/download/javacc-full.jar
 
 % wget https://javacc.com/download/javacc-full.jar
 ....
