@@ -1,0 +1,111 @@
+== JavaCC Tutorial Preface
+
+=== Audience
+
+Broadly speaking, the audience for this tutorial can be divided into three groups:
+
+. Total neophyte. You have no background in the parser generator space, either JavaCC or any other such tools.
+. Some parser generator experience. You have used https://en.wikipedia.org/wiki/Yacc[Yacc] or
+https://en.wikipedia.org/wiki/GNU_Bison[Bison] or possible https://antlr.org/[ANTLR], so the basic concepts are not new.
+. Existing users of the https://javacc.org/[_legacy_ JavaCC tool]. You are familiar with the original JavaCC tool and want to upgrade to JavaCC 21.
+
+The approach I take here is to write documentation primarily for the first group, but clearly mark material that people in the other two groups can probably skip. So, if I write:
+
+NOTE: *Legacy JavaCC:* Note that the syntax for this in the __legacy__ tool was... (something ugly and obfuscated) 
+
+If you are not in group 3 above, i.e. you have never used any previous version of JavaCC, you can skip such a note, and come to think of it, __you really __should!
+
+Also, I might occasionally go off on a tangent and I'll mark it so that people who are in a hurry can skip over that.
+
+====
+*Tangent:* __Some information that is potentially useful (or failing that, amusing at least) but could easily be skipped if you are in a hurry.__
+====
+
+As for people's background in the parser generator space, this is not a theoretical treatise and I am no theoretician anyway. It is a hands-on tutorial. However, certain theoretical concepts will be introduced as one goes through the tutorial. Again, I shall mark the sections that people in the second group above, i.e. those with a good theoretical grounding in this space, can simply ignore.
+
+All right, let's get started...
+
+=== The Basic Approach (And I mean _Basic_)
+
+This tutorial will assume a _lowest common denominator_ toolset.
+
+. You have a JDK installed (it must be Java 1.8 or higher) and can type commands like javac and java.
+. You can type commands like `java` and `javac` on the command line.
+. You have a text editor that you are comfortable using to edit the various examples.
+
+NOTE: It is likely that many readers (in particular, those who spend a lot of time on the command line) could skip the rest of this section and move on to the link:ch-0.html[first example].
+
+Though it is not really mandatory, this exposition will make a sort of __default assumption__ that your command line is some sort of Unixy shell. On Mac or Linux, this is a given. On Windows, not so much. You can, of course, go through the tutorial on a Windows machine, but:
+
+. You understand that when I say something like: "Now you type `rm *.java` to delete the generated source files" this has to be `del *.java` on a default Windows command line.
+. You use some sort of Unix shell on your Windows machine.
+. Another perfectly reasonable possibility is that you remote login into a Unix machine and do the tutorial there -- the only prerequisite being, again, that the remote machine has a JDK installed.
+
+Of the options above, I would probably lean towards the second one. If you don't already have it, the easiest thing is just to install the https://git-scm.com/download/win[Git for Windows package]. That gives you gives you the command-line https://en.wikipedia.org/wiki/Git[Git] client and a UNIX terminal emulator with the default BASH (Bourne Again Shell) command line. (This also gives you a _good enough_ plain text editor you can use.)
+
+====
+*Tangent:* The __good enough__ text editor I refer to above is `nano`, not `vim`. You have that as well, but unless you are already familiar with it, it would be masochistic to use that!
+====
+
+NOTE: I am not at all suggesting that this toolset (JDK + command line) is optimal. IDE's like Eclipse and IntelliJ exist for a reason (or
+_many_ reasons) and so do modern build tools like Maven or Gradle. This tutorial takes this _lowest common denominator_ approach because the ability to do everything with JDK + command line seems like the best way to demystify what is really going on.
+
+=== Before the Next Step
+
+Now let's quickly check that you have everything you need, on your command line type:
+
+....
+% java -version
+....
+
+and if that worked:
+
+....
+% javac -version
+....
+
+In both cases, the version it gives you should be 1.8.x or greater.
+
+Download the latest JavaCC 21 from https://javacc.com/download/javacc-full.jar[here].
+
+And assuming you are on a Unixy command line, one (or either) of the
+following commands in your shell should also do the trick:
+
+....
+% curl -O wget https://javacc.com/download/javacc-full.jar
+
+% wget https://javacc.com/download/javacc-full.jar
+....
+
+So, you should now be able to type:
+
+....
+% java -jar javacc-full.jar 
+....
+
+TIP: Since you'll likely be typing the above command quite a bit as you go through the tutorial, I suggest that you create a shortcut
+to execute it, something like: 
+
+....
+% alias jcc='java -jar ~/java/libs/javacc-full.jar'
+....
+
+Now you should be able to type `jcc` to invoke JavaCC. Well, try it:
+
+....
+% jcc
+....
+
+TIP: The normal thing to do would be to add that above alias line to your shell configuration file, most likely `$HOME/.bashrc`
+
+====
+*Note for Windows Users:* You can get the effect of the above alias command on a default Windows command line via:
+
+     > doskey jcc=java -jar <PATH_TO_JAR_FILE>\javacc-full.jar $*
+
+Note that the `$*` in the above is very important, because otherwise, any parameters you add to the command-line will be ignored!
+
+*TANGENT:* This, by the way, was an exciting new feature added to MS-DOS 5.0 in 1990, I think. I was surprised to discover recently that it still works! 
+====
+
+Now that we have these details out of the way, we can move on to link:ch-00.html[our first example]
