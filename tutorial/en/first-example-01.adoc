@@ -1,0 +1,55 @@
+== Our First Parser
+
+I'll assume that you created a new empty directory for this tutorial. Now, go into that directory and create a file `First.javacc` using the text editor of your choice. If you are in a Unix terminal, you could just type:
+
+    nano First.javacc
+
+For now, the file will just contain the single line:
+
+    Foo : "bar" (":" "baz")+ ; 
+
+The language that this minimal JavaCC grammar defines accepts any string that starts with "bar" and is followed by one or more occurrences of ":" followed by "baz". The `<EOF>` means the end of input. So, the parser would accept:
+
+     bar:baz
+     bar:baz:baz
+     bar:baz:baz:baz
+
+and so on...
+
+Assuming you have everything set up as in the last section, you should be able to save your First.javacc file and then, from the command-line:
+
+     jcc First.javacc
+
+Unless you mistyped something, this should give you a bunch of output, telling you that this little one-line grammar generated a whle slew of Java source files. Now:
+
+     javac *.java
+
+The generated code should compile successfully.
+
+=== Testing the Parser
+
+Now, in the same directory, create a little Java program to test our parser. Create a file `Test.java` that contains the following:
+
+     public class Test {
+         static public void main(String[] args) throws ParseException {
+             FirstParser parser = new FirstParser(args[0]);
+             parser.Foo();
+             Nodes.dump(parser.rootNode());
+         }
+     }
+
+Now, you should be able to run:
+
+     javac Test.java
+
+As you can see from looking at the `main` method, our main method simply uses the first argument passed in on the command line as the input to the parser. So you could try various input strings that you know to be valid:
+
+     java Test bar:baz
+     java Test bar:baz:baz
+
+You could also experiment with some invalid input. For example:
+
+     java Test bar:bar
+     java Test Hello,World
+     java Test bar:bazzz
+
