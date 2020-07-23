@@ -20,15 +20,15 @@ Assuming you have everything set up as in the last section, you should be able t
 
      jcc First.javacc
 
-Unless you mistyped something, this should give you a bunch of output, telling you that this little one-line grammar generated a whle slew of Java source files. Now:
+Unless you mistyped something, this should give you a bunch of output, telling you that this little one-line grammar generated a whole slew of Java source files. Now:
 
      javac *.java
 
-The generated code should compile successfully.
+The generated code should compile successfully. So we have successfully generated a parser for our little language!
 
 === Testing the Parser
 
-Now, in the same directory, create a little Java program to test our parser. Create a file `Test.java` that contains the following:
+Now, let's test the generated parser. In the same directory, we create a little Java program as a test harness. In the file `Test.java`:
 
      public class Test {
          static public void main(String[] args) throws ParseException {
