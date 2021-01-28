@@ -6,8 +6,8 @@ Broadly speaking, the audience for this tutorial can be divided into three group
 
 . Total neophyte. You have no background in the parser generator space, either JavaCC or any other such tools.
 . Some parser generator experience. You have used https://en.wikipedia.org/wiki/Yacc[Yacc] or
-https://en.wikipedia.org/wiki/GNU_Bison[Bison] or possible https://antlr.org/[ANTLR], so the basic concepts are not new.
-. Existing users of the https://javacc.org/[_legacy_ JavaCC tool]. You are familiar with the original JavaCC tool and want to upgrade to JavaCC 21.
+https://en.wikipedia.org/wiki/GNU_Bison[Bison] or possibly https://antlr.org/[ANTLR], so the basic concepts are not new.
+. Existing users of the https://javacc.org/[_legacy_ JavaCC tool]. You are familiar with the original JavaCC tool and want to learn about or upgrade to JavaCC 21.
 
 The approach I take here is to write documentation primarily for the first group, but clearly mark material that people in the other two groups can probably skip. So, if I write:
 

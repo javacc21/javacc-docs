@@ -1,0 +1,50 @@
+[cols=2*,stripes=even]
+|===
+|A1
+|B1
+|A2
+|B2
+|A3
+|B3
+|===
+
+//Single newLine or CRs are ignored and are assumed to NOT mean new paragraph
+Now is the time
+for all good men
+to come to the aid
+of their country
+
+//must use two newLines or CRs to make new paragraphs
+Now is the time
+
+for all good men
+
+to come to the aid
+
+of their country
+
+//this prints on one line
+What about bullet points?
+*  Point 1
+* Point 2
+* Point 3
+
+//this prints on multiple lines because of newLine after "bullet points"
+What about bullet points?
+
+*   Point 1
+** Point 2
+*** Point 3
+
+//numbered list
+.Title of List
+. Step 1 - now is the time for all good men to come to the aid of their country. now is the time for all good men to come to the aid of their country. now is the time for all good men to come to the aid of their country.
+. Step 2
+. Step 3
+
+====
+This is an example
+======
+This is an example inside an example
+======
+====
