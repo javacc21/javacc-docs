@@ -6,7 +6,7 @@ Jonathan Revusky
 :toc: left
 :toclevels: 2
 :numbered:
-
+:imagesdir: ../images/
 
 include::prerequisites-00.adoc[]
 

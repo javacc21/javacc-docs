@@ -1,0 +1,5 @@
+Questions
+
+. Is this JavaCC 21  or JavaCC21 (no space between JavaCC and 21)?
+. How much do you want to standardize on jcc? Prerequisites defines jcc alias. . . Most other docs say to use java -jar javacc-full.jar <filename>. Would j21 be a better alias as it would emphasize this is NOT legacy JavaCC?
+. curl command in prerequisites copied javacc-full.jar to current directory. Is that correct?

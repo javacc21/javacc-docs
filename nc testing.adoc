@@ -23,7 +23,7 @@ to come to the aid
 
 of their country
 
-//this prints on one line
+//this prints on one line because it needs a blank line separating the heading line & bullet points
 What about bullet points?
 *  Point 1
 * Point 2
@@ -32,7 +32,7 @@ What about bullet points?
 //this prints on multiple lines because of newLine after "bullet points"
 What about bullet points?
 
-*   Point 1
+*           Point 1
 ** Point 2
 *** Point 3
 
@@ -48,3 +48,20 @@ This is an example
 This is an example inside an example
 ======
 ====
+
+*Inline formatting must appear in the correct order*
+
+. monospace (backtick mark)
+. bold (asterisk)
+. underline (italic)
+
+`*_monospaced bold italic_*`
+
+`+{backtick}+`
+
+....
+error: 1954 Forbidden search
+absolutely fatal: operation lost in the dodecahedron of doom
+
+Would you like to try again? y/n
+....
