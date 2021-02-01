@@ -34,9 +34,15 @@ Now, let's test the generated parser. In the same directory, we create a little 
          static public void main(String[] args) throws ParseException {
              FirstParser parser = new FirstParser(args[0]);
              parser.Foo();
-             Nodes.dump(parser.rootNode());
+//             Nodes.dump(parser.rootNode());
+             parser.rootNode().dump();
          }
      }
+
+// Nodes.dump(...) is gone now, by the way. It's just parser.rootNode().dump();
+// In fact, I got rid of the whole Nodes.java class because
+// now that you can put default/static methods in interfaces (since JDK 8, I think)
+// there is no need for it!
 
 Now, you should be able to run:
 

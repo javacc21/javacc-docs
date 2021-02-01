@@ -1,5 +1,30 @@
 Questions
 
 . Is this JavaCC 21  or JavaCC21 (no space between JavaCC and 21)?
+
+Well, to tell the truth, I really don't know. I think I've been using both interchangeably. I guess I am at two levels of uncertainty. I am not sure whether I prefer the space or not. And also, I'm not sure whether I really care! 
+
+So, I guess the answer is that you can do what you want. If you feel the need to standardize, you can choose to put in the space or not. Between you and me (though it's not much of a secret really) my real intention is to use the "21" (space or not, I hardly care...) when it is necessary to distinguish between this and "legacy" JavaCC, but increasingly over time, just to drop the "21" and just refer to this project as "JavaCC". 
+
+Or in other words, I'm not such a pathologically nice guy and my intention is basically just to take the name from those nothingburger artists. Besides, what is "nice" about letting people just sit on a project and do nothing year after year and decade after decade and respecting their exclusive right to the name? __In whose interests is that?__ Sun open-sourced the thing in 2003 and in the entire history since then, there is only one person (ME) who has done any meaningful work on the thing. And I'm supposed to recognize their exclusive right to the name "JavaCC"? 
+
+In short, my intention is just to take the name from them basically. People can scream and holler but I don't see any ethical problem with it frankly. So those pathetic losers can sit on top of an (increasingly) obsolete version of JavaCC and scream that this is the __real__ JavaCC, yah dee dah. As far as I'm concerned, they can be like Gollum, whining about his "precious" cursing that hobbit Bilbo Baggins for taking his ring...
+
 . How much do you want to standardize on jcc? Prerequisites defines jcc alias. . . Most other docs say to use java -jar javacc-full.jar <filename>. Would j21 be a better alias as it would emphasize this is NOT legacy JavaCC?
+
+Well, I think it's natural to use a shorter alias, but it isn't so important what exactly it is. So I don't see much call to "standardize" on that. But, since you ask, and I think about it a bit, I do prefer "jcc" to "j21" -- finally, because I want to minimize the use of the "21", not have it all over the place. I want to give people the subtle message that this __is__ JavaCC, the current version. So, another possibility is just to alias the command to "javacc" but to my taste, that is still a bit long to type, so I went with jcc. (jc is even shorter, but JC is Jesus Christ, so... LOL!)
+
 . curl command in prerequisites copied javacc-full.jar to current directory. Is that correct?
+
+Well, I guess the basic thing going on here is that I wrote that initial stuff, very consciously assuming a sheer minimum of computing culture on the part of the reader! Possibly even to a ridiculous extent, I dunno. I mean, on the other hand, one could take it as a given that any seasoned Java hacker would just copy the jarfile to some place he tends to keep jarfiles and then alias the invocation, so he could copy it over to some directory like ~/java/libs and then put:
+
+----
+alias jcc='java -jar ~/java/libs/javacc-full.jar'
+----
+
+in his init file (.bashrc or maybe .zshrc). But the name of the alias and the location of the directory is really up to the individual. 
+
+So, what's going on is that I'm just really assuming a minimal computing culture on the part of the reader, and going through things that few people would bother to do. But I think it's good to err on that side than the other. But I'd be a bit wary now of laying it on too thick. We should dispense with this stuff in a paragraph or so. Besides, frankly, how dumb does a reader have to be not to realize that he can use whatever alias for the command he wants or put the jarfile in whatever directory he wants? We could just say: __In the following, we assume that you have aliased the command to invoke javacc as 'jcc' but it can be anything easy to type.__
+
+Well, in any case, don't worry too much about asking for approval of everything you do. But... now that you ask these things, I guess I would say that my preference is not to use the "21" too much when it is not necessary to distinguish it from the legacy tool (__in the given context__). And I don't really care about the space.... Our tutorial assumes minimal computing culture on the reader's part, but maybe we shouldn't totally overdo it! (But I think we're basically on the same page on that, no?)
+

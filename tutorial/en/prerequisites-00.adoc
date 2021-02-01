@@ -92,7 +92,7 @@ NOTE: *Windows users:* The latest versions of Windows 10 include both curl and w
 A huge number of text editors are available at every price point, from free to astronomically expensive. The choice is yours as long as it can produce plain unformatted text files and you find it _good enough_ to use. If you don't have a favorite text editor, it is suggested that you download and learn one of the free text editors that came with your OS distribution. 
 
 ====
-*Tangent:* For most Linux distributions, the _good enough_ text editor I refer to above is `nano`, not `vim`. `Vim` is usually installed on most Unix and Linux distributions, but unless you are already familiar with vim` (or its predecessor `vi`), it would be masochistic to learn to use it!
+*Tangent:* For most Linux distributions, the _good enough_ text editor I refer to above is `nano`, not `vim`. `Vim` is usually installed on most Unix and Linux distributions, but unless you are already familiar with vim` (or its predecessor `vi`), it would be masochistic to use it for this tutorial!
 ====
 
 For the rest of this tutorial, `nano` will be used simply because it is _good enough_. In the following screenshot of `nano`, we can see that it displays the text plainly and includes a brief menu of the most frequently used keyboard shortcuts and commands.
