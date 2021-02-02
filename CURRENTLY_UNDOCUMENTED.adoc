@@ -1,0 +1,59 @@
+== Things to Document
+
+I'm starting this document just to maintain a list of various things that are not adequately documented anywhere. (Some of these things are alluded to here and there, maybe in a wiki page, or a blog post, but certainly not systematically documented.) So, eventually, we can just knock them off.
+
+The list is not complete and I'll be adding things over time. But here are some glaring issues -- I mean, in terms of them not being documented. I'm pretty sure the stuff I describe below is all working, but it would be hard for anybody to know about it! (__If the tree falls in the forest but nobody hears it...__)
+
+If our goal is to have systematic documentation that eventually stands alone as a book, then these are some things that we need to cover. (__Plenty of other things as well!__)
+
+=== Strings that are aliased in a grammar file
+
+There are some predefined strings that are actually __aliases__ in a JavaCC 21 grammar file, i.e. they are automatically substituted with something else in the generated code. For example, `PARSER_CLASS` and `LEXER_CLASS` can be used to refer to the name of the XXXParser class and XXXLexer class respectively. 
+
+This is particularly useful if a grammar is liable to be used as an https://doku.javacc.com/doku.php?id=include[INCLUDE], since the code in an included grammarfile does not, generally speaking, "know" what the name of the parser or lexer classes are. Regardless, it is a good idea not to hard-code the names of the parser or lexer class all over the place, as it makes any code you write more easily reusable. So there are also the aliases: `CONSTANTS_CLASS`, `PARSER_PACKAGE`, and `NODE_PACKAGE` that exist for the same reason.
+
+
+=== The hash symbol # in "semantic lookahead" and code actions to mark them as "global"
+
+In __legacy__ JavaCC, a code action in the parsing is __only__ ever executed during parsing, __never__ in a lookahead.
+
+However, the expression in a so-called __semantic__ lookahead is __always__ evaluated in legacy JavaCC, either in __parsing__ or in a __lookahead__. 
+
+JavaCC 21 offers an extra layer of flexibility to this state of affairs. In JavaCC 21, you can add a `#` after a code action block OR a semantic lookahead to indicate that it __applies globally__ -- i.e. when parsing or scanning ahead.
+
+The default behavior (without the `#` specified) is the same for code actions (__only__ when parsing, __not__ in lookahead) but is changed for semantic lookahead. In JavaCC 21, semantic lookahead is evaluated only when parsing, by default, and it becomes a __global__ semantic lookahead when you add the `#` after the closing brace `}`.
+
+(N.B. A key __gotcha__ is that the code in a __global__ code action or a __global__ semantic lookahead cannot reference any local variables defined in the production. If you do that, your code will be generated without complaint, but then will not compile!)
+
+=== Variables and methods that can be used your internal code.
+
+The variables `lastConsumedToken` and `currentLookaheadToken` can be used in your various code actions, or in semantic lookahead, or in code that you https://doku.javacc.com/doku.php?id=code_injection_in_javacc_21[inject] into your `PARSER_CLASS`. The first one is simply the last token `consumed` by the parsing machinery. If you are in a lookahead routine, `currentLookaheadToken` is the last token the lookahead machinery scanned. If you are not in a lookahead routine, this variable is null.
+
+The following method:
+
+....
+   Token getToken(int n)
+....
+
+looks ahead and returns the nth token in the token stream. This works in either parsing or in lookahead. A key point here is that: 
+
+....
+    getToken(0)
+.... 
+
+returns `lastConsumedToken` if you are parsing but if you are scanning ahead, it returns `currentLookaheadToken`. (This is quite useful when you are writing a global action or semantic lookahead that needs to work when parsing or scanning ahead.)
+
+The following method:
+
+....
+    boolean isInProduction(String... name)
+....
+
+checks whether or not we have entered a given production. It works in either parsing or in lookahead. You can pass it a variable length list of String arguments, and it can check whether we have entered any of them. So you could have:
+
+....
+    if (isInProduction("ClassDeclaration", "InterfaceDeclaration")) {...}
+....
+
+to check whether we are currently inside a `ClassDeclaration` or `InterfaceDeclaration`. This method can be very useful inside of semantic lookahead. (Generallyh speaking, this kind of thing can be leveraged to solve problems that were borderline intractable in legacy JavaCC.)
+
