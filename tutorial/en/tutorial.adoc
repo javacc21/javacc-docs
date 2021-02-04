@@ -6,7 +6,10 @@ Jonathan Revusky
 :toc: left
 :toclevels: 2
 :numbered:
-:imagesdir: ../images/
+:imagesdir: ./images
+:iconsdir: ./icons
+//:stylesdir: ./styles
+:scriptsdir: ./js
 
 include::prerequisites-00.adoc[]
 
