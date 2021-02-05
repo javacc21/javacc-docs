@@ -127,7 +127,9 @@ TIP: Since you'll likely be typing the above command quite a bit as you go throu
 % alias jcc='java -jar javacc-full.jar'
 ....
 
-This command assumes that the javacc-full.jar is in your current directory. If it is installed in a different directory, include the path, such as `~/java/libs/javacc-full.jar'.  Now you should be able to type `jcc` to invoke JavaCC. Well, try it:
+This command assumes that the javacc-full.jar is in your current directory. If it is installed in a different directory, include the path, such as `~/java/libs/javacc-full.jar`. It is also important that you include the quotes around everything after the equals sign.
+
+Now you should be able to type `jcc` to invoke JavaCC. Well, try it:
 
 ....
 % jcc
@@ -143,7 +145,7 @@ This tutorial will make a sort of _default assumption_ that your command line is
 * *Git for Windows:* Many Windows users will already have https://git-scm.com/download/win[Git for Windows package] installed. Git for Windows gives you the command-line https://en.wikipedia.org/wiki/Git[Git] client and a UNIX terminal emulator with the default BASH (Bourne Again Shell) command line. This also gives you a _good enough_ plain text editor (Nano).  It's free, you can access all of your Windows folders, and it provides great access to Git.
 
 ====
-*Tangent:* For most Linux distributions, the _good enough_ text editor I refer to above is `nano`, not `vim`. `Vim` is usually installed on most Unix and Linux distributions, but unless you are already familiar with vim` (or its predecessor `vi`), it would be masochistic to learn to use it!
+*Tangent:* _For most Linux distributions, the good enough text editor I refer to above is `nano`, not `vim`. `Vim` is usually installed on most Unix and Linux distributions, but unless you are already familiar with vim` (or its predecessor `vi`), it would be masochistic to learn to use it!_
 ====
 
 * *Windows Subsystem for Linux (WSL):* A complete Linux distribution can be downloaded from the Microsoft Store and installed so it runs concurrently with Windows. A choice of Linux distributions are available, including Ubuntu, Debian, SUSE, and many more - most are free but some require purchasing. Ubuntu 18 LTS will require you to install Java JDK, even if you already have it installed in Windows - other distributions may include Java. This may be a great choice if you've been meaning to learn or brush up on Bash command but it doesn't automatically mount the Windows filesystem, so it will take a little effort to move files between WSL and Windows.
@@ -159,7 +161,7 @@ NOTE: Windows users can get the effect of the `jcc` alias command on a default W
 *Important:* be sure to include the `$*` at the end of the command because otherwise any parameters you add to the command-line will be ignored!
 
 ====
-*TANGENT:* This, by the way, was an exciting new feature added to MS-DOS 5.0 in 1990, I think. I was surprised to discover recently that it still works! 
+*TANGENT:* _This, by the way, was an exciting new feature added to MS-DOS 5.0 in 1990, I think. I was surprised to discover recently that it still works!_ 
 ====
 
 Now that we have these details out of the way, we can move on to link:ch-00.html[our first example]
