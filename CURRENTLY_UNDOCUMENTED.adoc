@@ -10,7 +10,7 @@ If our goal is to have systematic documentation that eventually stands alone as 
 
 There are some predefined strings that are actually __aliases__ in a JavaCC 21 grammar file, i.e. they are automatically substituted with something else in the generated code. For example, `PARSER_CLASS` and `LEXER_CLASS` can be used to refer to the name of the XXXParser class and XXXLexer class respectively. 
 
-This is particularly useful if a grammar is liable to be used as an https://doku.javacc.com/doku.php?id=include[INCLUDE], since the code in an included grammarfile does not, generally speaking, "know" what the name of the parser or lexer classes are. Regardless, it is a good idea not to hard-code the names of the parser or lexer class all over the place, as it makes any code you write more easily reusable. So there are also the aliases: `CONSTANTS_CLASS`, `PARSER_PACKAGE`, and `NODE_PACKAGE` that exist for the same reason.
+This is particularly useful if a grammar is liable to be used as an https://doku.javacc.com/doku.php?id=include[INCLUDE], since the code in an included grammarfile does not, generally speaking, "know" what the names of the parser or lexer classes are. Regardless, it is a good idea not to hard-code the names of the parser or lexer class all over the place, as it makes any code you write more easily reusable. So, similarly, there are also the aliases: `CONSTANTS_CLASS`, `PARSER_PACKAGE`, and `NODE_PACKAGE` that exist for the same reason.
 
 
 === The hash symbol # in "semantic lookahead" and code actions to mark them as "global"
@@ -55,5 +55,16 @@ checks whether or not we have entered a given production. It works in either par
     if (isInProduction("ClassDeclaration", "InterfaceDeclaration")) {...}
 ....
 
-to check whether we are currently inside a `ClassDeclaration` or `InterfaceDeclaration`. This method can be very useful inside of semantic lookahead. (Generallyh speaking, this kind of thing can be leveraged to solve problems that were borderline intractable in legacy JavaCC.)
+to check whether we are currently inside a `ClassDeclaration` or `InterfaceDeclaration`. This method can be very useful inside of semantic lookahead. (Generally speaking, this kind of thing can be leveraged to solve problems that were borderline intractable in legacy JavaCC.)
 
+## Handling of BOM (Byte Order Mark) 
+
+I wasn't aware of this until recently (or if I was, I forgot about it) but certain files (__out there in the wild, let's say...__) begin with a BOM (byte order mark) that is from 2 to 4 bytes long and indicates what format the file is in -- UTF-16 little-endian etcetera.
+
+That is documented https://docs.microsoft.com/es-es/globalization/encoding/byte-order-mark[here]. It seems that Microsoft makes heavy use of the BOM.
+
+I recently (as of this writing, **today**!) added support for this. I added an extra constructor to any generated Parser that takes a `java.nio.file.Path` object as a parameter and it peeks at the first few bytes of a file and does the right thang.
+
+See https://github.com/javacc21/javacc21/blob/fault-tolerant/src/main/resources/templates/java/Parser.java.ftl#L126[here] and https://github.com/javacc21/javacc21/blob/fault-tolerant/src/main/resources/templates/java/FileLineMap.java.ftl#L508[here].
+
+As a side note, the ANTLR grammar for CSharp treats the BOM as part of the syntactic grammar. (See https://github.com/antlr/grammars-v4/blob/master/csharp/CSharpParser.g4#L10[here].) This is totally WRONG. The BOM is **NOT** part of the grammar, syntactic or lexical. It is clearly __pre-lexical__, like unicode escaping, for example.
