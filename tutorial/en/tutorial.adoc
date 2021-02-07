@@ -1,5 +1,7 @@
-= JavaCC 21 Tutorial
-Jonathan Revusky
+= 21st Century JavaCC:: A Tutorial Using JavaCC 21
+Jonathan Revusky and Nelson Chamberlain
+:revremark: Initial Draft
+:revdate: February 6, 2021
 :doctype: book
 :encoding: utf-8
 :lang: en
@@ -14,3 +16,5 @@ Jonathan Revusky
 include::prerequisites-00.adoc[]
 
 include::first-example-01.adoc[]
+
+include::first-example-breakdown-02.adoc[]

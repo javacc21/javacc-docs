@@ -1,61 +1,104 @@
+:imagesdir: ./images
 == Our First Parser
 
-I'll assume that you created a new empty directory for this tutorial. Now, go into that directory and create a file `First.javacc` using the text editor of your choice. If you are in a Unix terminal, you could just type:
+Let's start by creating a new directory for this tutorial. Pick a convenient location, typically somewhere under your home directory.
+
+    % cd <somewhere convenient>
+    % mkdir tutorial
+    % cd tutorial
+
+If you didn't previously move javacc-full.jar to a standard location, move it now to the tutorial folder as follows:
+
+    % mv <path to download location>/javacc-full.jar .
+
+NOTE: the above command is ONLY needed if you didn't move javacc-full.jar to a standard location. You don't need to move it twice.
+
+=== Create Our First Grammar File
+Now create a file named `First.javacc` using the text editor of your choice. We're using nano for this tutorial so you can just type:
 
     nano First.javacc
 
-For now, the file will just contain the single line:
+For now, the file will contain just one line. Type in the following line:
 
     Foo : "bar" (":" "baz")+ ; 
 
-The language that this minimal JavaCC grammar defines accepts any string that starts with "bar" and is followed by one or more occurrences of ":" followed by "baz". The `<EOF>` means the end of input. So, the parser would accept:
+It should look like the following image:
 
-     bar:baz
-     bar:baz:baz
-     bar:baz:baz:baz
+image::nano_first_example.jpg[Our First Parser]
+
+Now save the file using the ^O key-combo and exit nano using the ^X key-combo, where the "^" represents the Control key (Mac users: Command key). 
+
+NOTE: By convention, ".javacc" is standard file extension for grammar files in JavaCC 21 and will be used throughout this tutorial. _Legacy users_, by convention, used ".jj" as grammar file extensions. You can use any extension for your grammar files that you prefer but whatever one you choose, use the same one consistently so it will be easy to find your grammar files.
+
+*Result:* We have just defined the complete BarBaz language in our grammar file. (I warned you that this language didn't do much!) This minimal JavaCC grammar defines all possible legal statements in BarBaz: any string that starts with "bar" and is followed by one or more occurrences of ":" followed by "baz". The `<EOF>` means the end of input. The following table shows acceptable and unacceptable values, with brief explanations about why the unacceptable values wouldn't work. 
+
+.Acceptable and Unacceptable Values in BarBaz
+[cols="1,1,3"]
+|===
+|*Acceptable Vaules* |*Unacceptable Values* |*Reason Unacceptable*
+|bar:baz
+|bar :baz
+|Spaces not allowed between "bar" and ":baz"
+|bar:baz:baz
+|Bar:Baz:baz
+|Uppercase letters not recognized
+|bar:baz:baz:baz
+|bar:baz:bar:baz
+|bar can only appear once at the beginning of the string
+|===
 
 and so on...
 
-Assuming you have everything set up as in the last section, you should be able to save your First.javacc file and then, from the command-line:
+=== Run Our First Grammar Through JavaCC
+Assuming you have everything set up correctly, you should be able run JavaCC on your first grammar file (First.javacc). At the command-line, type one of the following:
 
      jcc First.javacc
 
-Unless you mistyped something, this should give you a bunch of output, telling you that this little one-line grammar generated a whole slew of Java source files. Now:
+OR (if you didn't create an alias)
+
+    java -jar javacc-full.jar First.javacc
+
+Unless you mistyped something, this should give you a bunch of output, telling you that this little one-line grammar generated a whole slew of Java source files. If you `ls` the .java files, you should see something like the following screenshot:
+
+image::Run_JavaCC_First.jpg[Run JavaCC on First.javacc Results]
+
+Now we can compile the .java files into executable (.class) file as follows:
 
      javac *.java
 
-The generated code should compile successfully. So we have successfully generated a parser for our little language!
+The generated code should compile successfully. The good news is that we have successfully generated a parser for our little language! The bad news is that we can't run our parser just yet - we don't have a main function to call because we didn't include one in our grammar. And this is in keeping with more modern conventions where source files aren't cluttered up with testing code such as main functions, etc. So let's get set up to test the parser.
 
 === Testing the Parser
 
-Now, let's test the generated parser. In the same directory, we create a little Java program as a test harness. In the file `Test.java`:
+Now, let's test the generated parser. In the same directory, we create a little Java program as a test harness. Open nano and type in the following Java test program with the file name of `FirstTest.java`:
 
-     public class Test {
+     public class FirstTest {
          static public void main(String[] args) throws ParseException {
              FirstParser parser = new FirstParser(args[0]);
              parser.Foo();
-//             Nodes.dump(parser.rootNode());
              parser.rootNode().dump();
          }
      }
 
+// Nodes.dump(parser.rootNode()); This line removed from code
 // Nodes.dump(...) is gone now, by the way. It's just parser.rootNode().dump();
 // In fact, I got rid of the whole Nodes.java class because
 // now that you can put default/static methods in interfaces (since JDK 8, I think)
 // there is no need for it!
 
+NOTE: This test code creates an instance of FirstParser, a Java object that was generated by JavaCC based on the name of the grammer and its function (parsing). If our grammar had been named BarBaz.javacc, the parser object created would have been named BarBazParser.java.
+
 Now, you should be able to run:
 
-     javac Test.java
+     javac FirstTest.java
 
-As you can see from looking at the `main` method, our main method simply uses the first argument passed in on the command line as the input to the parser. So you could try various input strings that you know to be valid:
+As you can see from looking at the `main` method, our main method simply uses the first argument passed in on the command line as the input to the parser. So at the command line, you could try various input strings that you believe should be valid:
 
-     java Test bar:baz
-     java Test bar:baz:baz
+     java FirstTest bar:baz
+     java FirstTest bar:baz:baz:baz:baz
 
-You could also experiment with some invalid input. For example:
+You could also experiment with some input stings you believe should be invalid. For example:
 
-     java Test bar:bar
-     java Test Hello,World
-     java Test bar:bazzz
-
+     java FirstTest bar:bar
+     java FirstTest Hello,World
+     java FirstTest bar:bazzz

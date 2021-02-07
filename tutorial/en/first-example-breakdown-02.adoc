@@ -1,2 +1,9 @@
-== Breaking down our first example
+:imagesdir: ./images
+=== Breaking Down Our First Example
+Let's look at the code that was generated. At the command line, open nano on the file `FirstParser.java`
 
+image::FirstParser_java.jpg[A Quick Look at the Generated Code]
+
+Wow, 700+ lines! That's a lot of Java code to be generated from just one line in a grammar. But that's the secret to the power of JavaCC - one line in a grammar file can produce a thousand lines of Java code. But don't worry, we're not going to plow through all of those lines of generated code. Our goal right now is to understand how all these pieces fit together and understand how to use JavaCC. 
+
+The following flowchart highlights the process that we just completed.

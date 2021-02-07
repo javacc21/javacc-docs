@@ -123,11 +123,17 @@ If your preferred text editor isn't already installed on your system, follow the
 === Streamlining the Process
 TIP: Since you'll likely be typing the above command quite a bit as you go through the tutorial, I suggest that you create a shortcut to execute it, something like: 
 
-....
-% alias jcc='java -jar javacc-full.jar'
-....
+    % alias jcc='java -jar javacc-full.jar'
 
-This command assumes that the javacc-full.jar is in your current directory. If it is installed in a different directory, include the path, such as `~/java/libs/javacc-full.jar`. It is also important that you include the quotes around everything after the equals sign.
+This command assumes that the javacc-full.jar was downloaded into your current directory. If javacc-full.jar was downloaded into a standard download location instead, you may wish to move it to a different directory, such as ~/java/libs using the following command:
+
+    % mv <download location>/javacc-full.jar ~/java/libs/javacc-full.jar
+
+If you moved javacc-full.jar to ~/java/libs, your alias command would become:
+
+    % alias jcc='java -jar ~/java/libs/javacc-full.jar'
+
+It is also important that you include the quotes around everything after the equals sign.
 
 Now you should be able to type `jcc` to invoke JavaCC. Well, try it:
 
