@@ -4,14 +4,16 @@ Let's look at the code that was generated. At the command line, open nano on the
 
 image::FirstParser_java.jpg[A Quick Look at the Generated Code]
 
-Wow, 700+ lines! That's a lot of Java code to be generated from just one line in a grammar. But that's the secret to the power of JavaCC - one line in a grammar file can produce a thousand lines of Java code. But don't worry, we're not going to plow through all of those lines of generated code. Our goal right now is to understand how all these pieces fit together and understand how to use JavaCC. 
-
-The following flowchart highlights the process that we completed so far.
-
-image::FirstExample.png[The Journey So Far]
+Wow, 700+ lines! That's a lot of Java code to be generated from just one line in a grammar. But that's the secret to the power of JavaCC - one line in a grammar file can produce thousands of lines of Java code. But don't worry, we're not going to plow through all of those lines of generated code. Our goal right now is to get an overall understanding of how all these pieces fit together and understand how to use JavaCC. 
 
 This next flowchart shows more details about what happened when we processed our grammar file (First.javacc) thru JavaCC.
 
 image::GrammarIntoCompiledProgHighlights.png[More Details about the Process]
 
-The big magic is really happening in the second step, when the grammar is processed by JavaCC. The following flowchart shows the highlights of when the grammar is processed.
+The big magic is really happening in the second step, when the grammar is processed by JavaCC. So let's look at that part of the process a little more closely. The following flowchart shows _some_ of the highlights of grammar processing, where the "xx" in the leftmost 3 boxes represent the name of your grammar file.
+
+image::JavaCC_Highlights.png[Details about JavaCC Actions]
+
+We don't need much more about how JavaCC does it's processing to be able to use it beyond what is shown in this flowchart. JavaCC builds 3 unique files based on what you put into your grammar files; the rest of the Java code is generated based on the code templates. That is why, when you re-run JavaCC on your grammar file, only 3 files are re-generated: the other files aren't affected by changes to your grammar and are only re-generated if they are missing.
+
+NOTE: Sharp-eyed readers will have noticed that the Foo production/rule received its own Java code file. This file is used as part of building the Abstract Syntax Tree (AST) and is NOT pure template code. However, it is only re-generated when missing, like the pure template files.
