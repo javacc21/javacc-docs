@@ -14,6 +14,32 @@ The big magic is really happening in the second step, when the grammar is proces
 
 image::JavaCC_Highlights.png[Details about JavaCC Actions]
 
-We don't need much more about how JavaCC does it's processing to be able to use it beyond what is shown in this flowchart. JavaCC builds 3 unique files based on what you put into your grammar files; the rest of the Java code is generated based on the code templates. That is why, when you re-run JavaCC on your grammar file, only 3 files are re-generated: the other files aren't affected by changes to your grammar and are only re-generated if they are missing.
+Beyond what is shown in this flowchart, we really don't need to know much more about how JavaCC works to be able to use it. JavaCC builds 3 unique files based on what you put into your grammar files; the rest of the Java code is generated based on the code templates. That is why, when you re-run JavaCC on your grammar file, only 3 files are re-generated: the other files aren't affected by changes to your grammar and are only re-generated if they are missing.
 
-NOTE: Sharp-eyed readers will have noticed that the Foo production/rule received its own Java code file. This file is used as part of building the Abstract Syntax Tree (AST) and is NOT pure template code. However, it is only re-generated when missing, like the pure template files.
+NOTE: Sharp-eyed readers will have noticed that the Foo production/rule received its own Java code file. This file is used as part of building the Abstract Syntax Tree (AST) and is generated because of the same named production/rule in the grammar. However, it managed like the pure template files; it is only re-generated when it is missing.
+
+==== WTF (What The Foo)
+Our simple grammar contained just the following line:
+
+    Foo : "bar" (":" "baz")+ ;
+
+The line begins with the name of the production/rule, which in this case is Foo (although any legal Java name could have been selected). The colon marks the end of the production's name. 
+
+Next comes the word "bar" - the double quote marks show that we expect an input string that exactly matches "bar". 
+
+Next comes a group, surrounded by parentheses, that must begin with a colon (":") followed by a string that exactly matches "baz". The plus sign ("+") following the closing parenthesis means that the group must occur at least once but can be repeated as many more times as desired.
+
+The semi-colon at the end of the line marks the end of the production/rule, the same way that a semi-colon marks the end of a legal Java statement.
+
+===== Streamlining in 21st Century JavaCC
+NOTE: This section is meant primarily for _Legacy users_ and may be of interest to _Parser users_. Novices are welcome to skip this section, unless they want to learn how much extra typing they are avoiding.
+
+Production/rules must specify their return type before their name, such as `String MyProduction`. However, since most production/rules return `void`, it seems unnecessarily explicit and wordy to call out something that usually isn't used, especially since JavaCC can easily figure out that the return type is void.
+
+Next, production/rules no longer require empty parentheses at the end of its name when you aren't passing parameters to the production/rule. If you did want to pass one or more paramenters, it would done in the normal fashion: for example, MyProduction(String param1, String param2). If it makes you more comfortable to include empty parentheses, go ahead and use them; they are still supported. They are just no longer required.
+
+Next, the empty curly braces that were used for initialization code for the production/rule are no longer required. If they make you feel better to include meaningless curly braces, again, go ahead and use them; they are still supported.
+
+Finally, curly braces around the body of the production/rule are no longer required. Instead, a semi-colon is used to specify the end of the production/rule. 
+
+Altogether, these streamlining changes don't significantly reduce the number of keystrokes that you will type. Instead, a significant amount of visual clutter has been removed, making your grammars shorter and cleaner while reducing the amount of time you will have to spend searching for stupid punctuation errors.
