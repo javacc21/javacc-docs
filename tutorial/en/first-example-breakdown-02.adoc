@@ -43,3 +43,52 @@ Next, the empty curly braces that were used for initialization code for the prod
 Finally, curly braces around the body of the production/rule are no longer required. Instead, a semi-colon is used to specify the end of the production/rule. 
 
 Altogether, these streamlining changes don't significantly reduce the number of keystrokes that you will type. Instead, a significant amount of visual clutter has been removed, making your grammars shorter and cleaner while reducing the amount of time you will have to spend searching for stupid punctuation errors.
+
+==== Generated Files: The Constants File
+So let's look more closely at some of the generated files, starting with FirstConstants.java. (Reminder: if we had named our grammar BarBaz.javacc, the constants file would have been named BarBazConstants.java). A screenshot of the constants file is shown below.
+
+image::xxConstants.jpg[The Generated Constants File]
+
+The constants file is generated based on the tokens that you included in your grammar. Most grammar files will have the tokens explicitly defined, which we'll cover later. For our simple grammar, we defined two strings that must be matched exactly, "bar" and "baz" and JavaCC figured out that we wanted these two strings to be our tokens and we see these two items appear in lines 7 and 15 of the screenshot.
+
+They first appear in the definition of the enum TokenType, but completely converted to uppercase. These are the symbolic names of your grammar's tokens and is consistent with the conventions of JavaCC, where the names of tokens are capitalized. For example, if you wanted a token for phone numbers, you would name it PHONE_NUMBER or if you wanted a token for an opening curly brace ("{") you would name it LBRACE, and so on.
+
+Notice that there are three extra tokens defined in TokenType: EOF, _TOKEN_2 and INVALID. EOF (End of File) and INVALID (text that doesn't fit into your grammar) are always included as the first and last tokens. JavaCC stops processing your grammar when it reads an End of File marker (a normal situation) and begins exception handling procedures when it encounters text or punctionation that it hasn't been defined in your grammar (a non-normal situation). The _TOKEN_2 token is automatically generated for punctuation that is normal part of your grammar but hasn't been otherwise named.
+
+On the next to the last line, the String array tokenImage contains the plaintext equivalents of the enums defined in TokenType. These String equivalents are defined in the same order as they are defined in TokenType. The tokenImage Strings are used when you want to view or print the token's plaintext value. Invalid tokens have no equivalent String value. 
+
+NOTE: bar, :, and baz all contain quotation marks as part of their String values so that they can be displayed and printed correctly, but to do this, the inner quotes need to be "escaped" with a backslash. So, for example, the String "bar" must be escaped as "\"bar\"", where the \" key-combo closest to the word bar tell the Java compiler that the quotation mark is part of the String and is NOT a String delimiter.
+
+We'll look at the constants file again in later tutorial examples. For now, however, the only other item to look at in the constants file is the enum LexicalState. In our simple grammar, we haven't defined any lexical states so JavaCC contains only the DEFAULT lexical state. For now, we'll just say that different lexical states can handle text and tokens differently to correctly respond to different contexts, such as not processing statements inside comment lines or comment blocks.
+
+==== Generated Files: The Lexer File
+The next generated file that we'll look at is FirstLexer.java. The lexer file is responsible for finding _in the input source_ the words (tokens) that you have defined in your grammar. In our simple grammar, we defined "bar" and ":baz". When we ran FirstTest, we included "bar:baz" on the command line (arg[0]) and this became the _input source_ that the lexer scanned. A screenshot is included below.
+
+image::xxLexer.jpg[The Generated Lexer File]
+
+When the Lexer identifies a token, it is passed to the Parser for processing. The interplay of the Lexer and the Parser will be discussed in a following section. As the Lexer is scanning thru its _input source_ (command line argument, file, directory(s) of files), it keeps track of a lot of detail information such as line number, column number, current token, last token, etc. More details will be provided later in the tutorial.
+
+NOTE: _Legacy users_ will note that the "TokenManager" has been renamed the simpler and more direct "Lexer".
+
+==== Generated Files: The Parser File
+The last generated file that we'll look at is FirstParser.java. As can be seen from the following screenshot, it is the largest of the three generated files that we'll be looking at. 
+
+image::xxParser.jpg[The Generated Lexer File]
+
+The Parser is responsible for consuming tokens provided by the Lexer, building the Abstract Syntax Tree (AST), and managing/manipulating the tree contents. The AST is composed of a root node and as many other nodes as required to define your grammar. The AST is roughly similar to the HTML DOM Document Object, which is the root of the HTML document.
+
+We won't look at many more Parser details other than the following screenshot of the Foo production that was the very first word that you typed in your grammar.
+
+image::FirstFoo.jpg[The Generated Foo Production]
+
+This screenshot shows the beginning of the Foo production/rule. The first line shows the JavaCC file that was processed (First.javacc) as well as where in this grammar file this production/rule was defined, which was line 1 and column 1. This level of documentation can be extremely helpful if you're trying to understand where the code being executed came from.
+
+After some setup and initialization, the code enters a try block that performs the core functionality of our simple grammar - it consumes tokens as follows:
+
+*   it consumes a Bar ("bar") token - anything else is a ParseException that is caught
+*   it enters a do-while loop that
+**  consumes a _TOKEN_2 (":") token - anything else is a ParseException that is caught
+**  consumes a BAZ ("baz") token - anything else is a ParseException that is caught
+**  checks to see if the nextTokenType is a _TOKEN_2 (":") token - anything else is a ParseException that is caught
+
+And that's pretty much it. If it caught an exception, it throws up and throws the ParseException. If there was no exception, it takes care of some details in a finally block and then exits.
