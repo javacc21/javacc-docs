@@ -64,7 +64,15 @@ Of course, both debug options can be turned on at the same time and doing this n
 
 image::FirstFullDebugScreenshot.jpg[Debug Parser and Lexer Screenshot]
 
-Once a complete token has been found, control passes back to the Parser which consumes that token (shown a little more than half way down the screenshot). Control then passes back to the Lexer when begins reading thru the input character by character. This cooperative processing continues until the end of the input is reached or until an exception is generated.
+Once a complete token has been found, control passes back to the Parser which consumes that token (shown a little more than half way down the screenshot). Control then passes back to the Lexer which continues reading thru the input character by character. This cooperative processing continues until the end of the input is reached or until an exception is generated.
 
-The following flowchart illustrates this process.
+The following flowchart illustrates this process, where 
 
+image::Parser-Lexer-interplay.png[Interactions Between Parser and Lexer]
+
+This simplified flowchart emphasizes the clear separation of responsibility - the Lexer finds tokens but doesn't know anything about what to do with them, and the Parser consumes tokens but doesn't know anything about how to find tokens. Processing stops when either:
+
+*   the End Of File is reached OR 
+*   when an Exception is caught
+
+OK, you're probably getting sick of our BarBaz language grammar by this point but we have one more subject that we've been casually using: Tokens. The next section will introduce you to some of the basics of Tokens by reworking our grammar to be more consistent with best practices for JavaCC.

@@ -20,3 +20,5 @@ include::first-example-01.adoc[]
 include::first-example-breakdown-02.adoc[]
 
 include::first-example-getting-more-03.adoc[]
+
+include::first-example-intro-tokens-04.adoc[]
