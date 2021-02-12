@@ -1,0 +1,70 @@
+:imagesdir: ./images
+=== Getting More Out of Our First Example
+So far, we have gotten a lot of insight into the functioning of JavaCC by examining our one-line grammar.  Up to this point we have done the following (one or more times):
+
+.   Practiced entering code into our grammar
+.   Processed our grammar through JavaCC
+.   Compiled the JavaCC-generated code in executable Java classes
+.   Created a Java test class that created an instance of our parser
+.   Passed a variety of command line arguments to our parser to test its responses
+.   Examined the resposes we received and
+.   Looked at some of the generated code to understand in more detail why we received these responses.
+
+In this next section we're going to watch the generated code in action to better understand how these parts work together. We're going to do that by setting a few options at the top of our code.
+
+==== The DEBUG_LEXER Option
+
+At a command line, open our grammar with `nano First.javacc`. And then at the top of the file, insert the Lexical debug option as shown in the screenshot below:
+
+image::FirstDebugLexerScreenshot.jpg[Screenshot of Added Debug_Lexer line]
+
+The option, DEBUG_LEXER can be uppercase or lowercase and you can add spaces between the equals sign and in front of the semi-colon that terminates the line *however* the boolean value of "true" must be all lowercase so it forms a legal Java boolean.
+
+NOTE: _Legacy users_ will notice that the debug option is not walled off from the rest of the grammar by an explicit option block, complete with the word "options" and a matching pair of curly braces surrounding the selected options. Since the only legal place for an options block is at the top of a file, it is easy enough for JavaCC to recognize when these first lines are options, without all the cruft. Just be sure to include a semi-colon at the end of each option.
+
+Back at the command line, run First.javacc thru JavaCC and recompile the generated Java code as follows.
+
+    % jcc First.javacc
+    % javac *.java
+
+Now when you run the program with `java FirstTest bar:baz:baz`, you get output similar to the following screenshots:
+
+image::FirstDebugLex1.jpg[Debug_Lexer Screenshot Part 1]
+
+image::FirstDebugLex2.jpg[Debug_Lexer Screenshot Part 2]
+
+In the upper screenshot, the first debug line (first line with a date and time) announces that our Lexer program is going to execute the nextToken() function, followed by an INFO line that announces what it found (in this case the letter "b") at line 1 column 1. The next lines show each time the Lexer looks for a new token and what character it found until eventually it determines that no more string literals matches are possible and on the final INFO line of that block, it announces that it found a "bar" match. The Lexer then goes on to repeat the process and matches the ":" token at the bottom of the second block.
+
+In the lower screenshot, we can see it matching the final "baz" from our command line arguments and announcing the line and column numbers where each of the characters were found. It then announces that it has reached the end of the file, or in this case the end of our command line argument, and returns the <EOF> token. 
+
+At this point, our test program, FirstTest, has just completed the `parser.foo()` command. The test program now executes the `parser.rootNode().dump()` code and displays a list of all the tokens that Foo() found.
+
+Pretty cool - the Lexer is responsible for crawling thru our text character by character and identifying the words (tokens) that we have defined in our grammar. And with all that the Lexer does, what's left for the Parser to do. Let's find out.
+
+==== The DEBUG_PARSER Option
+We've seen that the Lexer generates a lot of lines of debug information, so for right now let's turn OFF the DEBUG_LEXER option and turn ON the DEBUG_PARSER option. Use nano to edit and then save First.javacc so it looks similar to the following screenshot.
+
+image::FirstDebugParserScreenshot.jpg[]
+
+The DEBUG_PARSER option doesn't have to entered exactly as shown in the screenshot - the option name was entered all lowercase with lots of spaces just to show that you hae some flexibility in how options are entered, just in case you have formatting preferences. You do, however, have to enter the boolean values all lowercase.
+
+After running the grammar thru JavaCC and then compiling all the java files, you can run the program with `java FirstTest bar:baz:baz`. You should get output similar to the following screenshot:
+
+image::FirstDebugParser.jpg[Debug_Parser Screenshot]
+
+In the above screenshot, the first debug line (first line with a date and time) announces the name of the Parser that is being run (FirstParser) and the function that is being run (Foo). The following INFO line announces the starting line number of the production/rule and the grammar file that it came from.
+
+The next few lines describe some housekeeping about node scopes and nesting levels. Following these lines is a pair of lines that announce that a token has been consumed of type BAR from line 1 starting at column 1 (of the command line argument). The next pair of lines announce that a token has been consumed of type _TOKEN_2 from line 1 starting at column 4 (this is the ":" token). The next pair of lines announce that a token has been consumed of type BAZ from line 1 starting at column 5. These last 4 lines (for the ":" and "baz") will repeat as many times as you entered ":baz".
+
+Because the DEBUG_PARSER feature operates at the token level instead of the character level, the debug output is shorter and more concise. It also makes it a little easier to locate the source of an error. Without debugging info, we just get notified of the ParseException, but with debugging info enabled, we get more information about what was happening at the time the exception happened. The following screenshot shows the sequence of events when ":baz" is misspelled ":bam".
+
+image::FirstDebugException.jpg[Debug Excpetion Screenshot]
+
+Of course, both debug options can be turned on at the same time and doing this not only prints a lot of lines to the screen, it also shows how the Lexer and the Parser work together. The first few debug lines in the following screenshot were generated by the Parser as it begins to execute the Foo production/rule. The Lexer then takes control and steps thru the input character by character until it finds a complete token.
+
+image::FirstFullDebugScreenshot.jpg[Debug Parser and Lexer Screenshot]
+
+Once a complete token has been found, control passes back to the Parser which consumes that token (shown a little more than half way down the screenshot). Control then passes back to the Lexer when begins reading thru the input character by character. This cooperative processing continues until the end of the input is reached or until an exception is generated.
+
+The following flowchart illustrates this process.
+

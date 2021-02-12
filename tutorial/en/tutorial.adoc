@@ -18,3 +18,5 @@ include::prerequisites-00.adoc[]
 include::first-example-01.adoc[]
 
 include::first-example-breakdown-02.adoc[]
+
+include::first-example-getting-more-03.adoc[]
