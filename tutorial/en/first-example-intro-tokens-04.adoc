@@ -17,6 +17,8 @@ Up until this point in this tutorial, we've been generating tokens every time we
 
 Fortunately, we don't need to fully understand every single line to be able to use Token objects; we just need to know how to correctly define Tokens in our grammars. And this section will introduce _some_ of the basics of how to define and use Tokens.
 
+==== Defining Our First Token
+
 So let's begin by modifying our grammar to add a TOKEN section where we'll formally define a new Token: COLON.
 
 image::FirstToken1.jpg[Defining a New Token]
@@ -50,6 +52,8 @@ In the last line of the grammar, the new BAR token has been substituted for the 
 
 Hopefully, everything ran just like before. If not, go back thru the grammar and make sure you added the new Token and TOKEN section as shown in the above screenshot. And re-run the Cleanup steps to make sure you're getting a clean build.
 
+==== Modifying Our First Token
+
 Once that is working, go back into your grammar and modify the BAR Token definition as shown in the following screenshot.
 
 image::FirstToken2.jpg[Adding to the token]
@@ -74,6 +78,8 @@ But what if we don't care about which case (uppercase or lowercase) these three 
 image::FirstToken3.jpg[More Bar Variations]
 
 Here each letter of bar is explicitly stated as being either uppercase of lowercase. Note that there are other ways of accomplishing case insensitivities, but we'll learn about them later. For this example, we'll just keep using the vertical bar.
+
+==== Making Our Second Token
 
 Edit First.javacc to replace the ":" with the <PUNCT> token. Do the following:
 
@@ -113,7 +119,10 @@ Note that we capitalized the "a" to prove that <BAR> is still case insensitive. 
         :
         baz
 
-So to finish off our grammar, let's make "baz" into a Token. And this time, we'll also change it so that the last character can be any alphabetic letter. Edit First.javacc so it looks like the following screenshot:
+
+==== Making Our Third And Final Token
+
+So to finish off our grammar, let's make "baz" into a Token. And this time, we'll also change it so that the last character can be _any_ alphabetic letter, far too many possibilities to use the vertical bar symbol. Edit First.javacc so it looks like the following screenshot:
 
 image::FirstToken5.jpg[BAZ Token]
 
@@ -137,8 +146,19 @@ After compiling, run the test program with command line arguments similar to the
 
 It should run without complaint. <BAR> can be any combination of uppercase and lowercase letters. The <PUNCT> characters have all been successfully processed. And <BAZ> accepts the first two letters as "ba" and then allows any single alphabetic lowercase or uppercase character at the end of the token.
 
-However, sharp-eyed readers will note that $bas isn't listed. That is because of the Bash shell reserves "$" for its own use and consumed "$bas" itself. Trying to use the "!" will also cause problems - this time Bash halts everything because it expects to use the BANG symbol to execute something. Which is just a long winded way of saying that you can expect surprises when you use punctuation.
+IMPORTANT: Sharp-eyed readers will note that $bas isn't listed. That is because of the Bash shell reserves "$" for its own use and consumed "$bas" itself. Trying to use the "!" will similarly cause problems - this time Bash halts everything because it expects to use the BANG symbol to execute something. Which is just a long winded way of saying that you can expect surprises when you use punctuation so always test carefully.
 
-Whew! We have covered a lot of ground in this first tutorial example. Take a second to look back at that last screenshot and you can see just how much more complicated (and sophisticated) we've made our simple little BarBaz language. It still doesn't do anything useful but we sure learned a lot getting to this point.
+=== First Example Summary
+Whew! We have covered a lot of ground in this first tutorial example. Take a second to look back at that last screenshot and you can see just how much more flexible and sophisticated we've made our simple little one-line BarBaz language.
 
-See you in the next Chapter!
+The following flowchart summarizes the steps that what we've done so far:
+
+image::FirstExampleProcess.png[Final Overview of Process]
+
+And this last flowchart shows a high-level view of using JavaCC:
+
+image::FirstExampleJavaCCProcess.png[Final JavaCC Overview]
+
+Hopefully these flowcharts all make sense. If not, go back thru this first example and read thru the parts that don't make sense. And if it still doesn't make sense, get in touch with the authors and explain where it doesn't make sense. 
+
+Otherwise, see you in the next Chapter!
