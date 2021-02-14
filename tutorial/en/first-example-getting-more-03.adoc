@@ -75,4 +75,4 @@ This simplified flowchart emphasizes the clear separation of responsibility - th
 *   the End Of File is reached OR 
 *   when an Exception is caught
 
-OK, you're probably getting sick of our BarBaz language grammar by this point but we have one more subject that we've been casually using: Tokens. The next section will introduce you to some of the basics of Tokens by reworking our grammar to be more consistent with best practices for JavaCC.
+OK, you're probably getting sick of our BarBaz language/grammar by this point but we have one more item that we've been using very casually so far in this tutorial: Tokens. The next section will introduce you to some of the basics of Tokens by reworking our grammar to be more consistent with best practices for JavaCC.

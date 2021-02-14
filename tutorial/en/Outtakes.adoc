@@ -21,3 +21,15 @@ On Windows, not so much. You can, of course, go through the tutorial on a Window
 * You understand that when I say something like: "Now you type `rm *.java` to delete the generated source files" this has to be `del *.java` on a default Windows command line.
 * You use some sort of Unix shell on your Windows machine.
 * Another perfectly reasonable possibility is that you remote login into a Unix machine and do the tutorial there -- the only prerequisite being, again, that the remote machine has a JDK installed.
+
+
+- - - 
+
+
+IGNORE_CASE = true;   <<<<<Possible option at top of file that makes everything case insensitive >>>>>
+
+Can also do:
+
+TOKEN [IGNORE_CASE]: blah blah blah
+
+to make just one token case insensitive but it may have some issues to make sure it only applies to just one token

@@ -1,3 +1,144 @@
 :imagesdir: ./images
 === Introducing Tokens
-Up until this point, we've been generating tokens almost as a by-product of the Strings that we entered but in JavaCC ....
+Up until this point in this tutorial, we've been generating tokens every time we run JavaCC but never explained what tokens are and how we use them. The Strings that we matched in our grammar were converted behind the scenes into Token objects that include significantly more information than just their String values. In JavaCC, Tokens implement two interfaces:
+
+*   xxConstants (where "xx" is the name of your grammar file), which include:
+**  The enum TokenType listing every Token created in your grammar
+**  Lexical States
+**  The tokenImage String array including the String representation of every token created in your grammar
+*   Node, which include information about 
+**  Parent Nodes
+**  Child Nodes
+**  Node manipulation methods
+**  FileLineMap (source content where this Node came from)
+**  Begin & End Line number of this Node/Token
+**  Begin & End Column number of this Node/Token
+**  Many more private variables and methods used to implement the required Node functionality
+
+Fortunately, we don't need to fully understand every single line to be able to use Token objects; we just need to know how to correctly define Tokens in our grammars. And this section will introduce _some_ of the basics of how to define and use Tokens.
+
+So let's begin by modifying our grammar to add a TOKEN section where we'll formally define a new Token: COLON.
+
+image::FirstToken1.jpg[Defining a New Token]
+
+The above screenshot shows that we've added a new section to our grammar, which is just the one line that begins with "TOKEN :" and ends with the semi-colon. Almost every other JavaCC file you encounter will have a TOKEN section towards the top of the file; our simple grammar didn't require one so we skipped it just for simplicity. And yes, you do need that colon following the word TOKEN so it will be recognized as the TOKEN section.
+
+NOTE: We also turned off the debugging statements by setting them both to false.
+
+Inside the TOKEN section, we have defined a single item, BAR, that will become a Token. To define a Token, we begin with a LessThan sign ("<") followed by the name of the Token _IN ALL CAPS_ followed by the colon punctuation mark to identify the end of the Token's name. Next is the item(s) that will be recognized by the Lexer as being the Token (in this case "bar") followed by the GreaterThan sign (">"). At the end of the line is a semi-colon, marking the end of the TOKEN section.
+
+NOTE: *_Legacy users_* will note that JavaCC 21 has again streamlined the presentation of the TOKEN section to replace the curly braces ({}) that normally surround the TOKEN section with a single semi-colon. The curly braces still work and you are welcome to use them if you prefer but you will get an error if you use *both* the semi-colon and the curly braces. 
+
+In the last line of the grammar, the new BAR token has been substituted for the word "bar". While this change might not seem like a big improvement, this substitution will provide us with significant power and flexibility in a little bit. For now, let's do a little more setup and then let's make sure that everything works like it did before. At the command line:
+
+* Setup (Make sure we don't have to keep retyping FirstTest.java)
+
+    % mkdir save
+    % cp FirstTest.java save
+
+* Cleanup (Get rid of obsolete files)
+
+    % rm *.class
+    % rm *.java
+
+* Run JavaCC, compile, and then test
+
+    % jcc First.javacc
+    % cp save/FirstTest.java .
+    % javac *.java
+    % java FirstTest bar:baz:baz
+
+Hopefully, everything ran just like before. If not, go back thru the grammar and make sure you added the new Token and TOKEN section as shown in the above screenshot. And re-run the Cleanup steps to make sure you're getting a clean build.
+
+Once that is working, go back into your grammar and modify the BAR Token definition as shown in the following screenshot.
+
+image::FirstToken2.jpg[Adding to the token]
+
+After the "bar", we added the vertical bar symbol followed by "BAR". The vertical bar shows that an OR condition exists; "bar" OR "BAR" will be accepted for the Token <BAR>. In JavaCC, the vertical bar symbol works pretty much like the symbol meaning OR ("||") in Java.
+
+Run the Cleanup and Run steps above but this time, change the command line args to use BAR.
+And when it runs, it should look similiar to the following output:
+
+    % java FirstTest BAR:baz:baz
+    Foo
+        BAR
+        :
+        baz
+        :
+        baz
+
+If you run it again with "bar", it should also run without complaint.
+
+But what if we don't care about which case (uppercase or lowercase) these three letters are entered. Because there are only 3 letters, there are eight possible combinations (3^^2)-1 so we could list each one of them ("bar" | "Bar" | "bAr" etc.) or we could enter them as shown in the following screenshot:
+
+image::FirstToken3.jpg[More Bar Variations]
+
+Here each letter of bar is explicitly stated as being either uppercase of lowercase. Note that there are other ways of accomplishing case insensitivities, but we'll learn about them later. For this example, we'll just keep using the vertical bar.
+
+Edit First.javacc to replace the ":" with the <PUNCT> token. Do the following:
+
+.   Remove the semi-colon from the end of the <BAR> line
+.   Add a vertical bar symbol to the new line - I've aligned the "|" with the ":" on the line above just because it looks pretty but it's not required
+.   Add the definition of <PUNCT> following the vertical bar symbol.
+.   Add the semi-colon on a line by itself to mark the end of the TOKEN block.
+.   Replace the ":" in the last line with <PUNCT>
+
+When you're all done, it should look similar to the following screenshot:
+
+image::FirstToken4.jpg[Punctuation Variations]
+
+Clean and compile your updated grammar as before. This time test it with the following line and it should respond with the appropriate output (not an error message):
+
+    % java FirstTest bAr@baz:baz
+    Foo
+        bAr
+        @
+        baz
+        :
+        baz
+
+Note that we capitalized the "a" to prove that <BAR> is still case insensitive. Then we used the "@" symbol instead of the ":" and it was recognized as punctuation as well. Let's expand <PUNCT> to read as follows: `< PUNCT : "@" | "#" | "$" | "%" | "^" | ":" >` and then compile it (no need to clean unless you're getting weird error messages). Then test it and it should respond with the appropriate output as follows:
+
+    % java FirstTest Bar@baz#baz$baz%baz^baz:baz
+    Foo
+        Bar
+        @
+        baz
+        #
+        baz
+        %
+        baz
+        ^
+        baz
+        :
+        baz
+
+So to finish off our grammar, let's make "baz" into a Token. And this time, we'll also change it so that the last character can be any alphabetic letter. Edit First.javacc so it looks like the following screenshot:
+
+image::FirstToken5.jpg[BAZ Token]
+
+In the BAZ token, we specified that the first two characters must be lowercase "ba" followed by the stuff in the square brackets. That stuff begins with a range specifier that says that any single lowercase character from "a" to "z" can be used, including "a" and "z". Next comes a comma, meaning that another specifier follows, and that specifier says that any single uppercase character from "A" to "Z" can be used, including "A" and "Z". It is important to understand, however, that these are OR ranges; either one character from a-z can be used OR one character from A-Z _but only one character._
+
+After compiling, run the test program with command line arguments similar to the following:
+
+    $ java FirstTest BAR@bav#baH$bas%baP^baq:baM
+    Foo
+        BAR
+        @
+        bav
+        #
+        baH
+        %
+        baP
+        ^
+        baq
+        :
+        baM
+
+It should run without complaint. <BAR> can be any combination of uppercase and lowercase letters. The <PUNCT> characters have all been successfully processed. And <BAZ> accepts the first two letters as "ba" and then allows any single alphabetic lowercase or uppercase character at the end of the token.
+
+However, sharp-eyed readers will note that $bas isn't listed. That is because of the Bash shell reserves "$" for its own use and consumed "$bas" itself. Trying to use the "!" will also cause problems - this time Bash halts everything because it expects to use the BANG symbol to execute something. Which is just a long winded way of saying that you can expect surprises when you use punctuation.
+
+Whew! We have covered a lot of ground in this first tutorial example. Take a second to look back at that last screenshot and you can see just how much more complicated (and sophisticated) we've made our simple little BarBaz language. It still doesn't do anything useful but we sure learned a lot getting to this point.
+
+See you in the next Chapter!
