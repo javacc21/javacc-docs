@@ -1,0 +1,7 @@
+The images used in this tutorial are jpg's or png's. Screenshots are normally saved as jpg's. Flowcharts were all created using the DrawIO online flowcharting tool and saved as png files for use in this tutorial. 
+
+Note that the native file format for DrawIO is XML, which no one else recognizes, so DrawIO's native file format can't be used in an AsciiDoc. However, DrawIO is extremely clever and can save their flowcharts as png files that DrawIO can somehow open and edit as flowcharts, where all of the on-screen objects retain their attributes (size, location, text labels, etc). But AsciiDoc still recognizes the contents of their png file as a legal png file and displays them just fine.
+
+Flowcharts that were saved to png format can still be opened by a graphics editor such as GIMP, but they can only be bit edited and all objects (boxes, lines, etc) become just bits on-screen and all of their object attributes are lost. In a pinch, you could do some simple bit edititng but it would be better to open the png flowchart in DrawIO.
+
+And if you attempt to use DrawIO to open a png file that wasn't created by DrawIO, it won't be loaded - DrawIO complains that it isn't a Chart file.

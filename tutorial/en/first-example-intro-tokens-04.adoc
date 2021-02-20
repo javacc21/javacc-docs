@@ -148,8 +148,8 @@ It should run without complaint. <BAR> can be any combination of uppercase and l
 
 IMPORTANT: Sharp-eyed readers will note that $bas isn't listed. That is because of the Bash shell reserves "$" for its own use and consumed "$bas" itself. Trying to use the "!" will similarly cause problems - this time Bash halts everything because it expects to use the BANG symbol to execute something. Which is just a long winded way of saying that you can expect surprises when you use punctuation so always test carefully.
 
-=== First Example Summary
-Whew! We have covered a lot of ground in this first tutorial example. Take a second to look back at that last screenshot and you can see just how much more flexible and sophisticated we've made our simple little one-line BarBaz language.
+=== First Parser Summary
+Whew! We have covered a lot of ground in this first parser tutorial. Take a second to look back at that last screenshot and you can see just how much more flexible and sophisticated we've made our simple little one-line BarBaz language.
 
 The following flowchart summarizes the steps that what we've done so far:
 
