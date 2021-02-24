@@ -137,9 +137,7 @@ It is also important that you include the quotes around everything after the equ
 
 Now you should be able to type `jcc` to invoke JavaCC. Well, try it:
 
-....
-% jcc
-....
+    % jcc
 
 TIP: The normal thing to do would be to add that above alias line to your shell configuration file, most likely `$HOME/.bashrc`
 

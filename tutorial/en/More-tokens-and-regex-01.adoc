@@ -1,0 +1,104 @@
+:imagesdir: ./images
+== More About Tokens and Regular Expressions
+In the last chapter, when we were talking about Tokens, we were also demonstrating how to use some basic Regular Expressions, commonly referred to as RegEx. So as you may have guessed from the chapter title, we will be looking in more detail at how to use Tokens and RegEx. 
+
+NOTE: If you are familiar with Tokens and RegEx, you might want to skim thru this chapter, and if everything looks familiar, move on to the next chapter, Production Rules. 
+
+=== Chapter Setup
+
+So before we go any further, let's get our environment set up a little better. So open your command line window (if required) and move to your tutorial directory and tidy up. First let's save off a couple of files and get rid of the generated files:
+
+    % cd tutorial
+    % mkdir first
+    % mv First.javacc first
+    % mv FirstTest.java first
+    % rm *.java
+    % rm *.class
+
+Now let's make a new directory for our next grammars:
+
+    % mkdir second
+    % cd second
+    % mkdir build
+
+We're going to keep things a little cleaner now using the build directory. Our grammar will be saved in the "second" but all the generated and compiled files will end up in the "build" subdirectory. But that also requires that we change how we do things a little, so we're going to update and add to our aliases as follows:
+
+    % alias jcc='java -jar <path to>javacc-full.jar -d build'
+    % alias cmp='javac build/*.javac'
+    % alias tst='java -cp build SoupTest'
+
+* The first alias, jcc (run JavaCC), should look familiar but we have added the -d directive so all of the generated java files will get put into the build directory. Just follow the alias with the name of the grammer file and it should run.
+* The cmp (compile) alias compiles all of the java files in the build directory and puts all the resulting class files in the build directory. 
+* The tst (testing) alias sets the classpath to the build directory and then runs the SoupTest class file so all you have to do is add the command line arguments, such as `tst "broth chicken peas"` (be sure to add the quotation marks around your arguments).
+
+NOTE: _Windows users_ can create batch files that perform the same functions.
+
+So let's open nano and get cooking (groan: sorry, I couldn't help myself).
+
+=== Making Soup
+Our new grammar will read thru simple soup recipes. We'll start with the bare minimum and add more to the grammar and introduce many of the more advanced features of Tokens and RegEx along the way. The following screenshot shows what we want in our soup.
+
+image:3soupjavaccScreenshot1.jpg[Soup Recipe Grammar]
+
+Our new grammar, Soup.javacc, is pretty much the same as what we used before, just with lots more items in the TOKEN section. What has been added is the "SKIP" section. Any items that we list in the SKIP section will consumed by the Lexer and then discarded. In the SKIP section above, we included a single item, a space surrounded by double quotes, which allows us to put a space between each ingredient in our soup so our list is easier for us to read.
+
+But what if one of our Tokens contains a space, such as "green onion"? As long as you included the space in your Token definition, the Lexer will honor the space and not discard it. Once the Lexer has started consuming a Token, it will accept and keep the space as long as you defined it as being part of that Token. But outside of a Token, the space will get skipped.
+
+Alright, let's try out our new soup. Create a test program, SoupTest.java, in the same directory as Soup.javacc, that contains the following lines:
+
+image:3souptestScreenshot1.jpg[Soup Test]
+
+All set. Run the following commands:
+
+    % cp SoupTest.java build
+    % jcc Soup.javacc
+    % cmp
+    % tst "broth beef carrot onion salt"
+    Soup
+      broth
+      beef
+      carrot
+      onion
+      salt
+
+If everything was entered correctly, your results should match the last 6 lines shown above. Test it again using any one item from each line of Tokens _in the correct order_ and "recipes" for soup should be listed. Which makes our soup grammar pretty rigid and inflexible. Let's go back into our Soup.javacc and give ourselves a little more flexibility. Change the last line as follows:
+
+    Soup : (<LIQUID> | <PROTEIN> | <VEGGIEs> | <HERBS> | <SPICES>)+ ;
+
+In this line, we added the veritcal var "|" between each item in the list so any _one_ of items will be accepted. So if that were our only change, the Lexer would stop after the first item because we had successfully met all of the requirements of the Soup rule. Since a single item soup wouldn't taste very good, we put the parentheses around all of the potential items in our soup and added the plus sign "+" to mean that Tokens from this list would be accepted one or more times, the same as was done for ":baz" in the last chapter. After changing the last line and running JavaCC and javac, we can now enter the command line arguments in any order, as shown below.
+
+    % tst "salt onion carrot beef broth"
+    Soup
+      broth
+      beef
+      carrot
+      onion
+      salt
+
+Unfortunately, we can now also enter any of the items multiple times, for example:
+
+    % tst "salt salt salt"
+    Soup
+      salt
+      salt
+      salt
+
+We'll improve on this later in the section on Regular Expressions but for now this is good enough. For now, let's just explore what we can do with just Tokens.
+
+For example, you may have been wondering why all of the ingredient Tokens are lumped together under a single TOKEN section, and the answer is that they don't have to be. The general rule of thumb is to lump related Tokens together in one TOKEN section; that just makes good sense organizationally, to help find things more easily in the future. However, if you prefer to give every ingredient its own TOKEN section, as shown below, that works too.
+
+    TOKEN : < LIQUID : "broth" | "water"  | "wine" > ;
+    TOKEN : < PROTEIN: "beef"  | "chicken"| "pork" > ;
+    TOKEN : < VEGGIEs: "carrot"| "potato" | "spinach" | "tomatoes" >;
+    TOKEN : < HERBS  : "onion" | "garlic" | "parsley" | "basil" > ;
+    TOKEN : < SPICES : "salt"  | "pepper" | "parsley" | "sage" >;
+
+If you compare the SoupConstants.java file that is generated when each Token has its own TOKEN section with the SoupConstants.java file that is generated with the ingredients lumped together, they will be identical. And when you re-compile and run the program, it works exactly as it did before. Just make sure that each TOKEN section terminates with a semi-colon ";".
+
+While capitalization isn't essential for our Soup recipe, it is worth mentioning that the [IGNORE_CASE] directive can be applied to each TOKEN section that you wish to be case insensitive. For example, if you wanted to allow uppercase and lowercase letters for one or more Tokens, you could add [IGNORE_CASE] to the appropriate TOKEN as follows:
+
+    TOKEN [IGNORE_CASE] : < PROTEIN: "beef"  | "chicken"| "pork" > ;
+
+When you re-run JavaCC, re-compile, and then run the program, you'll find that "bEEf" and "ChIcKeN" and "poRK" will be accepted but using a capital letter in any of the other tokens will fail. Which could suggest a possible grouping strategy for your tokens; Tokens that you want to be case insensitive would be grouped together into a single TOKEN section with the [IGNORE_CASE] declaration while all the other Tokens would be grouped based on their relationship to other similar tokens.
+
+The true power of Tokens comes when you combine Tokens with Regular Expressions, as the next section will demonstrate.
