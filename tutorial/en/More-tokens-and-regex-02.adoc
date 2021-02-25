@@ -1,0 +1,21 @@
+:imagesdir: ./images
+=== More About Regular Expressions
+First, let's start with an observation that RegEx are like standards. As Andrew Tanenbaum remarked, "The good thing about standards is that there are so many to choose from." In other words, be aware that the RegEx used in JavaCC won't necessarily be identical to the RegEx used in java.util.regex or in Perl or grep or any other of a dozen different regular expression processors.
+
+==== Regular Expressions Already Viewed
+So far, we've used four different kinds of regular expressions:
+
+* "|" or the "Alternative" symbol. The stuff on one side of the vertical bar is a legitimate alternative to the stuff on the other side of the bar. In our Soup grammar, "beef" | "chicken" is a short (and unambiguous) way of stating that either beef or chicken are acceptable alternatives. Alternatives can be strung together an unlimited number of times, so "beef" | "chicken" | "pork" | "goat" | "rabbit" ... | <final alternative> would also allow any ONE of these alternatives to be selected.
+* "()" or the "Expression" markers. The parentheses identify the beginning and end of some arbitrary expression. Parentheses work similarly to the way they work in a math expression: the items contained within the parentheses form a single group or chunk that is processed together. For example, 3 * (4 + 5) will equal 27 and not 17 because the 4 + 5 are added together _before_ they are multiplied by 3. In the last chapter, we used ("b"|"B") to show that either "b" or "B" were legitimate alternatives for the first letter of the <BAR> token.
+* "+" or the "One or More" operator. The + is a type of "repetition" operator that means that the item or expression it follows must occur at least once but can be repeated as many more times as desired. In the Soup example, (<ingredients list>)+ meant that we had to list at least one ingredient but could list as many more ingredient Tokens as desired. Several other repetition operators are available:
+** "?" means "zero or one". The item or expression can occur once (and only once) or not at all. A common example would be the minus sign in front of a number; it only appears when you want to identify a negative number.
+** "* "  means "zero or more". The item or expression can be skipped or can be included and then repeated as many times as desired. In our Soup grammar, if we wanted to allow for vegatarian soup, we could specify that our meats were optional, as follows: (<PROTEIN>)*
+* "[ ]" ranges can be defined inside the square brackets. In the BarBaz example, we specified that the final character of the <BAZ> token could be any alphabetic character as follows: ["a"-"z", "A"-"Z"]   Other examples of ranges include ["0"-"9"], ["a" - "f"] and ["Q" - "T"].
+
+==== Introducing Other JavaCC Regular Expressions
+Believe it or not, we've already covered most of the Regular Expressions available in JavaCC. Here are the remaining Regular Expressions that we can use.
+
+* "[ , ]" character class are used for non-consecutive characters. For example, we could use ["1","3","5","7","9"] to define the acceptable characters for an <ODD> Token. In our BarBaz example, we could have used ["B","b"] ["A","a"] ["r","R"] to specify that <BAR> would match any combination of uppercase and lowercase letters that spelled bar.
+* "{n}" repetions, where the "n" specifies how many times the item or expression is to be repeated. For example, as a part of a Token definition for a URL, <URL:("W"){3} > would specify that exactly three capital W's ("WWW") must be read, no more, no less.
+* "{n,m}" min-max repetitions, where "n" is the minimum number of repetions (MUST be greater than 0) and "m" is the maximum number of repetions. In a Token definition for a quantity, you might specify <QTY: (["0"-"9"]){1,4}>, which would allow any QTY between 0 and 9999. Note that at least one digit must be entered to meet the minimum number of repetitions, but that value could be "0".
+

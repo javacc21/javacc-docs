@@ -40,9 +40,9 @@ Our new grammar will read thru simple soup recipes. We'll start with the bare mi
 
 image:3soupjavaccScreenshot1.jpg[Soup Recipe Grammar]
 
-Our new grammar, Soup.javacc, is pretty much the same as what we used before, just with lots more items in the TOKEN section. What has been added is the "SKIP" section. Any items that we list in the SKIP section will consumed by the Lexer and then discarded. In the SKIP section above, we included a single item, a space surrounded by double quotes, which allows us to put a space between each ingredient in our soup so our list is easier for us to read.
+Our new grammar, Soup.javacc, is pretty much the same as what we used before, just with lots more items in the TOKEN section. What has been added is the "SKIP" section. Any items that we list in the SKIP section will consumed by the Lexer and then discarded. In the SKIP section above, we included a single item, a space surrounded by double quotes, which allows us to put a space between each ingredient in our soup, making our list easier for us to read.
 
-But what if one of our Tokens contains a space, such as "green onion"? As long as you included the space in your Token definition, the Lexer will honor the space and not discard it. Once the Lexer has started consuming a Token, it will accept and keep the space as long as you defined it as being part of that Token. But outside of a Token, the space will get skipped.
+But what if one of our Tokens contains a space, such as "green onion"? Won't it also get discarded? Turns out, as long as you included the space in your Token definition, the Lexer will honor the space and not discard it. Once the Lexer has started consuming a Token, it will accept and keep any characters that you defined as belonging inside that Token. But outside of a Token, any characters that you put into the SKIP secion, which are typically "whitespace" characters, such as a space, a tab, and end of line characters (new line, carriage return, etc).
 
 Alright, let's try out our new soup. Create a test program, SoupTest.java, in the same directory as Soup.javacc, that contains the following lines:
 
@@ -61,11 +61,15 @@ All set. Run the following commands:
       onion
       salt
 
-If everything was entered correctly, your results should match the last 6 lines shown above. Test it again using any one item from each line of Tokens _in the correct order_ and "recipes" for soup should be listed. Which makes our soup grammar pretty rigid and inflexible. Let's go back into our Soup.javacc and give ourselves a little more flexibility. Change the last line as follows:
+If everything was entered correctly, your results should match the last 6 lines shown above. Test it again using any one item from each of the Tokens _in the correct order_ and "recipes" for soup should be listed. 
+
+Which makes our soup grammar pretty rigid and inflexible. Let's go back into our Soup.javacc and give ourselves a little more flexibility. Change the last line as follows:
 
     Soup : (<LIQUID> | <PROTEIN> | <VEGGIEs> | <HERBS> | <SPICES>)+ ;
 
-In this line, we added the veritcal var "|" between each item in the list so any _one_ of items will be accepted. So if that were our only change, the Lexer would stop after the first item because we had successfully met all of the requirements of the Soup rule. Since a single item soup wouldn't taste very good, we put the parentheses around all of the potential items in our soup and added the plus sign "+" to mean that Tokens from this list would be accepted one or more times, the same as was done for ":baz" in the last chapter. After changing the last line and running JavaCC and javac, we can now enter the command line arguments in any order, as shown below.
+In this line, we added the veritcal bar "|" between each item in the list so any _one_ of items will be accepted. So if that were our only change, the Lexer would stop after the first item because we had successfully met all of the requirements of the Soup rule. Since a single item soup wouldn't taste very good, we put the parentheses around all of the potential items in our soup and added the plus sign "+" to mean that Tokens from this list would be accepted one or more times. This is the same RegEx magic that we did for for ":baz" in the last chapter, and we'll cover RegEx in more detail in the next section. 
+
+After changing the last line and running JavaCC and javac, we can now enter the command line arguments in any order, such as shown below.
 
     % tst "salt onion carrot beef broth"
     Soup
@@ -83,13 +87,13 @@ Unfortunately, we can now also enter any of the items multiple times, for exampl
       salt
       salt
 
-We'll improve on this later in the section on Regular Expressions but for now this is good enough. For now, let's just explore what we can do with just Tokens.
+Which wouldn't make a very good soup. We'll improve on this grammar later in the section on Regular Expressions but for now this is good enough. For now, let's just explore Tokens a little more.
 
-For example, you may have been wondering why all of the ingredient Tokens are lumped together under a single TOKEN section, and the answer is that they don't have to be. The general rule of thumb is to lump related Tokens together in one TOKEN section; that just makes good sense organizationally, to help find things more easily in the future. However, if you prefer to give every ingredient its own TOKEN section, as shown below, that works too.
+For example, you may have been wondering why all of the ingredient Tokens are lumped together under a single TOKEN section, and the answer is that they don't have to be. The general rule of thumb is to lump related Tokens together in one TOKEN section; that just makes good sense organizationally, to help us find items/Tokens more easily in the future. However, if you prefer to give every ingredient its own TOKEN section, as shown below, that works too.
 
     TOKEN : < LIQUID : "broth" | "water"  | "wine" > ;
     TOKEN : < PROTEIN: "beef"  | "chicken"| "pork" > ;
-    TOKEN : < VEGGIEs: "carrot"| "potato" | "spinach" | "tomatoes" >;
+    TOKEN : < VEGGIES: "carrot"| "potato" | "spinach" | "tomatoes" >;
     TOKEN : < HERBS  : "onion" | "garlic" | "parsley" | "basil" > ;
     TOKEN : < SPICES : "salt"  | "pepper" | "parsley" | "sage" >;
 
@@ -99,6 +103,6 @@ While capitalization isn't essential for our Soup recipe, it is worth mentioning
 
     TOKEN [IGNORE_CASE] : < PROTEIN: "beef"  | "chicken"| "pork" > ;
 
-When you re-run JavaCC, re-compile, and then run the program, you'll find that "bEEf" and "ChIcKeN" and "poRK" will be accepted but using a capital letter in any of the other tokens will fail. Which could suggest a possible grouping strategy for your tokens; Tokens that you want to be case insensitive would be grouped together into a single TOKEN section with the [IGNORE_CASE] declaration while all the other Tokens would be grouped based on their relationship to other similar tokens.
+When you re-run JavaCC, re-compile, and then run the program, you'll find that "BEef" and "ChIcKeN" and "poRK" will all be accepted but using a capital letter in any of the other tokens will fail. Which could suggest a possible grouping strategy for your tokens; Tokens that you want to be case insensitive would be grouped together into a single TOKEN section with the [IGNORE_CASE] directive while all the other Tokens would be grouped with other similar tokens.
 
-The true power of Tokens comes when you combine Tokens with Regular Expressions, as the next section will demonstrate.
+As useful as Tokens are, by themselves they are pretty much limited to just matching text strings exactly. It would quickly become overwhelming complex if we had to explicitly define all possible text combinations (for example: DRUM, Drum, drum, DRUMS, Drums, drums, DRUMMING, Drumming, drumming, etc).The true power of Tokens comes when you combine Tokens with Regular Expressions, as the next section will demonstrate.
