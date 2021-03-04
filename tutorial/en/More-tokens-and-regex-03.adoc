@@ -39,8 +39,78 @@ Time to make vegetarian soup. Put parentheses around <PROTEIN> followed by a "?"
 
 Run jcc and cmp and then remove your <PROTEIN> from the recipe. Now when you run tst, it should work just fine, but with one less item in the ingredients list.
 
-Just for curiosity's sake, what happens if you add the <PROTEIN> after the <SPICES>? You're right - it will run without complaint but will only print the initial ingredients. That is because once the <SPICES> had been consumed, the Soup production rule had completed itself and successfully filled in every blank in its Mad Libs recipe and control returned to the SoupTest program where it dumped the list of ingredients. The Soup production rule was absolutely indifferent to anything following the <SPICES>. This is NOT a defect or a flaw but correct behavior. Grammars normally have multiple production rules and in something more realistic than our Soup grammar, the following text would be expected to be handled as other Tokens by other production rules.
+Just for curiosity's sake, what do you think happens if you add the <PROTEIN> after the <SPICES>? You're right - it will run without complaint but will only print the initial ingredients. That is because once the <SPICES> had been consumed, the Soup production rule had completed itself and successfully filled in every blank in its Mad Libs recipe and control returned to the SoupTest program where it dumped the list of ingredients. 
 
+The Soup production rule was absolutely indifferent to anything following the <SPICES>. This is NOT a defect or a flaw but correct behavior. Grammars normally have multiple production rules and in something more realistic than our Soup grammar, the following text would be expected to be handled as other Tokens by other production rules, picking up where that production rule left off.
+
+So let's start changing this Soup grammar into more of a recipe parser by adding the amounts for each ingredient. Let's start by adding the following Token to the Soup.javacc:
+
+  TOKEN : < AMT : (<NBR>)+ >
+        | <#NBR: ["0" - "9"] > ;
+
+The private regular express, #NBR, can be any character from 0 to 9 inclusive. Then in the <AMT> Token, we define that the amount must be at least 1 numerical digit but as many more digits as needed. Depending on the recipe, we can specify from 1 to 9999999 or more of any ingredient. And then we add the <AMT> Token to each item, similar to the following:
+
+  Soup : <AMT> <LIQUID>
+        (<AMT> <PROTEIN>)?
+         <AMT> <VEGGIES>
+         <AMT> <HERBS>
+         <AMT> <SPICES> ;
+
+I put each ingredient on a separate line just to make it easier to read the list. Notice that the <AMT> Token has to go inside the parentheses around the optional <PROTEIN> ingredient so the <AMT> is only required if a <PROTEIN> is included.
+
+Now go back and update your recipe to precede every ingredient with an amount. Use any numbers that you like for the <AMT>s. Run jcc, cmp, and tst and verify that everything works as expected. But now each number is dumped on its own line between each ingredient. And if you delete the <PROTEIN> and its associated amount, it should work without complaint.
+
+But very few recipes use exactly even amounts so let's go back and update our <AMT> Token to handle decimal fractional amounts, such as .5 or .125. The <AMT> Token should look like the following:
+
+  TOKEN : < AMT : (<NBR>)+ ("." (<NBR>){1,3} )? >
+        | <#NBR: ["0" - "9"] > ;
+
+Just like before, the <AMT> definition begins an unlimited number of numerical digits. But now those digits are followed by an optional part that begins with "." and is followed by 1 to 3 digits that represent the fractional amount. If you enter a decimal point ("."), you must enter at least 1 number and not more than 3 numbers.
+
+So now go back and update your recipe to include some amounts that include fractional amounts. And be sure to leave at least one line without a fractional amount to verify that we haven't accidentally required every <AMT> to include a fractional amount. After running jcc, cmp, your tst results should look similar to the following:
+
+  Soup
+    1.125
+    water
+    2.5
+    chicken
+    50.50
+    spinach
+    1
+    garlic
+    300
+    salt
+
+Now to be useful, we need to include some kind of measurment unit, so we know if we're listing teaspoons or kilograms. So first we need to add another Token, the <UNIT> that defines what measurement unit to use with each ingredient. And to make it more interesting, we'll either metric units (grams, liters, etc.) or untis from the U.S. Customary System (USCS) such as cups, ounces, etc. So add to Soup.javacc the following Token:
+
+  TOKEN : <UNIT   : <METRIC> | <USCS> >
+        | <#METRIC: "gram" | "g" | "gm" | "kilogram" | "kilo" | "liter" | "ml" >
+        | <#USCS  : "tsp" | "tbsp" | "ounce" | "oz" | "pound" | "cup" | "pint" | "quart" >;
+
+And then we'll have to also update our Soup definition to include the <UNIT> Token similar to `<AMT> <UNIT> <LIQUID>` for each of the ingredients. When that's done, we have to update our recipe to use <UNIT>s. When that's all done, re-run jcc, cmp, and then tst your recipe. You should get a result similar to the following:
+
+  Soup
+    8.25
+    quart
+    water
+    2.5
+    pound
+    chicken
+    500
+    gram
+    carrot
+    4
+    tbsp
+    garlic
+    2
+    tsp
+    salt
+
+Here's a final look at our Soup grammar for this chapter:
+
+image::3soupjavaccScreenshot2.jpg[Our Grammar So Far]
+
+We've come a long way with our recipe Mad Libs framework. And hopefully all regular expressions that we used with our grammar are all starting to look familiar. A good exercise to test your knowledge of regular expressions would be to add the ability to accept amounts given as fractions, such as `1-1/2` or `3/4`. 
 
 
 
