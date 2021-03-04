@@ -31,6 +31,8 @@ We're going to keep things a little cleaner now using the build directory. Our g
 * The cmp (compile) alias compiles all of the java files in the build directory and puts all the resulting class files in the build directory. 
 * The tst (testing) alias sets the classpath to the build directory and then runs the SoupTest class file so all you have to do is add the command line arguments, such as `tst "broth chicken peas"` (be sure to add the quotation marks around your arguments).
 
+IMPORTANT: Sometimes the compile step will fail with errors about items not found or not used. Before going any further, clean the build directory by deleting all of the .java and the .class files. For example, `rm build/*.java` or `rm build/*.class`. Be sure to keep a copy of SoupTest.java separate from your build directory so you don't have to re-create it each time you clean your build directory.
+
 NOTE: _Windows users_ can create batch files that perform the same functions.
 
 So let's open nano and get cooking (groan: sorry, I couldn't help myself).
@@ -89,6 +91,8 @@ Unfortunately, we can now also enter any of the items multiple times, for exampl
 
 Which wouldn't make a very good soup. We'll improve on this grammar later in the section on Regular Expressions but for now this is good enough. For now, let's just explore Tokens a little more.
 
+==== Token Variations
+
 For example, you may have been wondering why all of the ingredient Tokens are lumped together under a single TOKEN section, and the answer is that they don't have to be. The general rule of thumb is to lump related Tokens together in one TOKEN section; that just makes good sense organizationally, to help us find items/Tokens more easily in the future. However, if you prefer to give every ingredient its own TOKEN section, as shown below, that works too.
 
     TOKEN : < LIQUID : "broth" | "water"  | "wine" > ;
@@ -104,5 +108,14 @@ While capitalization isn't essential for our Soup recipe, it is worth mentioning
     TOKEN [IGNORE_CASE] : < PROTEIN: "beef"  | "chicken"| "pork" > ;
 
 When you re-run JavaCC, re-compile, and then run the program, you'll find that "BEef" and "ChIcKeN" and "poRK" will all be accepted but using a capital letter in any of the other tokens will fail. Which could suggest a possible grouping strategy for your tokens; Tokens that you want to be case insensitive would be grouped together into a single TOKEN section with the [IGNORE_CASE] directive while all the other Tokens would be grouped with other similar tokens.
+
+==== Private Regular Expressions #
+One more kind of Token to mention is the Private Regular Expression, which is any Token whose name begins with a "#". These Tokens are used as meaningful "abbreviations" used in the definitions of other Tokens. For example, imagine your system uses 5 numbers for User IDs. Instead of entering <USER_ID : ["0"-"9"] ["0"-"9"] ["0"-"9"] ["0"-"9"] ["0"-"9"]>, you could create a private RegEx and then use that when defining other Tokens. For example:
+    TOKEN: <USER_ID: <NBR> <NBR> <NBR> <NBR> <NBR> >
+         | <#NBR: ["0"-"9"] > ;
+
+We'll cover ranges in the next section, but in this example the ["0"-"9"] means any single digit between 0 and 9 can be a <NBR>. 
+
+Another good use for private RegExs is to emphasize certain items that might otherwise be glossed over. For example, imagine in the above USER_ID, the fourth digit was in the range 0-5 instead of 0-9. It would be way too easy to miss this little detail buried way down in the Token's definition if you specified each range separately. However, if you made a private RegEx just for that digit, say LO_NBR, that digit would stand out from the others; e.g., <NBR> <NBR> <NBR> <LO_NBR> <NBR>.
 
 As useful as Tokens are, by themselves they are pretty much limited to just matching text strings exactly. It would quickly become overwhelming complex if we had to explicitly define all possible text combinations (for example: DRUM, Drum, drum, DRUMS, Drums, drums, DRUMMING, Drumming, drumming, etc).The true power of Tokens comes when you combine Tokens with Regular Expressions, as the next section will demonstrate.

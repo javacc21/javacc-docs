@@ -1,21 +1,109 @@
 :imagesdir: ./images
 === More About Regular Expressions
-First, let's start with an observation that RegEx are like standards. As Andrew Tanenbaum remarked, "The good thing about standards is that there are so many to choose from." In other words, be aware that the RegEx used in JavaCC won't necessarily be identical to the RegEx used in java.util.regex or in Perl or grep or any other of a dozen different regular expression processors.
+Remember Mad Libs, the fill-in-the-blanks word game? The game where you are asked to provide answers to hints, such as "Noun" or "Verb" or "Body Part" and the story is read outloud, using the answers that you gave to fill in the blanks in the story and general hilarity ensued. 
 
-==== Regular Expressions Already Viewed
+Regular expressions are like Mad Libs, but you're the one that decides where the blanks should be and what the hints (regular expression markers) should be. Then, when the input text is processed, the Lexer tries to use the hints that you provided to find matching text that it can convert into Tokens that it can give to the Parser. Pretty much the same game, just not as much laughter.
+
+==== Regular Expressions Already Used
 So far, we've used four different kinds of regular expressions:
 
 * "|" or the "Alternative" symbol. The stuff on one side of the vertical bar is a legitimate alternative to the stuff on the other side of the bar. In our Soup grammar, "beef" | "chicken" is a short (and unambiguous) way of stating that either beef or chicken are acceptable alternatives. Alternatives can be strung together an unlimited number of times, so "beef" | "chicken" | "pork" | "goat" | "rabbit" ... | <final alternative> would also allow any ONE of these alternatives to be selected.
-* "()" or the "Expression" markers. The parentheses identify the beginning and end of some arbitrary expression. Parentheses work similarly to the way they work in a math expression: the items contained within the parentheses form a single group or chunk that is processed together. For example, 3 * (4 + 5) will equal 27 and not 17 because the 4 + 5 are added together _before_ they are multiplied by 3. In the last chapter, we used ("b"|"B") to show that either "b" or "B" were legitimate alternatives for the first letter of the <BAR> token.
+* "()" or the "Expression" or "group" markers. The parentheses identify the beginning and end of some arbitrary expression. Parentheses work similarly to the way they work in a math expression: the items contained within the parentheses form a single group or chunk that is processed together. For example, 3 * (4 + 5) will equal 27 and not 17 because the 4 + 5 are added together _before_ they are multiplied by 3. In the last chapter, we used ("b"|"B") to show that either "b" or "B" were legitimate alternatives for the first letter of the <BAR> token.
 * "+" or the "One or More" operator. The + is a type of "repetition" operator that means that the item or expression it follows must occur at least once but can be repeated as many more times as desired. In the Soup example, (<ingredients list>)+ meant that we had to list at least one ingredient but could list as many more ingredient Tokens as desired. Several other repetition operators are available:
 ** "?" means "zero or one". The item or expression can occur once (and only once) or not at all. A common example would be the minus sign in front of a number; it only appears when you want to identify a negative number.
-** "* "  means "zero or more". The item or expression can be skipped or can be included and then repeated as many times as desired. In our Soup grammar, if we wanted to allow for vegatarian soup, we could specify that our meats were optional, as follows: (<PROTEIN>)*
+** "* "  means "zero or more". The item or expression can be skipped or can be included and then repeated as many times as desired. In our Soup grammar, if we wanted to allow for vegatarian soup, we could specify that our meats were optional, as follows: (<PROTEIN>)* which means that zero or more instances of <PROTEIN> was acceptable.
 * "[ ]" ranges can be defined inside the square brackets. In the BarBaz example, we specified that the final character of the <BAZ> token could be any alphabetic character as follows: ["a"-"z", "A"-"Z"]   Other examples of ranges include ["0"-"9"], ["a" - "f"] and ["Q" - "T"].
 
 ==== Introducing Other JavaCC Regular Expressions
 Believe it or not, we've already covered most of the Regular Expressions available in JavaCC. Here are the remaining Regular Expressions that we can use.
 
-* "[ , ]" character class are used for non-consecutive characters. For example, we could use ["1","3","5","7","9"] to define the acceptable characters for an <ODD> Token. In our BarBaz example, we could have used ["B","b"] ["A","a"] ["r","R"] to specify that <BAR> would match any combination of uppercase and lowercase letters that spelled bar.
-* "{n}" repetions, where the "n" specifies how many times the item or expression is to be repeated. For example, as a part of a Token definition for a URL, <URL:("W"){3} > would specify that exactly three capital W's ("WWW") must be read, no more, no less.
-* "{n,m}" min-max repetitions, where "n" is the minimum number of repetions (MUST be greater than 0) and "m" is the maximum number of repetions. In a Token definition for a quantity, you might specify <QTY: (["0"-"9"]){1,4}>, which would allow any QTY between 0 and 9999. Note that at least one digit must be entered to meet the minimum number of repetitions, but that value could be "0".
+* "[ , ]" character class is used for non-consecutive characters. For example, we could use ["1","3","5","7","9"] to define the acceptable characters for an <ODD> Token. 
+* "~[]" the negation operator normally precedes character classes that that contains characters that should NOT be matched. Instead of our <ODD< Token, we could have created a Token <NOT_EVEN> by specifying the even characters that aren't allowed, using  ~["0","2","4","6","8"]. 
+* "{n}" repetions, where the "n" specifies how many times the item or expression is to be repeated. For example, as a part of a Token definition for a URL, <URL:("W"){3}> would specify that exactly three capital W's ("WWW") must be read, no more, no less.
+* "{n,m}" min-max repetitions, where "n" is the minimum number of repetions (MUST be greater than 0) and "m" is the maximum number of repetions. For example, in a Token definition for a quantity, you might specify <QTY: (["0"-"9"]){1,4}>, which would allow any QTY between 0 and 9999. Note that at least one digit must be entered to meet the minimum number of repetitions, but that value could be "0".
+
+Other Regular Expression tools (grep, awk, etc) use additional punctuation marks and conventions to specify additional information or conversion rules. For example, grep uses "^" to specify that the RegEx must occur at the beginning of the line and "$" to specify that the RegEx must occur at the end of the line. 
+
+=== A RegEx Example from Java
+One of the first things we learn in Java are the rules to make an identifier:
+
+* Must begin with a letter (uppercase OR lowercase)
+* The rest of identifier can be an unlimited number of letters or numbers
+* The only allowable punctuation is the underscore character "_"
+
+What follows is an excerpt from a JavaCC grammar for parsing Java and it looks very similiar to what we've already done. The <IDENTIFIER> line very concisely defines the above rules; an identifier begins with a letter followed by an unlimited number of other characters. It is so short and clear because it uses two private regular expressions; #LETTER and #PART_LETTER.
+
+    TOKEN :
+        < IDENTIFIER: <LETTER> (<PART_LETTER>)* > 
+        |
+        < #LETTER:
+            [  // all chars for which Character.isIdentifierStart is true
+                 "$",
+                 "A"-"Z",
+                 "_",
+                 "a"-"z",
+                 "\u00a2"-"\u00a5",
+                . . . 
+                <264 lines of unicode values removed>
+            ]
+        >
+        |
+        < #PART_LETTER:
+            [  // all chars for which Character.isIdentifierPart is true
+                "$",
+                "0"-"9",
+                "A"-"Z",
+                "_",
+                "a"-"z",
+                "\u007f"-"\u009f",
+                . . .
+                <367 lines of unicode values removed>
+            ]
+        >
+
+===== First Letter
+
+As defined in the Java Language Specification, the first letter of an identifier can be any item from the following character class: ["$","A"-"Z","_","a"-"z" ... ] (reformatted here to look more familiar). Notice the dollar sign "$" in the #LETTER definition. Seems pretty weird, right. Here's the scoop: 
+
+* *Oracle Java documentation:* "The convention, however, is to always begin your variable names with a letter, not "$" or "_". Additionally, the dollar sign character, by convention, is never used at all." 
+* *Java Language Specification, Section 3.8* states that "$" and "_" are allowed for "historical reasons."
+* So go ahead and use the "$" if you have a good reason but remember that Oracle or others may decide that it may have outlived its historical value and your fancy name might stop working.
+
+===== Subsequent Characters
+The character class for the second and unlimited subsequent characters in an identifier includes the same characters as the first letter but with the additon of the number characters, "0" - "9", (reformatted here to look more familiar) ["$","0"-"9","A"-"Z","_","a"-"z" ... ]. Again, the "$" and the " _" are available but not recommended. However, when you are defining a constant in your Java program, the *convention* is to spell the constant with all capital letters and to separate any words using an underscore (" _"), such as NUM_DIGITS. Sorry, dollar sign, you're still not recommended.
+
+===== Unicode Characters (\uXXXX)
+We should take a moment here to discuss the formatting of the text that you'll be parsing.
+
+Up to 95% of the World Wide Web uses UTF-8, or one 8-bit byte to represent the first 128 Unicode code points (0-127) and up to 4 bytes total to specify other characters. However, the primative char data type in Java is an unsigned 16-bit integer (2 bytes), or the code points in UTF-16. The Java standard language tools handle most of these differences automatically for you so you don't have to worry if the text that you copied from a web page is UTF-8 or UTF-16. Java will give you access to all of the non-null ASCII characters (7 bits of data in the byte, range 1 - 127) without need for special coding or configuration.
+
+However, if you do need to represent binary zero (null) or values greater than 127 (non-Latin alphabets, etc) in Java, you have to use the Unicode escape ("\u") followed by 4 hexidecimal digits; for example, "\u007f" (DEL) or "\u1271" (ቱ Ethiopic Syllable Tu). The range from \u0000 to \uFFFF provides access to a maximum of 65,535 unique characters, also known as the Basic Multilingual Plane (BMP).
+
+NOTE: Not every code point has been assigned a displayable character. For example, \u16A0 to \u16ff has been reserved for Runic characters. However,\u16f9 to \u16ff have not (yet) been assigned displayable characters in the Runic alphabet. No doubt others will be added as they are discovered.
+
+If your code point (char) isn't included in UTF-16, it is almost certainly included in UTF-32, which has designated a code point for every written character from almost all written languages, both modern and historic. I suspect that if you need to parse something that uses Big5_HKSCS (Traditional Chinese with Hong Kong extensions) or Nyiakeng Puachue Hmong (White or Green Hmong), or Old Sogdian (ancient Uzbekistan area, from 100 - 1200 C.E.), etc, you should probably allocate some extra time ensuring that these are characters will be properly handled.
+
+====
+*Tangent:* For all you Star Trek fans, Klingon is not currently included in Unicode due to "lack of real-world use." However, it is listed in the ConScript Unicode Registry with a "Private Use Area" code assignment, so, Fingers Crossed! Keep sending all your emails and business texts in Klingon and maybe someday it will be officially recognized.
+====
+
+And if you really want to know about Unicode characters, a random walk thru the link:https://unicode-table.com/en/[Unicode Character Table] should be enough to satisify even the most curious among you. And if you happen to need that special character, like a Latin Capital Letter a with Breve and Tilde, you can search that site as well.
+
+=== Another Java Example
+Java provides for single-line comments that begin with "//" and end at the end of the current line. One way to code the regular expression is:
+
+    <ONE_LINE_COMMENT : "//" (~["\n", "\r"])* ("\r" | "\n" | "\r\n") >. 
+
+When the Lexer reaches "//" it begins to accept an unlimited number of any characters *except* a newline character or a return character. As soon as either of those characters are found, processing continues with the next expression that consumes a newline or a return or the combination of return+newline, fulfilling the ONE_LINE_COMMENT Token.
+
+A special case exists if the text you are reading ends with a single-line comment without a return or newline. If that is possible, the regular expression can be updated as follows:
+
+    <ONE_LINE_COMMENT : "//" (~["\n", "\r"])* ("\r" | "\n" | "\r\n")*?* > 
+    
+Adding the "?" says that the second part is optional and the <EOF> shouldn't throw an exception. Which means that the Lexer won't thrown an exception because you had a single-line comment on the last line of your file but didn't end the line with a newline. One less thing to worry about.
+
+Comments, both one-line and multi-line, will be covered in more detail later when we discuss Lexical States.
+
+=== Saving MORE and SPECIAL_TOKEN for Later
+Two items that are half-way between Tokens and Regular Expressions are MORE and SPECIAL_TOKEN. These items will be covered in a later chapter in this Tutorial. Not to spoil the surprise, but MORE and SPECIAL_TOKEN both are associated with the next Token in the stream. We'll cover them in detail later.
 

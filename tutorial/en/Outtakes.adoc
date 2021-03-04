@@ -33,3 +33,14 @@ Can also do:
 TOKEN [IGNORE_CASE]: blah blah blah
 
 to make just one token case insensitive but it may have some issues to make sure it only applies to just one token
+
+
+- - -
+And take a look at the acceptable values for the rest of the characters of an identifier (#PART_LETTER); it begins with ["\u0000"-"\u0008", "\u000e"-"\u001b", "$", . . . . . ]. 
+
+====
+TANGENT: 
+Those are the ASCII control characters that I was always taught to never use because of the potential grief that these characters could cause - for example, ASCII 08 is the backspace character so there's no telling how your device will respond when it's told to backspace in the middle of an identifier. And ASCII 7f (127) is the Delete key value!! Does it print itself and then delete itself?
+
+And wasn't the Base64 encoding developed to specifically to handle binary values, such as control characters, safely on the internet and prevent undesired side effects? Call me old fashioned, but I'd avoid control characters inside identifiers unless I had a really good reason for using them, even if it was legal. OK, lots of smarter people than me made this decision but I'd love to hear the logic for allowing these characters.
+====

@@ -1,0 +1,53 @@
+:imagesdir: ./images
+=== And Now, Back to Our Soup
+When last spotted, our soup grammar was little more than a list of ingredients. To be useful, a recipe needs to include the amounts of each ingredient. And to be really useful, it needs to be written down so we don't have to keep retyping the recipe at the command line.
+
+So let's tackle the second item first; let's add the ability to read our recipe from a file. Create a new file in the build directory and name it something memorable, like soup1.recipe and put one item from each ingredient catagory in it, one per line, similar to the following:
+
+    broth
+      chicken
+    carrot
+  onion
+    salt
+
+Notice that the ingredients aren't lined up. I did that just to point out that variable amounts of whitespace (spaces, tabs, etc) will all be skipped in our recipe. 
+
+And now to make the test program read the recipe file, make the following changes:
+
+image::3souptestScreenshot2.jpg[Updated Testfile]
+
+Instead of reading the ingredients from String args[0], we're reading the name of the recipe file from args[0]. The new program uses the String in args[0] as the filename to make an instance of FileReader and then uses the FileReader to make an instance of BufferedReader (grabs a buffers-worth of the file at a time for better efficiency) and thens use the BufferedReader to create an instance of the SoupParser. Then, just like before, the parser executes it main rule, Soup, and then dumps the tree of ingredients to the console.
+
+The other change we need to make is to update SKIP: in our soup grammar to recognize newlines and tabs, as follows:
+
+    SKIP  : " " | "\n" | "\r" | "\t";
+
+Run jcc, cmp, and tst and fix any problems. It should work just like before and dump the recipe like before:
+
+  Soup
+    broth
+    chicken
+    carrot
+    onion
+    salt
+
+Now is a good time to mess around with the recipe and verify that it's back to its original state, where each ingredient has to be listed in the correct order and spelled correctly (cannot use carrots, plural). And note that you can modify the recipe without running Javacc or javac again. The parser that we built using JavaCC is like the Mad Libs story and the recipe that we gave it are the answers to fill in the blanks in the story.
+
+Time to make vegetarian soup. Put parentheses around <PROTEIN> followed by a "?" to show that zero or one item of <PROTEIN> can be included in the soup, as follows:
+
+  Soup : <LIQUID> (<PROTEIN>)? <VEGGIES> <HERBS> <SPICES> ;
+
+Run jcc and cmp and then remove your <PROTEIN> from the recipe. Now when you run tst, it should work just fine, but with one less item in the ingredients list.
+
+Just for curiosity's sake, what happens if you add the <PROTEIN> after the <SPICES>? You're right - it will run without complaint but will only print the initial ingredients. That is because once the <SPICES> had been consumed, the Soup production rule had completed itself and successfully filled in every blank in its Mad Libs recipe and control returned to the SoupTest program where it dumped the list of ingredients. The Soup production rule was absolutely indifferent to anything following the <SPICES>. This is NOT a defect or a flaw but correct behavior. Grammars normally have multiple production rules and in something more realistic than our Soup grammar, the following text would be expected to be handled as other Tokens by other production rules.
+
+
+
+
+
+
+
+=== Final Thoughts on Regular Expressions
+Andrew Tanenbaum is noted for many contributions to computer science, but he is also remembered for his observation, "The good thing about standards is that there are so many to choose from." In other words, the standard RegEx used in JavaCC won't necessarily be identical to the standard RegEx used in java.util.regex or the standard RegEx in Perl or the standard RegEx used in grep or any other of a hundred different regular expression processors.
+
+Fortunately, you don't need to know any of the others to know how to use JavaCC regular expressions. Even better, knowing how JavaCC regex works will make learning other dialects of regular expressions easier.
