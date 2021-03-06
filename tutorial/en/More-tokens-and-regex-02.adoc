@@ -61,7 +61,7 @@ What follows is an excerpt from a JavaCC grammar for parsing Java and it looks v
             ]
         >
 
-===== First Letter
+==== First Letter
 
 As defined in the Java Language Specification, the first letter of an identifier can be any item from the following character class: ["$","A"-"Z","_","a"-"z" ... ] (reformatted here to look more familiar). Notice the dollar sign "$" in the #LETTER definition. Seems pretty weird, right. Here's the scoop: 
 
@@ -69,10 +69,10 @@ As defined in the Java Language Specification, the first letter of an identifier
 * *Java Language Specification, Section 3.8* states that "$" and "_" are allowed for "historical reasons."
 * So go ahead and use the "$" if you have a good reason but remember that Oracle or others may decide that it may have outlived its historical value and your fancy name might stop working.
 
-===== Subsequent Characters
+==== Subsequent Characters
 The character class for the second and unlimited subsequent characters in an identifier includes the same characters as the first letter but with the additon of the number characters, "0" - "9", (reformatted here to look more familiar) ["$","0"-"9","A"-"Z","_","a"-"z" ... ]. Again, the "$" and the " _" are available but not recommended. However, when you are defining a constant in your Java program, the *convention* is to spell the constant with all capital letters and to separate any words using an underscore (" _"), such as NUM_DIGITS. Sorry, dollar sign, you're still not recommended.
 
-===== Unicode Characters (\uXXXX)
+==== Unicode Characters (\uXXXX)
 We should take a moment here to discuss the formatting of the text that you'll be parsing.
 
 Up to 95% of the World Wide Web uses UTF-8, or one 8-bit byte to represent the first 128 Unicode code points (0-127) and up to 4 bytes total to specify other characters. However, the primative char data type in Java is an unsigned 16-bit integer (2 bytes), or the code points in UTF-16. The Java standard language tools handle most of these differences automatically for you so you don't have to worry if the text that you copied from a web page is UTF-8 or UTF-16. Java will give you access to all of the non-null ASCII characters (7 bits of data in the byte, range 1 - 127) without need for special coding or configuration.

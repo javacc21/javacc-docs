@@ -1,7 +1,7 @@
 = 21st Century JavaCC:: A Tutorial Using JavaCC 21
 Nelson Chamberlain and Jonathan Revusky
 :revremark: Initial Draft
-:revdate: February 16, 2021
+:revdate: March 6, 2021
 :doctype: book
 :encoding: utf-8
 :lang: en
@@ -9,6 +9,7 @@ Nelson Chamberlain and Jonathan Revusky
 :toc: left
 :toclevels: 2
 :numbered:
+:front-cover-image: image:coverTree.png[width=1050,height=1600]
 :imagesdir: ./images
 :iconsdir: ./icons
 //:stylesdir: ./styles
@@ -29,3 +30,5 @@ include::more-tokens-and-regex-01.adoc[]
 include::more-tokens-and-regex-02.adoc[]
 
 include::more-tokens-and-regex-03.adoc[]
+
+include::ProductionRules-01.adoc[]

@@ -110,14 +110,13 @@ Here's a final look at our Soup grammar for this chapter:
 
 image::3soupjavaccScreenshot2.jpg[Our Grammar So Far]
 
-We've come a long way with our recipe Mad Libs framework. And hopefully all regular expressions that we used with our grammar are all starting to look familiar. A good exercise to test your knowledge of regular expressions would be to add the ability to accept amounts given as fractions, such as `1-1/2` or `3/4`. 
+We've come a long way with our recipe Mad Libs framework. And hopefully the regular expressions that we used with our grammar are all starting to look familiar. At this point you should be able to look at any line of the Soup grammar and dissect its meaning. 
 
-
-
-
-
+NOTE: A good exercise to test your knowledge of regular expressions would be to add the ability to accept amounts given as fractions, such as `1-1/2` or `3/4`. Someone entering recipe ingredients should be able to enter either as decimal numbers or as fractional numbers. Relax, they have to use one format or the other for any one ingredient but not both on the same ingredients (for example, 1.5-3/4 would NOT be allowed).
 
 === Final Thoughts on Regular Expressions
 Andrew Tanenbaum is noted for many contributions to computer science, but he is also remembered for his observation, "The good thing about standards is that there are so many to choose from." In other words, the standard RegEx used in JavaCC won't necessarily be identical to the standard RegEx used in java.util.regex or the standard RegEx in Perl or the standard RegEx used in grep or any other of a hundred different regular expression processors.
 
-Fortunately, you don't need to know any of the others to know how to use JavaCC regular expressions. Even better, knowing how JavaCC regex works will make learning other dialects of regular expressions easier.
+Fortunately, you don't need to know any of the others regex dialects to know how to use JavaCC regular expressions. If you learn how JavaCC regex works, it will make learning other dialects of regular expressions easier. But we leave learning these other dialects to fit your needs. 
+
+And, because this is a tutorial document, we will also leave more detailed investigations of JavaCC tokens & regex to meet your needs. Instead, we will move onto the next chapter which will cover how production rules use the Tokens that have been parsed from the input text.
