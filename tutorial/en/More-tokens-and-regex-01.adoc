@@ -29,7 +29,7 @@ We're going to keep things a little cleaner now using the build directory. Our g
 
 * The first alias, jcc (run JavaCC), should look familiar but we have added the -d directive so all of the generated java files will get put into the build directory. Just follow the alias with the name of the grammer file and it should run.
 * The cmp (compile) alias compiles all of the java files in the build directory and puts all the resulting class files in the build directory. 
-* The tst (testing) alias sets the classpath to the build directory and then runs the SoupTest class file so all you have to do is add the command line arguments, such as `tst "broth chicken peas"` (be sure to add the quotation marks around your arguments).
+* The tst (testing) alias sets the classpath to the build directory and then runs the SoupTest class file so all you have to do is add the command line arguments, such as `tst "broth chicken carrot onion salt"` (be sure to add the quotation marks around your arguments).
 
 IMPORTANT: Sometimes the compile step will fail with errors about items not found or not used. Before going any further, clean the build directory by deleting all of the .java and the .class files. For example, `rm build/*.java` or `rm build/*.class`. Be sure to keep a copy of SoupTest.java separate from your build directory so you don't have to re-create it each time you clean your build directory.
 
@@ -91,31 +91,58 @@ Unfortunately, we can now also enter any of the items multiple times, for exampl
 
 Which wouldn't make a very good soup. We'll improve on this grammar later in the section on Regular Expressions but for now this is good enough. For now, let's just explore Tokens a little more.
 
-==== Token Variations
+==== Token Grouping
 
 For example, you may have been wondering why all of the ingredient Tokens are lumped together under a single TOKEN section, and the answer is that they don't have to be. The general rule of thumb is to lump related Tokens together in one TOKEN section; that just makes good sense organizationally, to help us find items/Tokens more easily in the future. However, if you prefer to give every ingredient its own TOKEN section, as shown below, that works too.
 
     TOKEN : < LIQUID : "broth" | "water"  | "wine" > ;
     TOKEN : < PROTEIN: "beef"  | "chicken"| "pork" > ;
     TOKEN : < VEGGIES: "carrot"| "potato" | "spinach" | "tomatoes" >;
-    TOKEN : < HERBS  : "onion" | "garlic" | "parsley" | "basil" > ;
-    TOKEN : < SPICES : "salt"  | "pepper" | "parsley" | "sage" >;
+    TOKEN : < HERBS  : "onion" | "garlic" | "oregeno" | "basil" > ;
+    TOKEN : < SPICES : "salt"  | "pepper" | "cumin" | "tumeric" >;
 
 If you compare the SoupConstants.java file that is generated when each Token has its own TOKEN section with the SoupConstants.java file that is generated with the ingredients lumped together, they will be identical. And when you re-compile and run the program, it works exactly as it did before. Just make sure that each TOKEN section terminates with a semi-colon ";".
 
+==== Capitalization
 While capitalization isn't essential for our Soup recipe, it is worth mentioning that the [IGNORE_CASE] directive can be applied to each TOKEN section that you wish to be case insensitive. For example, if you wanted to allow uppercase and lowercase letters for one or more Tokens, you could add [IGNORE_CASE] to the appropriate TOKEN as follows:
 
-    TOKEN [IGNORE_CASE] : < PROTEIN: "beef"  | "chicken"| "pork" > ;
+    TOKEN [IGNORE_CASE] : < PROTEIN: "beef" | "chicken" | "pork" > ;
 
 When you re-run JavaCC, re-compile, and then run the program, you'll find that "BEef" and "ChIcKeN" and "poRK" will all be accepted but using a capital letter in any of the other tokens will fail. Which could suggest a possible grouping strategy for your tokens; Tokens that you want to be case insensitive would be grouped together into a single TOKEN section with the [IGNORE_CASE] directive while all the other Tokens would be grouped with other similar tokens.
 
-==== Private Regular Expressions #
-One more kind of Token to mention is the Private Regular Expression, which is any Token whose name begins with a "#". These Tokens are used as meaningful "abbreviations" used in the definitions of other Tokens. For example, imagine your system uses 5 numbers for User IDs. Instead of entering <USER_ID : ["0"-"9"] ["0"-"9"] ["0"-"9"] ["0"-"9"] ["0"-"9"]>, you could create a private RegEx and then use that when defining other Tokens. For example:
-    TOKEN: <USER_ID: <NBR> <NBR> <NBR> <NBR> <NBR> >
-         | <#NBR: ["0"-"9"] > ;
+==== Private Token Definitions #
+One more kind of Token to mention is the Private Token Definition, which is any Token whose name begins with a "#". These Tokens are used as meaningful "abbreviations" used in the definitions of other Tokens. For example, if you wanted to include more cuts of meat but don't want to overwhelm the <PROTEIN> line with all of the possibilities, you could do something like the following:
 
-We'll cover ranges in the next section, but in this example the ["0"-"9"] means any single digit between 0 and 9 can be a <NBR>. 
+      | < PROTEIN: <BEEF>  | "chicken"| "pork" >
+      | <#BEEF : "sirloin" | "flank" | "chuck" | "ground beef">
 
-Another good use for private RegExs is to emphasize certain items that might otherwise be glossed over. For example, imagine in the above USER_ID, the fourth digit was in the range 0-5 instead of 0-9. It would be way too easy to miss this little detail buried way down in the Token's definition if you specified each range separately. However, if you made a private RegEx just for that digit, say LO_NBR, that digit would stand out from the others; e.g., <NBR> <NBR> <NBR> <LO_NBR> <NBR>.
+In the <PROTEIN> Token definition, we include the <BEEF> Token and then later define the private <#BEEF> Token that defines four different cuts of beef, including one that has a space internally. Now when you list a <PROTEIN> ingredient, you can use any one of the four choices for beef.
+
+Another good use for private Tokens is to provide a symbolic name for commonly used values or ranges of values. Instead of having to cut and paste the values or ranges of values into every Token where they are used, the more meaningful symbolic name can be used instead. This can be especially useful if a long complicated Token definition is used in several places and a slightly different definition is used in another place, using a different private Token _with *different* descriptive name_ can make it easier to spot the differences.
+
+==== Lexical Actions
+When the Lexer matches a Token, you may want it to do something special, such as count the number of times the Token has been matched or log its usage. In these cases, lexical actions may be just what you need. Generally, lexical actions are simple and short bits of Java code that are executed. For example, if we wanted announce each Token that was found, we could add {System.out.println("Found a LIQUID token";} following the closing ">" of the Token definition and before the next Token's definintion. 
+
+The following screenshot shows what this would look like. Each Token definition is followed by a Java statement on a separate line that prints out a message about the type of Token that was found. Be sure that you include the semi-colon at the end of the statement and that it is enclosed with curly braces.
+
+image::3SoupjavaccScreenshot1LA.jpg[Soup.javacc with Lexical Actions]
+
+After saving these changes, running JavaCC and javac, re-run the test program and you should get output similar to the following:
+
+  Found a LIQUID Token
+  Found a PROTEIN Token
+  Found a VEGGIES Token
+  Found a HERBS Token
+  Found a SPICES Token
+  Soup
+    broth
+    beef
+    carrot
+    onion
+    salt
+
+IMPORTANT: Each lexical action was performed as soon as each Token (the current token) was matched, so they were all performed before the dump of the ingredients was performed.
+
+Lexical actions can be used for minor fix-ups, such as capitalization changes to the current token or logging certain events, etc. Larger blocks of actions will be covered in the chapter on Production Rules.
 
 As useful as Tokens are, by themselves they are pretty much limited to just matching text strings exactly. It would quickly become overwhelming complex if we had to explicitly define all possible text combinations (for example: DRUM, Drum, drum, DRUMS, Drums, drums, DRUMMING, Drumming, drumming, etc).The true power of Tokens comes when you combine Tokens with Regular Expressions, as the next section will demonstrate.

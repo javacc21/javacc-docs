@@ -33,13 +33,13 @@ Run jcc, cmp, and tst and fix any problems. It should work just like before and 
 
 Now is a good time to mess around with the recipe and verify that it's back to its original state, where each ingredient has to be listed in the correct order and spelled correctly (cannot use carrots, plural). And note that you can modify the recipe without running Javacc or javac again. The parser that we built using JavaCC is like the Mad Libs story and the recipe that we gave it are the answers to fill in the blanks in the story.
 
-Time to make vegetarian soup. Put parentheses around <PROTEIN> followed by a "?" to show that zero or one item of <PROTEIN> can be included in the soup, as follows:
+Time to make a vegetarian soup by making the <PROTEIN> optional. Put parentheses around <PROTEIN> followed by a "?" to show that zero or one item of <PROTEIN> can be included in the soup, as follows:
 
   Soup : <LIQUID> (<PROTEIN>)? <VEGGIES> <HERBS> <SPICES> ;
 
 Run jcc and cmp and then remove your <PROTEIN> from the recipe. Now when you run tst, it should work just fine, but with one less item in the ingredients list.
 
-Just for curiosity's sake, what do you think happens if you add the <PROTEIN> after the <SPICES>? You're right - it will run without complaint but will only print the initial ingredients. That is because once the <SPICES> had been consumed, the Soup production rule had completed itself and successfully filled in every blank in its Mad Libs recipe and control returned to the SoupTest program where it dumped the list of ingredients. 
+Just for curiosity's sake, what do you think happens if you add the <PROTEIN> after the <SPICES>? You're right - it will run without complaint but will only print the ingredients up to and including the <SPICES>. That is because once the <SPICES> had been consumed, the Soup production rule had completed itself and successfully filled in every blank in its Mad Libs recipe and control returned to the SoupTest program where it then dumps the list of ingredients. 
 
 The Soup production rule was absolutely indifferent to anything following the <SPICES>. This is NOT a defect or a flaw but correct behavior. Grammars normally have multiple production rules and in something more realistic than our Soup grammar, the following text would be expected to be handled as other Tokens by other production rules, picking up where that production rule left off.
 
