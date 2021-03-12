@@ -32,6 +32,9 @@ Next comes a group, surrounded by parentheses, that must begin with a colon (":"
 The semi-colon at the end of the line marks the end of the production/rule, the same way that a semi-colon marks the end of a legal Java statement.
 
 ===== Streamlining in 21st Century JavaCC
+
+// I'm not 100% sure but it could be better to relegate this kind of information to an appendix. A funny thing about making people write Foo() instead of just Foo is that they are copying Java syntax, where this is necessary, because obviously, Foo alone is a variable and Foo() with the parentheses is a method. But in the JavaCC language, there is no similar distiction! Also, the need for a return value to be specified from a method relates to the fact that if there is no return value, it is a constructor. But again, JavaCC has no constructors either, so.... I mean, it's an example of when people do things in a rather thoughtless manner. They copy the syntax and don't think about the fact that the () is necessary in Java itself, but there is no need for it in JavaCC. 
+
 NOTE: This section is meant primarily for _Legacy users_ and may be of interest to _Parser users_. Novices are welcome to skip this section, unless they want to learn how much extra typing they are avoiding.
 
 Production/rules must specify their return type before their name, such as `String MyProduction`. However, since most production/rules return `void`, it seems unnecessarily explicit and wordy to call out something that usually isn't used, especially since JavaCC can easily figure out that the return type is void.

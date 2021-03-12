@@ -65,9 +65,15 @@ What follows is an excerpt from a JavaCC grammar for parsing Java and it looks v
 
 As defined in the Java Language Specification, the first letter of an identifier can be any item from the following character class: ["$","A"-"Z","_","a"-"z" ... ] (reformatted here to look more familiar). Notice the dollar sign "$" in the #LETTER definition. Seems pretty weird, right. Here's the scoop: 
 
-* *Oracle Java documentation:* "The convention, however, is to always begin your variable names with a letter, not "$" or "_". Additionally, the dollar sign character, by convention, is never used at all." 
+* *Oracle Java documentation:* "The convention, however, is to always begin your variable names with a letter, not "$" or "_". Additionally, the dollar sign character, by convention, is never used at all."
+
+// Actually, I was under the impression that '$' in identifiers was typical of generated code, and in fact, I tend to use it in generated code because I figure that the likelihood of stomping on anybodyś variables is pretty minimal.
+
 * *Java Language Specification, Section 3.8* states that "$" and "_" are allowed for "historical reasons."
 * So go ahead and use the "$" if you have a good reason but remember that Oracle or others may decide that it may have outlived its historical value and your fancy name might stop working.
+
+// Frankly, I would tend to think that the objective risk of this is quite low!
+
 
 ==== Subsequent Characters
 The character class for the second and unlimited subsequent characters in an identifier includes the same characters as the first letter but with the additon of the number characters, "0" - "9", (reformatted here to look more familiar) ["$","0"-"9","A"-"Z","_","a"-"z" ... ]. Again, the "$" and the " _" are available but not recommended. However, when you are defining a constant in your Java program, the *convention* is to spell the constant with all capital letters and to separate any words using an underscore (" _"), such as NUM_DIGITS. Sorry, dollar sign, you're still not recommended.
@@ -79,7 +85,19 @@ Up to 95% of the World Wide Web uses UTF-8, or one 8-bit byte to represent the f
 
 However, if you do need to represent binary zero (null) or values greater than 127 (non-Latin alphabets, etc) in Java, you have to use the Unicode escape ("\u") followed by 4 hexidecimal digits; for example, "\u007f" (DEL) or "\u1271" (ቱ Ethiopic Syllable Tu). The range from \u0000 to \uFFFF provides access to a maximum of 65,535 unique characters, also known as the Basic Multilingual Plane (BMP).
 
+// The above is slightly mistaken (not that it really matters very much.) The truth of the matter is that there are somewhat less than 65,535 unique characters in the basic multilingual plane because certain character ranges are reserved. In particular, there is this thing that are the two (high and low) surrogate ranges. The high surrogate range is from 0xD800-0xDBFF and the high surrogate range is from 0xDC00-0xDFFF. So, internally, the characters beyond the BMP are stored as a "surrogate pair", one character from the high surrogate range followed by another one from the low surrogate range. All that shit can be found here: https://docs.oracle.com/en/java/javase/15/docs/api/java.base/java/lang/Character.html and actually, the key methods are documented here: https://docs.oracle.com/en/java/javase/15/docs/api/java.base/java/lang/Character.html#isHighSurrogate(char)
+
+// Well, to be honest, I didn't really know about this stuff until very recently. The way you escape an extended unicode character with the \u is just putting in the high surrogate followed by the low surrogate, so it's something like \uD9CD\uDC12. 
+
+// Truth told, this high-low surrogate pair terminology sounds like something from kinky sex or something, and hey, that would grab just about any reader's attention, but unfortunately... thus, there is probably no reason to mention it, especially at this precise moment, when I still don't have this working. The assumption that a character is 2 bytes is so hard-coded everywhere in the lexer/scanner part that it practically requires a total rewrite to have this stuff work -- which is maybe all for the better, since it needs a rewrite. In fact, all this stuff is the last major part of the legacy codebase that is not totally rewritten. 
+
 NOTE: Not every code point has been assigned a displayable character. For example, \u16A0 to \u16ff has been reserved for Runic characters. However,\u16f9 to \u16ff have not (yet) been assigned displayable characters in the Runic alphabet. No doubt others will be added as they are discovered.
+
+// The above, I did not know. I would tend to relegate this information to an appendix, and actually, since I don't currently have extended characters (beyond BMP) working yet, I am loath to even mention it at all! Until, I have it working (probably in a few weeks at most) and then, of course, I would want to shout it from the rooftops.
+
+// Oh, by the way, ANTLR supports full unicode now, but I noticed that it is quite recently, like maybe 2017 or so. It is a totally safe bet that legacy JavaCC will never support full unicode, because it's just too difficult to refactor the code. Even if it were much easier, they would never do the work either, but since it is so hard...
+
+// Also, truth told, there are not so many useful characters beyond the BMP. My honest sense is that any Chinese character not in the BMP is bound to be something very very specialized or totally archaic. Iguess my interest in getting this working is to be able to say that the thing does support the full up-to-date spec. I feel that we should go the extra nine yards... 
 
 If your code point (char) isn't included in UTF-16, it is almost certainly included in UTF-32, which has designated a code point for every written character from almost all written languages, both modern and historic. I suspect that if you need to parse something that uses Big5_HKSCS (Traditional Chinese with Hong Kong extensions) or Nyiakeng Puachue Hmong (White or Green Hmong), or Old Sogdian (ancient Uzbekistan area, from 100 - 1200 C.E.), etc, you should probably allocate some extra time ensuring that these are characters will be properly handled.
 

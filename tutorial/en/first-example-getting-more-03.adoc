@@ -12,7 +12,19 @@ So far, we have gotten a lot of insight into the functioning of JavaCC by examin
 
 In this next section we're going to watch the generated code in action to better understand how these parts work together. We're going to do that by setting a few options at the top of our code.
 
+// I would say that it would probably be better to move towards using an INJECT for the main() method once you're past the first example. Then you have something that is totally self-contained. For the very first Hello, World sort of thing, I think it makes sense to create a separate FirstTest.java that contains the main, but then once you get past that, it seems beter to just have:
+
+    INJECT PARSER_CLASS : {
+        static public void main(String[] args) {
+            ...
+        }
+    }
+
+right in the First.javacc file.    
+
 ==== The DEBUG_LEXER Option
+
+// I have to make the comment that I'm a bit nervous about documenting these old DEBUG_LEXER and DEBUG_PARSER things because I am not so happy with how they work, so they are liable to be redone completely at some later point. You should bear that in mind in terms of whether to devote too much detailed discussion of these things. Not that this is so terrible as things stand, it's more just that it's material that may well need to be rewritten later.
 
 At a command line, open our grammar with `nano First.javacc`. And then at the top of the file, insert the Lexical debug option as shown in the screenshot below:
 
