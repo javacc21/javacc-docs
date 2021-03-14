@@ -116,6 +116,10 @@ One more kind of Token to mention is the Private Token Definition, which is any 
       | < PROTEIN: <BEEF>  | "chicken"| "pork" >
       | <#BEEF : "sirloin" | "flank" | "chuck" | "ground beef">
 
+
+// Yeah, a "private" token definition is really a kind of alias or macro to be used
+// elsewhere. I do think that, when I've got this part of the code in a tractable state, there are bound to be some interesting (and useful) things to be done on this front. I think that having a bunch of predefine aliases, such as #JAVA_IDENTIFIER_PART that you can just use and are defined in the .jar file somewhere. In general, the Unicode consortium has all these various "character classes" that represent different punctuation and mathematical symbols and so on and so forth. So just being able to alias these things looks attractive. By the way, I was looking at https://jflex.de/ and they've done a lot of these sorts of things. Well, really, the lexical/scanning side of JavaCC is very primitive and also quite obsolete, given that it doesn't support the full Unicode spec.
+
 In the <PROTEIN> Token definition, we include the <BEEF> Token and then later define the private <#BEEF> Token that defines four different cuts of beef, including one that has a space internally. Now when you list a <PROTEIN> ingredient, you can use any one of the four choices for beef.
 
 Another good use for private Tokens is to provide a symbolic name for commonly used values or ranges of values. Instead of having to cut and paste the values or ranges of values into every Token where they are used, the more meaningful symbolic name can be used instead. This can be especially useful if a long complicated Token definition is used in several places and a slightly different definition is used in another place, using a different private Token _with *different* descriptive name_ can make it easier to spot the differences.
