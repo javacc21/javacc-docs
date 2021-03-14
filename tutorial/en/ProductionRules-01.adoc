@@ -1,3 +1,102 @@
 :imagesdir: ./images
 == Production Rules
-As promised at the end of last chapter, we'll be looking at how to use production rules to produce more advanced  results from the text that was parsed. Just like regular expressions enhanced our ability to specify and recognize Tokens, production rules enhance what can be done with the Tokens once they've been recognized and tokenized.
+As promised at the end of last chapter, we'll be looking at how to use production rules to produce more advanced  results from the text that was parsed. Just like regular expressions enhanced our use of Tokens, production rules enhance what can be done with RegEx/Tokens once they've been matched and tokenized.
+
+NOTE: Production Rules can also be referred to as Productions or as Rules. For the rest of this chapter, we'll be using the term Rules to mean the same thing Production Rules.
+
+Let's start by mentioning that we've been using rules since the very beginning. In the first example, the rule was named "Foo" and in our soup example, the rule was named "Soup". In the test programs, we created an instance of our parser and then had it execute parser.Foo() or parser.Soup(). And because these were the only rules that we'd created, they were the only rules that we could execute.
+
+=== Chapter Setup
+Let's make a new directory for our next grammars:
+
+    % mkdir third
+    % cd third
+    % mkdir build
+
+And let's update and add to our aliases as follows:
+
+    % alias jcc='java -jar <path to>javacc-full.jar -d build rules.javacc'
+    % alias cmp='javac build/*.javac'
+    % alias tst='java -cp build RulesTest'
+
+We're going to start with some rule experiments so we'll name our grammar rules.javacc and our test progarm RulesTest.java. Once we get more familiar with rules, we'll go back to our soup. For now, we'll leave it on the back burner to cool (sorry).
+
+=== First Experiment with Rules
+Our first grammar, rules.javacc, is very simple, with just one private Token, three regular Tokens and four rules. Each of the regular Tokens includes a Lexical Action to show when they are matched. In the RootRule, instead of specifying Tokens, we included calls to other rules that specify the Tokens to match. Each rule also includes an action, enclosed in curly braces, which prints out the name of the rule that was run.
+
+DEBUG_LEXER = false;
+DEBUG_PARSER= false;
+
+SKIP  : " " | "\t" | "\n" | "\r";
+
+TOKEN : < TWO_DIGIT : (<DIGIT>){2} > {System.out.println("TWO_DIGIT found");}
+|      < THREE_DIGIT: (<DIGIT>){3} > {System.out.println("THREE_DIGIT found");}
+|      < FOUR_DIGIT : (<DIGIT>){4} > {System.out.println("FOUR_DIGIT found");}
+;
+
+TOKEN : < #DIGIT    : ["0" - "9"] > ;
+
+void RootRule() : (Rule2Nbrs | rule3Nbrs() | rule_4_nbrs())+
+;
+
+Rule2Nbrs() : {} <TWO_DIGIT> {System.out.println("Rule2Nbrs executed"); }    ;
+
+void rule3Nbrs :
+        { <THREE_DIGIT> {System.out.println("rule3Nbrs executed");}
+        }
+
+rule_4_nbrs : <FOUR_DIGIT> {System.out.println("rule_4_nbrs executed"); }  ;
+                            
+Notice the inconsistency in the way the RootRule calls to the other rules; this was intentionally done to highlight the flexibility you have in JavaCC 21. Also notice how differently the rules are formatted:
+
+*   Rule2Nbrs includes empty parentheses, showing that no parameters were passed and includes a pair of curly braces for the initialization block in _legacy JavaCC_. It encloses the Java statement (System.out....) in curly braces and terminates the actions in the rule with a semi-colon.
+*   rule3Nbrs includes the return type of void but skipped the parentheses and the empty curly braces. It also encloses the the Java statment (with its own curly braces) and the entire rule contents in curly braces but does _NOT_ use a semi-colon at the end.
+*   rule_4_nbrs skips the return type, empty parentheses, and curly braces (both initiliation and enclosing). It does enclose the Java statement in curly braces and terminates the rule with a semi-colon.
+
+This is not the recommended formatting for rules; it was done so inconsistently to demonstrate the flexibility that you have with JavaCC 21. However, it is recommended that you pick a style and stick with it. The following section discusses the actual requirements.
+
+=== Rule Structure
+The following diagram shows the components of a rule and identifies which items are optional in JavaCC 21. _Legacy JavaCC_ required that all components were present in every rule, whether they were used or not.
+
+Looking at this diagram, we see that both the return type and the parentheses are only required in JavaCC when needed: when returning a non-void type or when passing a parameter. In our examples, both Foo and Soup returned a void and didn't pass any parameters so we listed just their name followed by a colon. If, for instance, they returned a Node type and passed an int parameter, they would have been written `Node Foo(int) :` or `Node Soup(int) :`
+
+image::4RuleStructure.png[Diagram of Rule Structure]
+
+A rule's name follows the normal Java rules for an identifier. The convention seems to be to capitalize the first letter and then use CamelCase for compound names but using an underscore is accepted. The colon after the name is always required.
+
+The Initialization Block, required in _Legacy JavaCC_, is usually empty, making it is just some leftover syntactic baggage. When it is used, it frequently will contain some code like `int count = 0;`.
+
+The Action Block is where stuff gets done. In our examples so far we have been listing either String literals or Tokens but we can also call itself recursively, call other rules, or execute Java code. And these actions will make up the majority of the material in this chapter.
+
+=== Test Code for Our Experiment
+Our testing code is just like we used in the our First example; it creates an instance of the Parser and then runs its RootRule method, which is the rule named RootRule in our grammar. When RootRule is completed, it lists all of the items it matched on the command line. Here's the code:
+
+  public class RulesTest {
+          static public void main(String[] args) throws ParseException {
+                  RulesParser parser = new RulesParser(args[0]);
+                  parser.RootRule();
+                  parser.rootNode().dump();
+          }
+  }
+
+Now run jcc, cmp, and then `tst "22 333 4444"` and you should get an output similar to the following:
+
+  TWO_DIGIT found
+  Rule2Nbrs executed
+  THREE_DIGIT found
+  rule3Nbrs executed
+  FOUR_DIGIT found
+  rule_4_nbrs executed
+  RootRule
+    22
+    333
+    4444
+
+The next example will use modified versions of these same Nbr rules. For the rest of this chapter, my general formatting guidelines will be as follows:
+
+*   Return types of void will be skipped
+*   Rules without parameters will be defined without empty parentheses
+*   Rules that are called will include parentheses, even if they are empty. They are included to make it clearer that a rule is to be run
+*   Rule names will begin with a lowercase letter, just like method calls in Java normally begin with a lowercase letter. The rest of the rule name will use camelCase, like in Java.
+*   The curly braces for the initialization block will be omitted. If initialization is required, it will be handlded in the action block.
+*   The action block will skip the enclosing curly braces and instead terminate the block with a semi-colon.

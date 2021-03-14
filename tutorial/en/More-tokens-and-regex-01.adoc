@@ -145,4 +145,6 @@ IMPORTANT: Each lexical action was performed as soon as each Token (the current 
 
 Lexical actions can be used for minor fix-ups, such as capitalization changes to the current token or logging certain events, etc. Larger blocks of actions will be covered in the chapter on Production Rules.
 
+IMPORTANT: *Lexical Actions* and *Private Tokens* cannot both be used inside the same group of Token definitions. Putting the Private Token in its own Token definition fixes this problem. From the above examples: `TOKEN: <#BEEF: "sirloin".....>;` and then `TOKEN: ... <PROTEIN: <BEEF> | "chicken"....> {System.out.println("Found a PROTEIN Token") ; }` will work just fine. 
+
 As useful as Tokens are, by themselves they are pretty much limited to just matching text strings exactly. It would quickly become overwhelming complex if we had to explicitly define all possible text combinations (for example: DRUM, Drum, drum, DRUMS, Drums, drums, DRUMMING, Drumming, drumming, etc).The true power of Tokens comes when you combine Tokens with Regular Expressions, as the next section will demonstrate.

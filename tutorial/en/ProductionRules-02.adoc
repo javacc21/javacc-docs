@@ -1,0 +1,3 @@
+:imagesdir: ./images
+=== Second Experiment with Rules - Return Types and Parameters
+bla-bla-bla
