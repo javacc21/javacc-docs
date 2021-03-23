@@ -1,3 +1,121 @@
 :imagesdir: ./images
-=== Second Experiment with Rules - Return Types and Parameters
-bla-bla-bla
+=== More Experiments with Rules 
+As stated before, rules can be called with parameters and can return any type of value, just like regular Java methods and functions. We'll demonstrate these capabilities by modifying our rules.javacc grammar. 
+
+==== Using Parameters with Rules
+We'll start by modifying our starterRule to call the other rules with parameters.
+
+ starterRule : {int msg = 1; System.out.println("starterRule called");} 
+               (twoNbrRule(msg) | threeNbrRule(msg) | fourNbrRule(msg) )+ 
+               {System.out.println("Ready to dump the rootNode");} ;
+
+Here we've initialized an int to a value of 1 and then passed it to each of our rules. The following code snippet shows the mods to the first rule and you can make the changes to the other rules. Note that we are required to include the parentheses because we are passing a parameter to the rule.
+
+ twoNbrRule(int val):{val++; System.out.println("twoNbrRule: " + val); } 
+                     <TWO_DIGIT> ;
+
+Just to make things a little more interesting, we added a second statement inside the code block. It just  increments the value that was passed in so the number that is printed equals the number of digits; in this case 2. 
+
+For your changes, add 2 to the passed in value in threeNbrRule and 3 to fourNbrRule, so both will print the number that matches the rule. Your output should look like:
+
+ starterRule called
+ twoNbrRule: 2
+ threeNbrRule: 3
+ fourNbrRule: 4
+ Ready to dump the rootNode
+ starterRule
+   22
+   333
+   4444
+
+Test your changes to be sure that you get the right values no matter which order they rules are called in and how many times you call them.
+
+==== Using Return Values with Rules
+We'll start by making the following changes to starterRule:
+
+ (msg = twoNbrRule(msg) | msg = threeNbrRule(msg) | msg = fourNbrRule(msg) )+ 
+
+The initial value of msg is 1, which will be passed to any one of the three rules. We will update each rule so it increments the parameter it receives and then returns the updated value where it will be stored back into the msg variable. The interesting aspect of this line is that it is written in a very Java-esque manner but it's not included in a Java code block. 
+
+Here's the complete changes to twoNbrRule:
+
+ int twoNbrRule(int val):{System.out.println("twoNbrRule: " + val); } 
+			             <TWO_DIGIT> 
+			             {return ++val;} ;
+
+Because this rule uses the int return type, the return type cannot be skipped the way we can skip void return types. In this example, the Java code blocks are sandwiched around the <TWO_DIGIT> Token, but there's no reason that we couldn't combine the two Java statements into a single block (separated by a semi-colon) as long as the last thing we did was return the value. Make the same kinds of changes to the other rules and, after processing the grammar and recompiling, when you run the test, it should look similar to the following:
+
+ $ tst "4444 333 22 111"
+ starterRule called
+ fourNbrRule: 1
+ threeNbrRule: 2
+ twoNbrRule: 3
+ threeNbrRule: 4
+ Ready to dump the rootNode
+ starterRule
+   4444
+   333
+   22
+   111
+
+Now run tests to make sure that the value that is being passed and returned always increments by just one, regardless of which rule was called, which order the rules were called in, and how many arguments you put on the command line for the test program.
+
+==== Rules Can Call Other Rules
+Since starterRule called the other rules, it was probably obvious that rules can call other rules. But just to finish up with _this_ experimental grammar by removing the calls to threeNbrRule and fourNbrRule out of starterRule and putting them into other rules so they form a sort of chain. In this case, starterRule will call twoNbrRule which will call threeNbrRule which in turn will call fourNbrRule. As before, each rule will print the value that it received and then increment it and then return the updated value. The complete rules are shown below:
+
+ starterRule : {int msg = 1; System.out.println("starterRule called");} 
+ 			  (msg = twoNbrRule(msg) )+ 
+              {System.out.println("Ready to dump the rootNode");} ;
+
+ int twoNbrRule(int val):{System.out.println("twoNbrRule: " + val++); } 
+			            (val = threeNbrRule(val) | <TWO_DIGIT> )
+			            {return val;} ;
+
+ int threeNbrRule(int nbr):{System.out.println("threeNbrRule: " + nbr++); }
+                           (nbr = fourNbrRule(nbr) | <THREE_DIGIT>)
+                           {return nbr; } ;
+
+ int fourNbrRule(int amt):{System.out.println("fourNbrRule: " + amt++); } 
+			              <FOUR_DIGIT>
+			              {return amt;} ;
+
+So starterRule initializes an int to the value of 1 and then passes it to twoNbrRule. It doesn't matter how many digits (which Token) the Lexer found, starterRule always calls twoNbrRule. Inside twoNbrRule, the second line holds the heart of the rule; it either finds a <TWO_DIGIT> Token or it calls threeNbrRule with the updated value. It's easy to imagine the Java code looking something like
+
+ if (TokenType == TWO_DIGIT) {}
+ else threeNbrRule()
+
+So go ahead and make these changes to your grammar, run jcc and cmp until there are no errors and then run `tst "22 22 22"` and your output should look like the following:
+
+ starterRule called
+ twoNbrRule: 1
+ twoNbrRule: 2
+ twoNbrRule: 3
+ Ready to dump the rootNode
+ starterRule
+   22
+   22
+   22
+
+This test verifies that each time a <TWO_DIGIT> Token was found, no further processing was required and control passed back to starterRule to accept the next Token. Now let's try `tst "4444 333 22"`. Your output should look like the following:
+
+ starterRule called
+ twoNbrRule: 1
+ threeNbrRule: 2
+ fourNbrRule: 3
+ twoNbrRule: 4
+ threeNbrRule: 5
+ twoNbrRule: 6
+ Ready to dump the rootNode
+ starterRule
+   4444
+   333
+   22
+
+The first test value, 4444, is a <FOUR_DIGIT> Token so starterRule sends the value of 1 to twoNbrRule, which increments the value, sees that it doesn't have any instructions that apply to <FOUR_DIGIT> Tokens so it passes the value to threeNbrRule, which increments the value, sees that it doesn't have any instructions that apply to <FOUR_DIGIT> Tokens so it passes the value to fourNbrRule, which increments the value and (thankfully) knows how to process the <FOUR_DIGIT> Token. fourNbrRule then returns the value to threeNbrRule which returns the value to twoNbrRule which returns the value to starterRule which then accepts the next Token and the process repeats until all of the input text has been processed.
+
+At this point it should come as no surprise that `tst "4444 3333 2222"` will count up to 9 or that `tst "1111 2222 3333 4444 5555 6666"` will count up to 18.
+
+==== Rules Can Call Themselves (Recursion)
+When appropriate, a rule can call itself, just like it can call other rules, to continue processing. It's all very elegant and sophisticated programmaing and it's great for situations where some character or sequence of characters will repeat an unknown number of times. A good example might be parsing an arbitrarily complex mathematical statement. 
+
+*True confessions time:* documenting how to write and use recursive rules is going to take a lot more time and space than I originally thought that they would so I'm going to defer the pleasure of writing about them until a later chapter, or maybe even Volume II of this tutorial. And honestly, instead of getting bogged down in recursive rules, there's a lot more useful and interesting stuff to learn right now. 

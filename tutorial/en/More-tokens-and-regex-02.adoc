@@ -65,12 +65,13 @@ What follows is an excerpt from a JavaCC grammar for parsing Java and it looks v
 
 As defined in the Java Language Specification, the first letter of an identifier can be any item from the following character class: ["$","A"-"Z","_","a"-"z" ... ] (reformatted here to look more familiar). Notice the dollar sign "$" in the #LETTER definition. Seems pretty weird, right. Here's the scoop: 
 
-* *Oracle Java documentation:* "The convention, however, is to always begin your variable names with a letter, not "$" or "_". Additionally, the dollar sign character, by convention, is never used at all."
+*   *Oracle Java documentation:* "The convention, however, is to always begin your variable names with a letter, not "$" or "_". Additionally, the dollar sign character, by convention, is never used at all." Despite what the documentation says, the dollar sign character is commonly used in generated code because it is less likely to conflict with user-created names.
 
 // Actually, I was under the impression that '$' in identifiers was typical of generated code, and in fact, I tend to use it in generated code because I figure that the likelihood of stomping on anybodyś variables is pretty minimal.
 
-* *Java Language Specification, Section 3.8* states that "$" and "_" are allowed for "historical reasons."
-* So go ahead and use the "$" if you have a good reason but remember that Oracle or others may decide that it may have outlived its historical value and your fancy name might stop working.
+*   *Java Language Specification, Section 3.8* states that "$" and "_" are allowed for "historical reasons."
+*   So the "$" is legal to use but might someday in the future stop working or come in conflict with generated code. Use at your own risk.
+*   The underscore is commonly used in identifiers and is probably safe for long term use, even if somewhat unconventional.
 
 // Frankly, I would tend to think that the objective risk of this is quite low!
 

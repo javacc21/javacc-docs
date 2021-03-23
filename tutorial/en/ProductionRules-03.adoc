@@ -1,0 +1,94 @@
+:imagesdir: ./images
+=== Abstract Syntax Trees
+
+
+The following came from https://www.cs.purdue.edu/homes/hosking/javacc/doc/JJTree.html
+
+*   #DefiniteNode(INTEGER EXPRESSION) A definite node is constructed with a specific number of children (nodes popped from stack)
+*   #ConditionalNode(BOOLEAN EXPRESSION) A conditional node is constructed with all of the children that were pushed on the stack within its node scope if and only if its condition evaluates to true.
+**  #IndefiniteNode is short for #IndefiniteNode(true)
+**  #GTNode(>1) is short for #GTNode(jjtree.arity() > 1)    (Greater-than nodes)
+*   By default JJTree treats each nonterminal as an indefinite node and derives the name of the node from the name of its production. You can give it a different name with the following syntax: `void P1() #MyNode : { ... } { ... }`
+*    To suppress the creation of a node for a production you can use the following syntax: `void P2() #void : { ... } { ... }`
+**  Any parse tree nodes pushed by nonterminals in the expansion of P2 will remain on the stack, to be popped and made children of a production further up the tree. You can make this the default behavior for non-decorated nodes by using the NODE_DEFAULT_VOID option.
+*   The #Name construct acts as a postfix operator, and its scope is the immediately preceding expansion unit. So if usage is `P4() ( P5() )+ #ListOfP5s P6()` then instead of multiple P5s it will have a ListOfP5s node
+*   Each node is associated with a node scope. User actions within this scope can access the node under construction by using the special identifier jjtThis to refer to the node. 
+
+The Life Cycle of a Node
+
+A node goes through a well determined sequence of steps as it is built. This is that sequence viewed from the perspective of the node itself:
+
+.   the node's constructor is called with a unique integer parameter. This parameter identifies the kind of node and is especially useful in simple mode. JJTree automatically generates a file called parserTreeConstants.java that declares valid constants. The names of constants are derived by prepending JJT to the uppercase names of nodes, with dot symbols (".") replaced by underscore symbols ("_"). For convenience, an array of Strings called jjtNodeName[] that maps the constants to the unmodified names of nodes is maintained in the same file.
+.   the node's jjtOpen() method is called.
+.   if the option NODE_SCOPE_HOOK is set, the user-defined parser method openNodeScope() is called and passed the node as its parameter. This method can initialize fields in the node or call its methods. For example, it might store the node's first token in the node.
+.   if an unhandled exception is thrown while the node is being parsed then the node is abandoned. JJTree will never refer to it again. It will not be closed, and the user-defined node scope hook closeNodeHook() will not be called with it as a parameter.
+.   otherwise, if the node is conditional and its conditional expression evaluates to false then the node is abandoned. It will not be closed, although the user-defined node scope hook closeNodeHook() might be called with it as a parameter.
+.   otherwise, all of the children of the node as specified by the integer expression of a definite node, or all the nodes that were pushed on the stack within a conditional node scope are added to the node. The order they are added is not specified.
+.   the node's jjtClose() method is called.
+.   the node is pushed on the stack.
+.   if the option NODE_SCOPE_HOOK is set, the user-defined parser method closeNodeScope() is called and passed the node as its parameter.
+.   if the node is not the root node, it is added as a child of another node and its jjtSetParent() method is called.
+
+==== JJTree state
+
+JJTree keeps its state in a parser class field called jjtree. You can use methods in this member to manipulate the node stack.
+
+    final class JJTreeState {
+      /* Call this to reinitialize the node stack.  */
+      void reset();
+
+      /* Return the root node of the AST. */
+      Node rootNode();
+
+      /* Determine whether the current node was actually closed and
+	 pushed */
+      boolean nodeCreated();
+
+      /* Return the number of nodes currently pushed on the node
+         stack in the current node scope. */
+      int arity();
+
+      /* Push a node on to the stack. */
+      void pushNode(Node n);
+
+      /* Return the node on the top of the stack, and remove it from the
+	 stack.  */
+      Node popNode();
+
+      /* Return the node currently on the top of the stack. */
+      Node peekNode();
+    }
+    
+
+==== Node Objects
+
+    /* All AST nodes must implement this interface.  It provides basic
+       machinery for constructing the parent and child relationships
+       between nodes. */
+
+    public interface Node {
+      /** This method is called after the node has been made the current
+	node.  It indicates that child nodes can now be added to it. */
+      public void jjtOpen();
+
+      /** This method is called after all the child nodes have been
+	added. */
+      public void jjtClose();
+
+      /** This pair of methods are used to inform the node of its
+	parent. */
+      public void jjtSetParent(Node n);
+      public Node jjtGetParent();
+
+      /** This method tells the node to add its argument to the node's
+	list of children.  */
+      public void jjtAddChild(Node n, int i);
+
+      /** This method returns a child node.  The children are numbered
+	 from zero, left to right. */
+      public Node jjtGetChild(int i);
+
+      /** Return the number of children the node has. */
+      int jjtGetNumChildren();
+    }
+    

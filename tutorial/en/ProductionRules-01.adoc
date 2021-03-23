@@ -24,27 +24,26 @@ We're going to start with some rule experiments so we'll name our grammar rules.
 === First Experiment with Rules
 Our first grammar, rules.javacc, is very simple, with just one private Token, three regular Tokens and four rules. Each of the regular Tokens includes a Lexical Action to show when they are matched. In the RootRule, instead of specifying the actual Tokens, rootRule makes calls to other rules, each of which specifies which Token to match. In this example, each rule also includes an action, enclosed in curly braces, which prints out the name of the rule that was run.
 
- DEBUG_LEXER = false;
- DEBUG_PARSER= false;
- 
- SKIP  : " " | "\t" | "\n" | "\r";
- 
- TOKEN : < TWO_DIGIT : (<DIGIT>){2} > {System.out.println("TWO_DIGIT found")  ;}
- |      < THREE_DIGIT: (<DIGIT>){3} > {System.out.println("THREE_DIGIT found");}
- |      < FOUR_DIGIT : (<DIGIT>){4} > {System.out.println("FOUR_DIGIT found") ;}
- ;
- 
- TOKEN : < #DIGIT    : ["0" - "9"] > ;
- 
- rootRule : (twoNbrRule | Threenbrrule() | four_nbr_rule())+ ;
+    DEBUG_LEXER = false;
+    DEBUG_PARSER= false;
 
- twoNbrRule() : {} <TWO_DIGIT> {System.out.println("twoNbrRule executed "); } ;
- 
- void Threenbrrule :
-        { <THREE_DIGIT> {System.out.println("Threenbrrule executed ");}
-        }
+    SKIP  : " " | "\t" | "\n" | "\r";
 
- four_nbr_rule : <FOUR_DIGIT> {System.out.println("four_nbr_rule executed"); } ;
+    TOKEN : < TWO_DIGIT : (<DIGIT>){2} > {System.out.println("TWO_DIGIT found")  ;}
+    |      < THREE_DIGIT: (<DIGIT>){3} > {System.out.println("THREE_DIGIT found");}
+    |      < FOUR_DIGIT : (<DIGIT>){4} > {System.out.println("FOUR_DIGIT found") ;}
+    ;
+    TOKEN : < #DIGIT    : ["0" - "9"] > ;
+
+    rootRule : (twoNbrRule | Threenbrrule() | four_nbr_rule())+ ;
+
+    twoNbrRule() : {} <TWO_DIGIT> {System.out.println("twoNbrRule executed "); } ;
+
+    void Threenbrrule :
+            { <THREE_DIGIT> {System.out.println("Threenbrrule executed ");}
+            }
+
+    four_nbr_rule : <FOUR_DIGIT> {System.out.println("four_nbr_rule executed"); } ;
 
 Notice the inconsistency in the way the RootRule calls to the other rules; this was intentionally done to highlight the flexibility you have in JavaCC 21. Also notice how differently the rules are formatted:
 
@@ -110,24 +109,19 @@ Update the experiment grammer to look like the following:
  DEBUG_PARSER= false;
 
  SKIP  : " " | "\t" | "\n" | "\r";
-
  TOKEN : < TWO_DIGIT : (<DIGIT>){2} > 
  |      < THREE_DIGIT: (<DIGIT>){3} > 
  |      < FOUR_DIGIT : (<DIGIT>){4} > 
  ;
-
  TOKEN : < #DIGIT    : ["0" - "9"] > ;  
 
  starterRule : {System.out.println("starterRule called");} 
 		(twoNbrRule() | threeNbrRule() | fourNbrRule())+ 
 		{System.out.println("Ready to dump the rootNode");} ;
-
  twoNbrRule  : {System.out.println("twoNbrRule executed "); } 
 			    <TWO_DIGIT> ;
-
  threeNbrRule: <THREE_DIGIT> 
                 {System.out.println("threeNbrRule executed ");} ;
-
  fourNbrRule : {System.out.println("fourNbrRule executed "); } 
 			    <FOUR_DIGIT>  ;
 
