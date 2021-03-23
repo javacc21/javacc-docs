@@ -44,3 +44,33 @@ Those are the ASCII control characters that I was always taught to never use bec
 
 And wasn't the Base64 encoding developed to specifically to handle binary values, such as control characters, safely on the internet and prevent undesired side effects? Call me old fashioned, but I'd avoid control characters inside identifiers unless I had a really good reason for using them, even if it was legal. OK, lots of smarter people than me made this decision but I'd love to hear the logic for allowing these characters.
 ====
+
+- - - 
+Chap 4 - Production Rules
+Rules are in a gray area half-way between JavaCC and Java functions/methods. In the rules that we've seen so far, they have only matched Strings or Tokens but going forward we'll see that rules can execute other rules or Java code. Some authors of JavaCC grammars seem to use Tokens and rules almost exclusively; others mix in Java much more liberally. It depends on both the author and the text/language being parsed on the balance of Tokens, rules, and Java.
+
+In JavaCC 21, many syntactical flourishes have been made optional and can be omitted. For example, _legacy JavaCC_  requires that every rule begin with the return type, which is frequently the void type meaning nothing is returned. So in JavaCC 21, the return type is only _required_ if it NOT void but will be accepted if provided. Similarly, if the rule isn't passed any parameters, the empty parentheses are NOT required but will be accepted if provided. So the following 4 rule declarations are equivalent:
+
+    Foo :
+    Foo() :
+    void Foo :
+    void Foo () :
+
+Curly braces "{}" are also used a lot more in _Legacy JavaCC_ rules but can now be safely skipped because of the streamlining done in JavaCC 21. The following graphic outlines the optional items that can now be omitted:
+
+    <image>
+
+=== Example
+
+discussion
+
+=== Example
+
+discussion
+
+=== Recursive Descent
+
+discussion
+
+=== BNF and EBNF?
+
