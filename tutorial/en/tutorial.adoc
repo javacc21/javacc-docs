@@ -15,7 +15,7 @@ Nelson Chamberlain and Jonathan Revusky
 //:stylesdir: ./styles
 :scriptsdir: ./js
 
-include::prerequisites-00.adoc[]
+include::prerequisites-00-RevA.adoc[]
 
 include::first-example-01.adoc[]
 
