@@ -1,0 +1,81 @@
+:imagesdir: ./images
+== Appendix A - Installation Instructions - Clean this up later
+=== Installing Java
+Many Java 8 (1.8) or later products are available, including:
+
+* Oracle Java JDK (personal/free or commercial version)
+* OpenJDK
+* Azul JDK
+* Others
+
+Each of these products offer their own advantages and set of platforms supported. JavaCC 21 should work fine with any of them, as long as you have installed a Java Development Kit (JDK). The Java Runtime Environment (JRE) by itself doesn't include the necessary tools. 
+
+Select your desired JDK and follow their installation instructions. If asked, allow the installer application to include the location of the JDK in your path.
+
+Because of Oracle's current 6-month cadence for releasing new Java versions with new (and sometimes revolutionary) features, JavaCC 21 may not (yet) support these latest features.
+
+==== Installing JavaCC 21
+Using JavaCC 21 requires javacc-full.jar which contains all of the logic and functionality needed to process your grammar files. Download the latest JavaCC 21 from https://javacc.com/download/javacc-full.jar[here]. Using this link will place the jar file in your standard download location.
+
+If you prefer to use the command line, one (or either) of the following commands in your shell should also do the trick:
+
+....
+% curl -O https://javacc.com/download/javacc-full.jar
+
+% wget https://javacc.com/download/javacc-full.jar
+....
+
+These commands will download javacc-full.jar into your current directory. You will probably want to move the jar file someplace useful later on
+
+=== Installing a Text Editor
+A huge number of text editors are available at every price point, from free to astronomically expensive. The choice is yours as long as it can produce plain unformatted text files.
+
+If your preferred text editor isn't already installed on your system, follow the instructions provided by the maker of the editor or follow the procedures to download and install your preferred editor for your OS distribution.  
+
+=== Streamlining the Process
+TIP: Since you'll likely be typing the above command quite a bit as you go through the tutorial, I suggest that you create a shortcut to execute it, something like: 
+
+    % alias jcc='java -jar javacc-full.jar'
+
+This command assumes that the javacc-full.jar was downloaded into your current directory. If javacc-full.jar was downloaded into a standard download location instead, you may wish to move it to a different directory, such as ~/java/libs using the following command:
+
+    % mv <download location>/javacc-full.jar ~/java/libs/javacc-full.jar
+
+If you moved javacc-full.jar to ~/java/libs, your alias command would become:
+
+    % alias jcc='java -jar ~/java/libs/javacc-full.jar'
+
+It is also important that you include the quotes around everything after the equals sign.
+
+Now you should be able to type `jcc` to invoke JavaCC. Well, try it:
+
+    % jcc
+
+TIP: The normal thing to do would be to add that above alias line to your shell configuration file, most likely `$HOME/.bashrc`
+
+Now that we have these details out of the way, we can move on to link:ch-00.html[our first example]
+
+=== Windows Setup
+This tutorial will make a sort of _default assumption_ that your command line is some sort of Unixy shell. On Mac or Linux, this is a given. On Windows, you have many excellent options for getting some kind of Unixy shell, way too many to describe in this tutorial. As such, we will describe just a few of the possibilities below:
+
+* *Git for Windows:* Many Windows users will already have https://git-scm.com/download/win[Git for Windows package] installed. Git for Windows gives you the command-line https://en.wikipedia.org/wiki/Git[Git] client and a UNIX terminal emulator with the default BASH (Bourne Again Shell) command line. This also gives you a _good enough_ plain text editor (Nano).  It's free, you can access all of your Windows folders, and it provides great access to Git.
+
+====
+*Tangent:* _For most Linux distributions, the good enough text editor I refer to above is `nano`, not `vim`. `Vim` is usually installed on most Unix and Linux distributions, but unless you are already familiar with vim` (or its predecessor `vi`), it would be masochistic to learn to use it!_
+====
+
+* *Windows Subsystem for Linux (WSL):* A complete Linux distribution can be downloaded from the Microsoft Store and installed so it runs concurrently with Windows. A choice of Linux distributions are available, including Ubuntu, Debian, SUSE, and many more - most are free but some require purchasing. Ubuntu 18 LTS will require you to install Java JDK, even if you already have it installed in Windows - other distributions may include Java. This may be a great choice if you've been meaning to learn or brush up on Bash command but it doesn't automatically mount the Windows filesystem, so it will take a little effort to move files between WSL and Windows.
+* *Windows Terminal:* The new Windows Terminal is the best text window tool available from Microsoft. The Terminal allows you to configure and open multiple tabs so you can manage or operate in different environments. The default text windows runs PowerShell which allows you to enter common Bash commands (rm, ls, etc) as well as common Windows commands (del, dir, etc) and it isn't fussy about which flavor of slash (forward slash ( / ) vs backslash ( \ )) when you access the standard Windows filesystem. Notepad is the standard text editor (You have been warned), although you can use any Windows editor or IDE for processing your text as long it can output plain text to the desired file location.
+* *PowerShell:* A convenient Bash-friendly and Windows-Command-Prompt-friendly and slash-agnostic environment that runs Notepad as the standard text editor. A new version of PowerShell is available but has not yet been tested for JavaCC.
+* *Window Command Prompt:* The standard DOS command line window. Once the path to your JDK is setup it should work fine. It will be your responsibility to translate Bash-speak into DOS-speak: when I say something like: "Now type `rm *.java` to delete the generated source files" that you have to enter `del *.java` on the Windows command line.
+* *Remote login to a Unix/Linux machine:* Another perfectly reasonable possibility is that you remote login into a Unix/Linux machine and do the tutorial there -- the only prerequisite being, again, that the remote machine has JDK 1.8 or later installed and that you have sufficient rights to install and execute javacc-full.jar.
+
+NOTE: Windows users can get the effect of the `jcc` alias command on a default Windows command line as follows:
+
+     > doskey jcc=java -jar <PATH_TO_JAR_FILE>\javacc-full.jar $*
+
+*Important:* be sure to include the `$*` at the end of the command because otherwise any parameters you add to the command-line will be ignored!
+
+====
+*TANGENT:* _This, by the way, was an exciting new feature added to MS-DOS 5.0 in 1990, I think. I was surprised to discover recently that it still works!_ 
+====
