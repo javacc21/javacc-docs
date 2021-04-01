@@ -1,0 +1,167 @@
+== Appendix B JavaCC Options and Settings
+The following tables identify the options available in JavaCC 21. Many options are identical in name and behavior to the _legacy JavaCC_ to retain backwards compatibility. Some options are new to JavaCC 21 and some have been dropped from JavaCC as obsolete.
+
+=== Command Line Options
+[cols="1,3,3"]
+|===
+|Option | Description | Comments
+
+|-d <directory>
+|Specify the directory (relative or absolute) to place generated files
+|For example:   -d ../../src/generated
+
+If this is unset, files are generated relative to the grammar file location.
+|-jdkN
+|Specify the target JDK version. N is a number from 8 to 16.
+|Default is 8
+|-n
+|Suppress the check for a newer version
+|
+|-p
+|Define one or more comma-separated (no spaces) symbols to pass to the preprocessor.
+|For example:   -p debug,strict
+|-q
+|Quieter output
+|
+|===
+
+=== Boolean Settings 
+[cols="1,1,5"]
+|===
+|Option|Default|Description
+
+|FAULT_TOLERANT
+|False
+|True causes fault tolerant behavior when processing grammar
+|DEBUG_FAULT_TOLERANT
+|False
+|True turns on debugging of fault tolerant processing
+|DEBUG_LEXER
+|False
+|True causes debugging statements to be displayed for lexer (TOKEN_MANAGER) events and actions
+|DEBUG_PARSER
+|False
+|True causes debugging statements to be displayed for parser events and actions
+|PRESERVE_LINE_ENDINGS
+|
+|
+|JAVA_UNICODE_ESCAPE
+|
+|
+|IGNORE_CASE
+|False
+|True ignores the capitalization of the text when matching tokens, so "BAR" and "bar" would be matched equally. At the beginning of a grammar, all matching would ignore uppercase or lowercase. As part of a Token definition, the case would be ignored only for the Tokens defined in that Token group.
+|USER_DEFINED_LEXER
+|False
+|
+|LEXER_USES_PARSER
+|False
+|
+|NODE_DEFAULT_VOID
+|False
+|
+|SMART_NODE_CREATION
+|True
+|When true, a node is only created when more than one Token was matched. When false, a node is created everytime a token is matched.
+|NODE_USES_PARSER
+|
+|
+|TREE_BUILDING_DEFAULT
+|
+|
+|TREE_BUILDING_ENABLED
+|True
+|
+|TOKENS_ARE_NODES
+|True
+|
+|SPECIAL_TOKENS_ARE_NODES
+|
+|
+|UNPARSED_TOKENS_ARE_NODES
+|
+|
+|FREEMARKER_NODES
+|
+|
+|HUGE_FILE_SUPPORT
+|
+|
+|LEGACY_API
+|False
+|
+|NODE_FACTORY
+|
+|
+|DEBUG_TOKEN_MANAGER
+|
+|
+|USER_TOKEN_MANAGER
+|
+|
+|TOKEN_MANAGER_USES_PARSER
+|
+|
+|ENSURE_FINAL_EOL
+|
+|
+|===
+
+=== String Settings 
+[cols="1,3,3"]
+|===
+|Option|Description|Example
+
+|PARSER_PACKAGE
+|
+|
+|PARSER_CLASS
+|
+|
+|LEXER_CLASS
+|
+|
+|CONSTANTS_CLASS
+|
+|
+|BASE_SRC_DIR
+|
+|
+|BASE_NODE_CLASS
+|
+|
+|TOKEN_FACTORY
+|
+|
+|NODE_PREFIX
+|
+|
+|NODE_CLASS
+|
+|
+|NODE_PACKAGE
+|
+|
+|DEFAULT_LEXICAL_STATE
+|
+|
+|NODE_CLASS
+|
+|
+|OUTPUT_DIRECTORY
+|
+|
+|===
+
+=== Integer Settings 
+[cols="1,3,3"]
+|===
+|Option|Description|Examples or Comments
+
+|TABS_TO_SPACES
+|Converts tabs into the specified number of spaces
+|Example: TABS_TO_SPACES=4
+|JDK_TARGET
+|Specify the target JDK version. N is a number from 8 to 16.
+|If this is set on command line, the xxx takes precedence
+|===

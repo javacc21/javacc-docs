@@ -12,12 +12,15 @@ Two public methods you'll probably use are getImage() and toString(), which real
 
  TOKEN: <NAME: ["A" - "G"] (["h" - "m"])* > ;
 
-Legal <NAME> Tokens could be "Ahijk" or "Bmlk", etc. and you might need to process certain <NAME> Tokens differently. The actual text that was tokenized can be accessed using either:
+Legal <NAME> Tokens could be "Ahijk" or "Bmlk", etc. and you might need to process certain <NAME> Tokens differently. The actual text that was tokenized can be accessed using:
 
- lastConsumedToken.getImage()   or    lastConsumedToken.toString()
+*   lastConsumedToken.getImage()
+*   lastConsumedToken.toString()
+*   lastConsumedToken.getNormalizedText()
 
-They can be used pretty much interchangeably. The getImage() method more closely resembles _legacy JavaCC_ which made the image field freely accessible, such as t.image. The toString() is more traditional Java. Both getImage() and toString() provide access to what is now a private field, allowing how the image data is stored to be modified without requiring code changes.
+They can be used pretty much interchangeably. The getImage() method more closely resembles _legacy JavaCC_.  The toString() method is more familiar to Java users, but it is really just a wrapper for the getNormalizedText() method. The getNormalizedText() method returns "EOF" if the tokenType is <EOF> otherwise it just alls getImage(). So use the method that makes the most sense to you.
 
+NOTE:  Token objects in _legacy JavaCC_ include a String field named "image" to hold the text that was matched and made it public, for example, `myToken.image`. In keeping with more modern Java usage, JavaCC 21 makes the image field private and provides accessor methods to retrieve the contents of the image field.
 
 
 
