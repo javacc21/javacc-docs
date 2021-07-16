@@ -1,6 +1,6 @@
 :imagesdir: ./images
 == Production Rules
-As promised at the end of last chapter, we'll be looking at how to use production rules to produce more advanced  results from the text that was parsed. Just like regular expressions enhanced our use of Tokens, production rules enhance what can be done with RegEx/Tokens once they've been matched and tokenized.
+As promised at the end of last chapter, we'll be looking at how to use production rules to produce more advanced results from the text that was processed. Just like regular expressions enhanced our use of Tokens, production rules enhance what can be done with RegEx/Tokens once they've been matched and tokenized.
 
 NOTE: Production Rules can also be referred to as Productions or as Rules. For the rest of this chapter, we'll be using the term Rules to mean the same thing Production Rules.
 
@@ -19,7 +19,7 @@ And let's update and add to our aliases as follows:
     % alias cmp='javac build/*.javac'
     % alias tst='java -cp build RulesTest'
 
-We're going to start with some rule experiments so we'll name our grammar rules.javacc and our test progarm RulesTest.java. Once we get more familiar with rules, we'll go back to our soup. For now, we'll leave it on the back burner to cool (sorry).
+We're going to start with some rule experiments so we'll name our grammar rules.javacc and our test progarm RulesTest.java. Once we get more familiar with rules, we'll get back to our soup. For now, we'll leave it on the back burner to cool (sorry).
 
 === First Experiment with Rules
 Our first grammar, rules.javacc, is very simple, with just one private Token, three regular Tokens and four rules. Each of the regular Tokens includes a Lexical Action to show when they are matched. In the RootRule, instead of specifying the actual Tokens, rootRule makes calls to other rules, each of which specifies which Token to match. In this example, each rule also includes an action, enclosed in curly braces, which prints out the name of the rule that was run.
@@ -35,7 +35,7 @@ Our first grammar, rules.javacc, is very simple, with just one private Token, th
     ;
     TOKEN : < #DIGIT    : ["0" - "9"] > ;
 
-    rootRule : (twoNbrRule | Threenbrrule() | four_nbr_rule())+ ;
+    rootRule : (twoNbrRule | Threenbrrule() | four_nbr_rule() )+ ;
 
     twoNbrRule() : {} <TWO_DIGIT> {System.out.println("twoNbrRule executed "); } ;
 
