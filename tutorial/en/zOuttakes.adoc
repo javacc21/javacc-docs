@@ -8,6 +8,8 @@ Contains text and fragments that were too good to throw away but shouldn't be in
 *Tangent:* For most Linux distributions, the _good enough_ text editor I refer to above is `nano`, not `vim`. `Vim` is usually installed on most Unix and Linux distributions, but unless you are already familiar with vim` (or its predecessor `vi`), it would be masochistic to use it for this tutorial!
 ====
 
+//=== The Basic Approach (And I mean _Basic_)   SAVE THIS HEADING FOR LATER
+
 For the rest of this tutorial, `nano` will be used simply because it is _good enough_. In the following screenshot of `nano`, we can see that it displays the text plainly and includes a brief menu of the most frequently used keyboard shortcuts and commands.
 
 image::images/nano_first_example.jpg[Nano text editor]
