@@ -1,36 +1,42 @@
 :imagesdir: ./images
-=== More Experiments with Rules 
+=== More About Rules 
 As stated before, rules can be called with parameters and can return any type of value, just like regular Java methods and functions. We'll demonstrate these capabilities by modifying our rules.javacc grammar. 
 
-==== Using Parameters with Rules
+==== Rules Can Use Parameters
 We'll start by modifying our starterRule to call the other rules with parameters.
 
  starterRule : {int msg = 1; System.out.println("starterRule called");} 
                (twoNbrRule(msg) | threeNbrRule(msg) | fourNbrRule(msg) )+ 
                {System.out.println("Ready to dump the rootNode");} ;
 
-Here we've initialized an int to a value of 1 and then passed it to each of our rules. The following code snippet shows the mods to the first rule and you can make the changes to the other rules. Note that we are required to include the parentheses because we are passing a parameter to the rule.
+Here we've initialized an int to a value of 1 and then passed it to each of our rules. The following code snippet shows the mods to the first rule and you can make the changes to the other rules. Note that when we call the rule we are required to include the parentheses because we are passing a parameter to the rule. Also note that, like Java, the name of the parameter being passed doesn't have to match the name of the received parameter; starterRule passes "msg" but the updated twoNbrRule (below) receives it as "val". As long as their types match, it works fine.
 
  twoNbrRule(int val):{val++; System.out.println("twoNbrRule: " + val); } 
                      <TWO_DIGIT> ;
 
 Just to make things a little more interesting, we added a second statement inside the code block. It just  increments the value that was passed in so the number that is printed equals the number of digits; in this case 2. 
 
-For your changes, add 2 to the passed in value in threeNbrRule and 3 to fourNbrRule, so both will print the number that matches the rule. Your output should look like:
+For your changes, _add 2_ to the passed in value in threeNbrRule and _add 3_ to fourNbrRule, so both will print the number that matches the rule. Using input "11 22 333 444 5555 6666", your output should look like:
 
  starterRule called
  twoNbrRule: 2
+ twoNbrRule: 2 
  threeNbrRule: 3
+ threeNbrRule: 3
+ fourNbrRule: 4
  fourNbrRule: 4
  Ready to dump the rootNode
  starterRule
+   11
    22
    333
-   4444
+   444
+   5555
+   6666
 
-Test your changes to be sure that you get the right values no matter which order they rules are called in and how many times you call them.
+Test your changes to be sure that you get the right values no matter which order they rules are called in and how many times you call them. This works because the value of msg being passed to the rules is always 1; our changes only affected the local value and not the value of "msg".
 
-==== Using Return Values with Rules
+==== Rules Can Use Return Values
 We'll start by making the following changes to starterRule:
 
  (msg = twoNbrRule(msg) | msg = threeNbrRule(msg) | msg = fourNbrRule(msg) )+ 
@@ -43,7 +49,7 @@ Here's the complete changes to twoNbrRule:
 			             <TWO_DIGIT> 
 			             {return ++val;} ;
 
-Because this rule uses the int return type, the return type cannot be skipped the way we can skip void return types. In this example, the Java code blocks are sandwiched around the <TWO_DIGIT> Token, but there's no reason that we couldn't combine the two Java statements into a single block (separated by a semi-colon) as long as the last thing we did was return the value. Make the same kinds of changes to the other rules and, after processing the grammar and recompiling, when you run the test, it should look similar to the following:
+Because this rule uses the _int_ return type, the return type cannot be skipped the way we can skip void return types. In this example, the Java code blocks are sandwiched around the <TWO_DIGIT> Token, but there's no reason that we couldn't combine the two Java statements into a single block (separated by a semi-colon) as long as the last thing we did was return the value. Make the same kinds of changes to the other rules (be sure to include the return type) and, after processing the grammar and recompiling, when you run the test, it should look similar to the following:
 
  $ tst "4444 333 22 111"
  starterRule called
@@ -61,7 +67,7 @@ Because this rule uses the int return type, the return type cannot be skipped th
 Now run tests to make sure that the value that is being passed and returned always increments by just one, regardless of which rule was called, which order the rules were called in, and how many arguments you put on the command line for the test program.
 
 ==== Rules Can Call Other Rules
-Since starterRule called the other rules, it was probably obvious that rules can call other rules. But just to finish up with _this_ experimental grammar by removing the calls to threeNbrRule and fourNbrRule out of starterRule and putting them into other rules so they form a sort of chain. In this case, starterRule will call twoNbrRule which will call threeNbrRule which in turn will call fourNbrRule. As before, each rule will print the value that it received and then increment it and then return the updated value. The complete rules are shown below:
+Since starterRule called the other rules, it was probably obvious that rules can call other rules. But just to finish up with the rules grammars, let's move the calls to threeNbrRule and fourNbrRule out of starterRule and put them into other rules so they form a sort of chain. In this case, starterRule will call twoNbrRule which will call threeNbrRule which in turn will call fourNbrRule. As before, each rule will print the value that it received and then increment it and then return the updated value. The complete rules are shown below:
 
  starterRule : {int msg = 1; System.out.println("starterRule called");} 
  			  (msg = twoNbrRule(msg) )+ 
@@ -96,7 +102,7 @@ So go ahead and make these changes to your grammar, run jcc and cmp until there 
    22
    22
 
-This test verifies that each time a <TWO_DIGIT> Token was found, no further processing was required and control passed back to starterRule to accept the next Token. Now let's try `tst "4444 333 22"`. Your output should look like the following:
+This test verifies that each time a <TWO_DIGIT> Token was found, no further processing was performed (no other rules were called) and that each time a <TWO_DIGIT> Token was consumed, control passed back to starterRule to accept the next Token. Now let's try `tst "4444 333 22"`. Your output should look like the following:
 
  starterRule called
  twoNbrRule: 1
@@ -111,9 +117,160 @@ This test verifies that each time a <TWO_DIGIT> Token was found, no further proc
    333
    22
 
-The first test value, 4444, is a <FOUR_DIGIT> Token so starterRule sends the value of 1 to twoNbrRule, which increments the value, sees that it doesn't have any instructions that apply to <FOUR_DIGIT> Tokens so it passes the value to threeNbrRule, which increments the value, sees that it doesn't have any instructions that apply to <FOUR_DIGIT> Tokens so it passes the value to fourNbrRule, which increments the value and (thankfully) knows how to process the <FOUR_DIGIT> Token. fourNbrRule then returns the value to threeNbrRule which returns the value to twoNbrRule which returns the value to starterRule which then accepts the next Token and the process repeats until all of the input text has been processed.
+. starterRule begins by calling twoNbrRule with a parameter of 1. 
+. twoNbrRule displays the println statement and then increments the passed parameter, sees that it can't consume a <TWO_DIGIT> Token so it calls threeNbrRule with a parameter value of 2.
+. threeNbrRule displays the println statement and then increments the passed parameter, sees that it can't consume a <THREE_DIGIT> Token so it calls fourNbrRule with a parameter of 3.
+. fourNbrRule displays the println statement and then increments the passed parameter, and(thankfully) knows how to process the <FOUR_DIGIT> Token. 
+. fourNbrRule then returns the value of 4 to threeNbrRule which returns the value to twoNbrRule which returns the value to starterRule which puts it into the msg variable. 
+. Because starterRule will accept one or more tokens, it then gets the next Token and calls twoNbrRule again, which starts the whole rules chain repeating itself until all of the input text has been processed.
 
-At this point it should come as no surprise that `tst "4444 3333 2222"` will count up to 9 or that `tst "1111 2222 3333 4444 5555 6666"` will count up to 18.
+At this point it should come as no surprise that `tst "4444 3333 2222"` will count up to 9 or that `tst "1111 2222 3333 4444 5555 6666"` will count up to 18, with three increments per <FOUR_DIGIT> Token. All of the input values are all listed neatly under starterRule when the parser calls the rootNode().dump() function.
+
+What do you think will happen if we turn off SMART_NODE_CREATION? At the top of your grammar, add 
+
+ SMART_NODE_CREATION=false;
+
+and then re-run jcc, cmp, and then `tst "4321 321 21"`. Your output should look like the following:
+
+ starterRule called
+ twoNbrRule: 1
+ threeNbrRule: 2
+ fourNbrRule: 3
+ twoNbrRule: 4
+ threeNbrRule: 5
+ twoNbrRule: 6
+ Ready to dump the rootNode
+ starterRule
+   twoNbrRule
+     threeNbrRule
+       fourNbrRule
+         4321
+   twoNbrRule
+     threeNbrRule
+       321
+   twoNbrRule
+     21
+
+With SMART_NODE_CREATION set to false we can see the chain of rules more clearly. The rule of SMART_NODE_CREATION is to only create a Node when it has more than one Token/item belonging to it. In our example, each time a Token is consumed, the twoNbrRule is called, then the threeNbrRule called (if required) and then the fourNbrRule (if required), but regardless of where the Token is matched, only one Token is consumed for the rule.
+
+What do you think will happen if we add a repetition quantifier to the rules? Let's find out. With SMART_NODE_CREATION=false, make the following changes to the appropriate rules: 
+
+*   twoNbrRule: (val = threeNbrRule(val) | <TWO_DIGIT>)+
+*   threeNbrRule: (nbr = fourNbrRule(nbr) | <THREE_DIGIT>)+
+*   fourNbrRule: (<FOUR_DIGIT>)+
+
+Now, re-run jcc, cmp, and then tst "12 345 6789" and you should get an output like this:
+
+ starterRule called
+ twoNbrRule: 1
+ threeNbrRule: 2
+ fourNbrRule: 3
+ Ready to dump the rootNode
+ starterRule
+   twoNbrRule
+     12
+     threeNbrRule
+       345
+       fourNbrRule
+         6789
+
+When twoNbrRule was called, it found one <TWO_DIGIT> Token to consume and then tried to consume another <TWO_DIGIT> Token. When it couldn't, it called the threeNbrRule, which found a <THREE_DIGIT> Token to consume. ThreeNbrRule then tried to consume another <THREE_DIGIT> Token but couldn't so it called fourNbrRule, which consumed a <FOUR_DIGIT> token. Since there were no other Tokens to consume, processing ended.
+
+So let's double it up; run tst with "12 12 345 345 6789 6789" and we should get the following output: 
+
+ starterRule called
+ twoNbrRule: 1
+ threeNbrRule: 2
+ fourNbrRule: 3
+ Ready to dump the rootNode 
+ starterRule
+   twoNbrRule
+     12
+     12
+     threeNbrRule
+       345
+       345
+       fourNbrRule
+         6789
+         6789
+
+But notice that the msg values printed for the xNbrRules at the top only goes up to 3 even though we processed twice as many numbers than we did in the preceeding example. That's because the Repetition Quantifier ("+") keeps consuming matching digits without leaving its current rule.
+
+What if we flip the input values around, to "9876 9876 543 543 21 21"? You should get an output similar to the following: 
+
+ starterRule called
+ twoNbrRule: 1
+ threeNbrRule: 2
+ fourNbrRule: 3
+ Ready to dump the rootNode
+ starterRule
+   twoNbrRule
+     threeNbrRule
+       fourNbrRule
+         9876
+         9876
+       543
+       543
+     21
+     21
+
+Again, the msg values for the xNbrRules only get up to 3 but the digits aren't nicely printed directly under the applicable rules but they are correctly aligned. The 9876 numbers are indented directly under the fourNbrRule; the 543 numbers are indented at the same level as the fourNbrRule because they were all processed by the threeNbrRule. And the 21 number are indented at the same level as the threeNbrRule because they were all processed by the twoNbrRule. As long as the <x_DIGITS> are grouped together, the xNbrRules will only be called once.
+
+So what happens if we jumble up the numbers, like tst "345 12 345 6789 12 345 12 6789"? You will get an output like the following: 
+
+ starterRule called
+ twoNbrRule: 1
+ threeNbrRule: 2
+ threeNbrRule: 3
+ fourNbrRule: 4
+ threeNbrRule: 5
+ threeNbrRule: 6
+ fourNbrRule: 7
+ Ready to dump the rootNode
+ starterRule
+   twoNbrRule
+     threeNbrRule
+       345
+     12
+     threeNbrRule
+       345
+       fourNbrRule
+         6789
+     12
+     threeNbrRule
+       345
+     12
+     threeNbrRule
+       fourNbrRule
+         6789
+
+With the <x_DIGIT> Tokens unorganized, the msg value is much larger because the matching rules have to be called more times. Notice also that the twoNbrRule is only called once by starterRule. And because all of the repetitions are handled by the rules, the Repetition Quantifier in starterRule isn't even needed; the plus sign can be eliminated. 
+
+Now let's set SMART_NODE_CREATION to true (or just remove it from the source) and the rerun jcc, cmp and then tst "345 12 345 6789 12 345 12 6789" (the same parameters that were just used). The output should look like:
+
+ starterRule called
+ twoNbrRule: 1
+ threeNbrRule: 2
+ threeNbrRule: 3
+ fourNbrRule: 4
+ threeNbrRule: 5
+ threeNbrRule: 6
+ fourNbrRule: 7
+ Ready to dump the rootNode
+ twoNbrRule
+   345
+   12
+   threeNbrRule
+     345
+     6789
+   12
+   345
+   12
+   6789
+
+Notice that the msg value is the same as before when SMART_NODE_CREATION was turned off but the rootNode dump was significantly changed. starterRule isn't even listed because it only had a single entry (twoNbrRule) and almost all of the calls to the xNbrRules have been omitted because they only had a single Token/item consumed. Only when 345 was followed by 6789 was the threeNbrRule listed (the Node was created) because it had more than one Token/item. The fourNbrRule wasn't listed (Node was not created) because it only contained one Token/item, so the <FOUR_DIGIT> Token became a Token/item of threeNbrRule.
+
+OK, that was a lot about Nodes but we needed to turn off SMART_NODE_CREATION to be able to see the actual order that the rules were called in. We'll look at Nodes in much more depth in a later chapter when we study Abstract Syntax Trees how JavaCC 21 has simplified and streamlined the development process by automatically incorporating the functionality of jjtree and eliminating the extra step of running jjtree that is required in _legacy javaCC_. 
 
 ==== Rules Can Call Themselves (Recursion)
 When appropriate, a rule can call itself, just like it can call other rules, to continue processing. It's all very elegant and sophisticated programmaing and it's great for situations where some character or sequence of characters will repeat an unknown number of times. A good example might be parsing an arbitrarily complex mathematical statement. 

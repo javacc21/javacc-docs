@@ -16,12 +16,12 @@ Let's make a new directory for our next grammars:
 And let's update and add to our aliases as follows:
 
     % alias jcc='java -jar <path to>javacc-full.jar -d build rules.javacc'
-    % alias cmp='javac build/*.javac'
+    % alias cmp='javac build/*.java'
     % alias tst='java -cp build RulesTest'
 
-We're going to start with some rule experiments so we'll name our grammar rules.javacc and our test progarm RulesTest.java. Once we get more familiar with rules, we'll get back to our soup. For now, we'll leave it on the back burner to cool (sorry).
+We're going to start with some rule experiments so we'll name our grammar rules.javacc and our test progarm RulesTest.java. Once we get more familiar with rules, we'll get back to our soup. For now, we'll leave it cooling on the back burner (sorry, I couldn't resist it).
 
-=== First Experiment with Rules
+=== Starting with Rules
 Our first grammar, rules.javacc, is very simple, with just one private Token, three regular Tokens and four rules. Each of the regular Tokens includes a Lexical Action to show when they are matched. In the RootRule, instead of specifying the actual Tokens, rootRule makes calls to other rules, each of which specifies which Token to match. In this example, each rule also includes an action, enclosed in curly braces, which prints out the name of the rule that was run.
 
     DEBUG_LEXER = false;
@@ -47,12 +47,13 @@ Our first grammar, rules.javacc, is very simple, with just one private Token, th
 
 Notice the inconsistency in the way the RootRule calls to the other rules; this was intentionally done to highlight the flexibility you have in JavaCC 21. Also notice how differently the rules are formatted:
 
-*   twoNbrRule includes empty parentheses, showing that no parameters were passed and includes a pair of curly braces for the initialization block in _legacy JavaCC_. It encloses the Java statement (System.out....) in curly braces and terminates the actions in the rule with a semi-colon.
-*   Threenbrrule includes the return type of void but skipped the parentheses and the empty curly braces. It also encloses the the Java statment (with its own curly braces) and the entire rule contents in curly braces but does _NOT_ use a semi-colon at the end.
+*   twoNbrRule was called without parentheses that would indicate that a rule was being call. Both Threenbrrule() and four_nbr_rule() were called using empty parentheses.
+*   The definition of twoNbrRule skips the return type (void in this rule) but does include empty parentheses, showing that no parameters were passed in. It also includes an empty pair of curly braces for the initialization block required in _legacy JavaCC_ only. It encloses the Java statement (System.out....) in curly braces and terminates the Java statement with a semi-colon inside the curly braces.
+*   Threenbrrule includes the return type of void but skips the parentheses and the empty curly braces. It also encloses the the Java statment (with its own curly braces) and the entire rule contents in curly braces but does _NOT_ use a semi-colon at the end.
 *   four_nbr_rule skips the return type, empty parentheses, and curly braces (both initiliation and enclosing). It does enclose the Java statement in curly braces and terminates the rule with a semi-colon.
-*   All three rules use different capitalization styles and use of underscores but all three styles are accepted.
+*   All three called rules use different capitalization styles and use of underscores but all three styles are accepted.
 
-The above example is not the recommended formatting for rules; it was done so inconsistently to demonstrate the flexibility that you have with JavaCC 21. However, it is recommended that you pick a style and stick with it. The following section discusses the actual structure of rules.
+The above example is not the recommended formatting for rules; it was intentionally doneS inconsistently to demonstrate the flexibility that you have with JavaCC 21. However, it is recommended that you pick a style and stick with it. The following section discusses the actual structure of rules.
 
 === Rule Structure
 The following diagram shows the components of a rule and identifies which items are optional in JavaCC 21. _Legacy JavaCC_ required that all components were present in every rule, whether they were used or not.
@@ -67,7 +68,7 @@ The Initialization Block, required in _Legacy JavaCC_, is usually empty, making 
 
 The Action Block is where stuff gets done. In our examples so far we have been listing either String literals or Tokens but we can also call itself recursively, call other rules, or execute Java code. And these actions will make up the majority of the material in this chapter.
 
-=== Test Code for Our Experiment
+=== Test Code for Our First Rules
 Our testing code is just like we used in the our First example; it creates an instance of the Parser and then runs its RootRule method, which is the rule named RootRule in our grammar. When RootRule is completed, it lists all of the items it matched on the command line. Here's the code:
 
   public class RulesTest {
@@ -78,7 +79,7 @@ Our testing code is just like we used in the our First example; it creates an in
           }
   }
 
-=== Running the Experiment
+=== Running the First Rules
 Now run jcc and cmp as required to get a clean compile. Then run the test program with parameters similar to `tst "22 333 4444"` and you should get an output similar to the following:
 
   TWO_DIGIT found
@@ -92,18 +93,18 @@ Now run jcc and cmp as required to get a clean compile. Then run the test progra
     333
     4444
 
-=== A More Consistent Version of the Experiment
+=== A More Consistent Version of the Rules
 The next example will use modified versions of these same Nbr rules. For the rest of this chapter, the general formatting guidelines will be as follows:
 
 *   Return types of void will be skipped
 *   Rules without parameters will be defined without empty parentheses
-*   Rules that are called will include parentheses, even if they are empty. They are included to make it clearer that a rule is to be run
+*   Rules that are called will include parentheses, even if they are empty. They are included to make it clearer that a rule is to be run. As you get more experienced with Javacc 21, you may prefer to skip the parentheses unless you are actually passing parameters to the rule.
 *   Rule names will begin with a lowercase letter, just like method calls in Java normally begin with a lowercase letter. The rest of the rule name will use camelCase, like in Java.
 *   The curly braces for empty initialization blocks will be omitted. If initialization is required, it will be handlded in the action block.
 *   The action block will skip the enclosing curly braces and instead terminate the block with a semi-colon.
 *   Lexical actions will only be used when needed, not for notification or troubleshooting.
 
-Update the experiment grammer to look like the following:
+Update the rules grammer to look like the following:
 
  DEBUG_LEXER = false;
  DEBUG_PARSER= false;
@@ -125,11 +126,9 @@ Update the experiment grammer to look like the following:
  fourNbrRule : {System.out.println("fourNbrRule executed "); } 
 			    <FOUR_DIGIT>  ;
 
-NOTE: rootRule was renamed starterRule. You can name your first rule any legal name that you want, but start() and run() are popular choices because parser.start() and parser.run() are commonly seen in Java code.
+NOTE: rootRule was renamed starterRule in this example. You can name your first rule any legal name that you want, but start() and run() are popular choices because start() and run() are commonly used in the Java API.
 
 If you change rootRule to starterRule (or any other name), be sure to update RulesTest.java to use the new name.
-
-IMPORTANT: Be sure to include the println statement _before_ rules line because we want that executed first.
 
 Now when we rerun jcc and cmp and `tst "22 333 4444"`` your output should look similar to the following:
 
@@ -146,7 +145,7 @@ Now when we rerun jcc and cmp and `tst "22 333 4444"`` your output should look s
 Notice that the rootNode is whatever you named your first rule, in our case, "starterRule". Also notice that if you rerun the example code that it will list the executed rules in the order that the dump lists them, no matter how many of 2-digit, 3-digit or 4-digit numbers you list. 
 
 === Longest Token Matched First (aka Greedy Matching)
-But what happens if you don't leave whitespace between the numbers in the argument? If, for example, you enter `tst 1212312345` or `tst 1212312345`. JavaCC will match the longest Token that it can (<FOUR_DIGIT>) as many times as it can and then, when there are less than 4 digits remaining, try to match any shorter tokens. So, for the "121231234" example, the last digit is discarded because it doesn't match any Token:
+But what happens if you don't leave whitespace between the numbers in the argument? If, for example, you enter `tst 121231234` or `tst 1212312345`. JavaCC will match the longest Token that it can (<FOUR_DIGIT>) as many times as it can and then, when there are less than 4 digits remaining, try to match any shorter tokens. So, for the "121231234" example, the last digit is discarded because it doesn't match any Token:
 
  $ tst "121231234"
  starterRule called
@@ -156,6 +155,8 @@ But what happens if you don't leave whitespace between the numbers in the argume
  starterRule
    1212
    3123
+
+NOTE: What about the leftover "4" at the end, you're probably asking. Why wasn't there an error or message about an invalid token? The starterRule provided rules for responding to different kinds of tokens but no rules for the leftover single digit. The logic of JavaCC assumes that if it has successfully matched a token and/or a rule then it has fulfilled its assigned duties and that something else will process that leftover token.
 
 However, in the "1212312345" example, the <FOUR_DIGIT> token is matched twice and the remaining digits are matched to a <TWO_DIGIT> token.
 
@@ -170,32 +171,42 @@ However, in the "1212312345" example, the <FOUR_DIGIT> token is matched twice an
    3123
    45
 
-=== Turn ON DEBUG_PARSER for a Moment
-Now go back into the grammar and turn on the debugger for the lexer (DEBUG_LEXER=true;), then rerun jcc and cmp. After running tst "22 333 4444" you'll get a bunch of debug output in addition to the previous output that will look something like the following:
+=== Turn ON DEBUG_LEXER for a Moment
+Now go back into the grammar and turn on the debugger for the lexer (DEBUG_LEXER=true;), then rerun jcc and cmp. After running tst "22 333 4444" you'll get a bunch of debug output in addition to the previous output. Let's tighten our focus and do:
 
- $ tst "22 333 4444"
- Mar 18, 2021 11:19:33 PM RulesLexer nextToken
- INFO: Current character : 2 (50) at line 1 column 1
- Mar 18, 2021 11:27:54 PM RulesLexer jjMoveStringLiteralDfa0_DEFAULT
+ $ tst "1234"
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer nextToken
+ INFO: Current character : 49 (49) at line 1 column 1
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer jjMoveStringLiteralDfa0_DEFAULT
  INFO:    No string literal matches possible.
- Mar 18, 2021 11:27:54 PM RulesLexer jjMoveNfa_DEFAULT
- INFO: 4 (52) at line 1 column 2
- Mar 18, 2021 11:27:54 PM RulesLexer jjMoveNfa_DEFAULT
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer jjMoveNfa_DEFAULT
+ INFO: 50 (50) at line 1 column 2
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer jjMoveNfa_DEFAULT
  INFO:    Currently matched the first 2 characters as a <TWO_DIGIT> token.
- Mar 18, 2021 11:27:54 PM RulesLexer jjMoveNfa_DEFAULT
- INFO: 4 (52) at line 1 column 3
- Mar 18, 2021 11:27:54 PM RulesLexer jjMoveNfa_DEFAULT
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer jjMoveNfa_DEFAULT
+ INFO: 51 (51) at line 1 column 3
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer jjMoveNfa_DEFAULT
  INFO:    Currently matched the first 3 characters as a <THREE_DIGIT> token.
- Mar 18, 2021 11:27:54 PM RulesLexer jjMoveNfa_DEFAULT
- INFO: 4 (52) at line 1 column 4
- Mar 18, 2021 11:27:54 PM RulesLexer jjMoveNfa_DEFAULT
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer jjMoveNfa_DEFAULT
+ INFO: 52 (52) at line 1 column 4
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer jjMoveNfa_DEFAULT
  INFO:    Currently matched the first 4 characters as a <FOUR_DIGIT> token.
- Mar 18, 2021 11:19:34 PM RulesLexer nextToken
- INFO: ****** FOUND A <TWO_DIGIT> MATCH (22) ******
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer nextToken
+ INFO: ****** FOUND A <FOUR_DIGIT> MATCH (1234) ******
 
  starterRule called
- twoNbrRule executed
+ fourNbrRule executed
+ Jul 19, 2021 3:22:23 PM RulesEx2Lexer generateEOF
+ INFO: Returning the <EOF> token.
+ Ready to dump the rootNode
+ 1234
 
-Notice that the starterRule println statement isn't the first item listed - it's way down the screen after the first block of Lexer debug statements. If you open RulesParser.java and find your first rule (starterRule in this example), the statement `openNodeScope(starterRule1)` causes the Lexer to load the next Token from the input source (which prints the debug lines) just before executing the starterRule println statement.
+Reading thru the debugging messages, the Lexer began by reading the first character but couldn't match any literals so it then read the next character and discovered that it could match a token so it displayed the line "Currently matched the first 2 characters as a <TWO_DIGIT> token." The Lexer then read the next character and discovered that it could match a <THREE_DIGIT> token and displayed the appropriate message. The Lexer then read another character and discovered that it could match a <FOUR_DIGIT> token and displayed the appropriate message.
+
+Only after after reading in "1234" and recognizing it as a <FOUR_DIGIT> token does the starterRule continue running and display the message "starterRule called". The starterRule continues running and selects the appropriate rule to execute.
+
+It may seem odd that the starterRule println statement isn't the first item listed; its the first item in starterRule, before any rules or tokens are evaluated. If you turn on DEBUG_PARSER and rerun jcc, cmp, and tst, you'll find that starterRule has in fact started but before it executes any actions, it tries to get a Token, which means that the Lexer runs, which performs the processing shown in the debugging statements above.
 
 The order of execution isn't normally critical; what is critical is that we understand that the Lexer and the Parser take turns controlling the flow of execution and that the Lexer tries to load the next Token before handing control back to the Parser to consume that Token.
+
+NOTE: Sharp-eyed readers may have noticed that the single value passed on the command was simply listed instead of being indented under "starterRule". This is because of the SMART_NODE_CREATION option defaults to true; set it to false or provide more values to parse and the normal indentation will return. But we're getting ahead of ourselves; we'll cover nodes and trees in a later chapter.
