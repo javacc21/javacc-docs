@@ -1,0 +1,37 @@
+:imagesdir: ./images
+=== Better Messages
+So far, we have only been printing pre-set messages, based on the rule that was accessed. Now we're going to start examining the input text that we're parsing so we can start performing more meaningful actions. This next flowchart shows in more detail how the Lexer and Parser work together to process your input text.
+
+image::4Parser-Lexer-interplay-advanced.png[Flowchart of Lexer-Parser]
+
+The big takeaway here is the item lastConsumedToken. The lastConsumedToken is set to the Token that was most recently matched by the Lexer and given to the Parser to consume. The parser checks to see if it's the correct type of Token and if it is, "consumes" that Token, making it the lastConsumedToken.
+
+The lastConsumedToken is a variable of type Token declared in your Parser to help the Parser keep track of what it is processing. If you look at Token.java, you'll see that it has a bunch of public methods to perform a lot of processing chores and housekeeping, most of which we don't really need to know about unless we really want to know the nitty-gritty details of how JavaCC works.
+
+Two public methods you'll probably use are getImage() and toString(), which really do the same thing; return the actual value of the text that was matched as a Token. For example:
+
+ TOKEN: <NAME: ["A" - "G"] (["h" - "m"])* > ;
+
+Valid <NAME> Tokens could be "Ahijk" or "Blmkjih", etc. and you might need to process certain <NAME> Tokens differently. The actual text that was tokenized can be accessed using:
+
+*   lastConsumedToken.getImage()
+*   lastConsumedToken.toString()
+*   lastConsumedToken.getNormalizedText()
+
+They can be used pretty much interchangeably. The getImage() method more closely resembles _legacy JavaCC_.  The toString() method is more familiar to Java users, but it is really just a wrapper for the getNormalizedText() method. The getNormalizedText() method returns "EOF" if the tokenType is <EOF> otherwise it just calls getImage(). So use the method that makes the most sense to you.
+
+NOTE:  Token objects in _legacy JavaCC_ include a String field named "image" to hold the text that was matched and made it public, for example, `myToken.image`. In keeping with more modern Java usage, JavaCC 21 makes the image field private and provides accessor methods to retrieve the contents of the image field.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
