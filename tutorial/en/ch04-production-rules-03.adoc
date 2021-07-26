@@ -1,0 +1,96 @@
+
+==== Rules Can Call Themselves (Recursion)
+Most modern programming languages support recursion, or calling themselves repeatedly to perform some work. Two of the advantages of recursion are:
+
+*   The size of the program code can be significantly reduced because you only have one set code that is performed repeatedly until some termination condition is reached
+*   You don't have to know ahead of time the structure or shape or conditions to be processed, the code just keeps repeating itself until the termination condition is reached.
+
+A famous recursion application is calculation of the Fibbonacci Series (0,1,1,2,3,5,8,13....). Fibbonacci numbers can be found by adding the first two numbers to produce a sum and then adding the second number and the sum to produce a new sum, then the third number and the new sum and so on for as long as you're interested. For example, 0+1=1, 1+1=2, 1+2=3, 2+3=5, 3+5=8, etc. Fibbonacci numbers can be calculated using loops but are generally considered more elegant if calculated using recursion because the operations being performed are the same. The following code snippet demonstrates this:
+
+ void fibbonacci(int reps) {
+		if (reps > 0) {
+			sum = loNbr + hiNbr;
+			loNbr = hiNbr;
+			hiNbr = sum;
+			System.out.print(" " + sum);
+			fibbonacci(reps - 1);
+		}
+	}
+
+The last line of this method calls itself and it continues calling itself until the value of `reps` drops to zero. The fibbonacci method doesn't have to know or understand anything of the structure or the process that it is performing. It just keeps calling itself until it reaches a termination condition.
+
+JavaCC can sometimes use this recursive capability to elegantly parse through Tokens and eliminating a lot of complicated control code and nested loops, etc. For example, consider the following code from Sun and included in the _Legacy JavaCC_ open source project.
+
+ /* Copyright (c) 2006, Sun Microsystems, Inc.
+  * All rights reserved.
+  * 
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions are met:
+  * 
+  *     * Redistributions of source code must retain the above copyright notice,
+  *       this list of conditions and the following disclaimer.
+  *     * Redistributions in binary form must reproduce the above copyright
+  *       notice, this list of conditions and the following disclaimer in the
+  *       documentation and/or other materials provided with the distribution.
+  *     * Neither the name of the Sun Microsystems, Inc. nor the names of its
+  *       contributors may be used to endorse or promote products derived from
+  *       this software without specific prior written permission.
+  * 
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+  * THE POSSIBILITY OF SUCH DAMAGE.
+  */
+
+ PARSER_BEGIN(Simple3)
+ 
+ /** Simple brace matcher. */
+ public class Simple3 {
+ 
+   /** Main entry point. */
+   public static void main(String args[]) throws ParseException {
+     Simple3 parser = new Simple3(System.in);
+     parser.Input();
+   }
+ }
+ 
+ PARSER_END(Simple3)
+ 
+ SKIP :
+ {
+   " "
+ | "\t"
+ | "\n"
+ | "\r"
+ }
+ 
+ TOKEN :
+ {
+   <LBRACE: "{">
+ | <RBRACE: "}">
+ } 
+ 
+ /** Root production. */
+ void Input() :
+ { int count; }
+ {
+   count=MatchedBraces() <EOF>
+   { System.out.println("The levels of nesting is " + count); }
+ }
+ 
+ /** Brace counting production. */
+ int MatchedBraces() :
+ { int nested_count=0; }
+ {
+   <LBRACE> [ nested_count=MatchedBraces() ] <RBRACE>
+   { return ++nested_count; }
+ }
+
+This grammar uses recursion to verify that the number of left curly braces ("{") matches the number of right curly braces ("}"). The MatchedBraces() production (rule) looks for the <LBRACE> Token, when it finds then t calls itself, causing it to look for another <LBRACE> Token and call itself again, again and again until eventually it finds an <RBRACE> Token
