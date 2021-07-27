@@ -1,25 +1,15 @@
-
+:imagesdir: ./images
 ==== Rules Can Call Themselves (Recursion)
-Most modern programming languages support recursion, or calling themselves repeatedly to perform some work. Two of the advantages of recursion are:
+When appropriate, a rule can call itself, just like it can call other rules, to perform additional processing. It's all very elegant and sophisticated programmaing and it's great for situations where some character or sequence of characters will repeat an unknown number of times. A good example might be parsing an arbitrarily complex mathematical statement. 
+
+Most modern programming languages support recursion, or calling themselves repeatedly to perform some work. A famous recursion application is calculation of the Fibbonacci Series (0,1,1,2,3,5,8,13....). If curious, you can search the internet for examples of calculating the Fibbonacci Series in probably any programming language ever developed.
+
+Two of the advantages of recursion are:
 
 *   The size of the program code can be significantly reduced because you only have one set code that is performed repeatedly until some termination condition is reached
 *   You don't have to know ahead of time the structure or shape or conditions to be processed, the code just keeps repeating itself until the termination condition is reached.
 
-A famous recursion application is calculation of the Fibbonacci Series (0,1,1,2,3,5,8,13....). Fibbonacci numbers can be found by adding the first two numbers to produce a sum and then adding the second number and the sum to produce a new sum, then the third number and the new sum and so on for as long as you're interested. For example, 0+1=1, 1+1=2, 1+2=3, 2+3=5, 3+5=8, etc. Fibbonacci numbers can be calculated using loops but are generally considered more elegant if calculated using recursion because the operations being performed are the same. The following code snippet demonstrates this:
-
- void fibbonacci(int reps) {
-		if (reps > 0) {
-			sum = loNbr + hiNbr;
-			loNbr = hiNbr;
-			hiNbr = sum;
-			System.out.print(" " + sum);
-			fibbonacci(reps - 1);
-		}
-	}
-
-The last line of this method calls itself and it continues calling itself until the value of `reps` drops to zero. The fibbonacci method doesn't have to know or understand anything of the structure or the process that it is performing. It just keeps calling itself until it reaches a termination condition.
-
-JavaCC can sometimes use this recursive capability to elegantly parse through Tokens and eliminating a lot of complicated control code and nested loops, etc. For example, consider the following code from Sun and included in the _Legacy JavaCC_ open source project.
+ JavaCC can sometimes use this recursive capability to elegantly parse through Tokens and eliminating a lot of complicated control code and nested loops, etc. For example, consider the following code from Sun and included as part of the _Legacy JavaCC_ open source project.
 
  /* Copyright (c) 2006, Sun Microsystems, Inc.
   * All rights reserved.
@@ -93,4 +83,63 @@ JavaCC can sometimes use this recursive capability to elegantly parse through To
    { return ++nested_count; }
  }
 
-This grammar uses recursion to verify that the number of left curly braces ("{") matches the number of right curly braces ("}"). The MatchedBraces() production (rule) looks for the <LBRACE> Token, when it finds then t calls itself, causing it to look for another <LBRACE> Token and call itself again, again and again until eventually it finds an <RBRACE> Token
+This grammar uses recursion to verify that the number of left curly braces ("{") matches the number of right curly braces ("}"). The MatchedBraces() production (rule) looks for the <LBRACE> Token, when it finds one, it then calls itself, causing it to look for another <LBRACE> Token and call itself again until it no longer finds an <LBRACE> Token. When it finds an <RBRACE> Token, that instance of MatchedBraces() completes and the pre-incremented value of nested_count is returned. The next (calling) instance of MatchedBraces() then tries to find an <RBRACE> and if it does, it pre-increments the nested_count and then returns it. As long as matching braces are found, the instances of the MatchedBraces() rule continue completing until finally the Input() rule (the "Root production") completes and prints the levels of nesting count.
+
+If this grammar is processed, compiled and run with javaCC 21, it works exactly the same as with _legacy javaCC_ demonstrating that JavaCC 21 has retained backwards compatibility. Notice that this _legacy_ code uses the "PARSER_BEGIN(name) -- PARSER_END(name)" block to generate the Java code that calls Input() instead of using the separate test program. Also notice that it uses System.in instead of command line parameters: when you run the Simple3 programm it will wait for you to enter left braces and then right braces. 
+
+When you press enter (or Ctrl-D on some *nix systems), Simple3 will then try to match the left and right curly braces. If you enter more left braces than right brace, it will exit with an error message. Same for more right braces than left braces. Same for out of order braces, for example "{}{}{}" or any non-brace character, for example "m q []", except for whitespace characters that are SKIP'ped.
+
+Following is the JavaCC 21 version of the same brace matching program. The first thing to notice is that the copyright notice from Sun Microsystems, Inc. has been abbreviated; however, all copyrights to the original code are still in effect and this streamlined version does not affect those original copyrights. 
+
+Next, notice that this code uses INJECT PARSER_CLASS to accomplish what the PARSER_BEGIN-PARSER_END block did. We'll cover injecting code more in a little bit, but for right now all we need to know is that the name of the file with the main() function is the name of the file that injects the PARSER_CLASS, so if you name your JavaCC 21 file simple3, the injected code is name Simple3Parser.
+
+ /* Copyright (c) 2006, Sun Microsystems, Inc. 
+  * Copied from JavaCC Legacy distribution - all previously stated copyrights apply
+  */
+
+ INJECT PARSER_CLASS : {
+	static public void main(String[] args) throws ParseException {
+		Simple3Parser parser = new Simple3Parser(System.in);
+		parser.Input();
+		parser.rootNode().dump();
+	}
+ }
+
+ SKIP : " " | "\t" | "\n" | "\r" ;
+ 
+ TOKEN : <LBRACE: "{"> | <RBRACE: "}">  ; 
+ 
+ /** Root production. */
+ void Input : 
+    { int count; }
+    count=MatchedBraces()
+    { System.out.println("The levels of nesting is " + count); }  ;
+ 
+ /** Brace counting production. */
+ int MatchedBraces : 
+    { int nested_count=0; }
+    <LBRACE> [ nested_count=MatchedBraces() ] <RBRACE>
+    { return ++nested_count; }  ;
+
+This updated code also eliminates much of the unneeded punctuation, such as empty parenthese following the rule names and the braces surrounding the SKIP, TOKEN, and individual rules. The SKIP options and TOKEN options were also moved to a single line; it is left to the reader to decide if the options are clearer on a single line or on multiple lines as was done in the original (the options could have been put on the same line in the original but that wasn't how they chose to format their options).
+
+After you run jcc and cmp, use the following command line instead of the tst alias:
+
+ java -cp out Simple3Parser
+
+When you type in your desired input, your output will look something like the following: 
+
+ $ java -cp out Simple3Parser
+ {{{}}}
+ The levels of nesting is 3
+ MatchedBraces
+   {
+   MatchedBraces
+     {
+     MatchedBraces
+       {
+       }
+     }
+   }
+
+In this example, we entered the braces without any spaces or tabs between them but you can add as many spaces or tabs as you want and it will work fine. Also notice that we included the line `parser.rootNode().dump();` to the injected code. The dump() statement works because JavaCC 21 automatically generates the Nodes that are dumped which _legacy javacc_ required you to run jjtree to generate. We'll cover Nodes in more detail in a later chapter when we look at how jjtree functionality is incorporated into JavaCC 21.
