@@ -123,14 +123,18 @@ Next, notice that this code uses INJECT PARSER_CLASS to accomplish what the PARS
 
 This updated code also eliminates much of the unneeded punctuation, such as empty parenthese following the rule names and the braces surrounding the SKIP, TOKEN, and individual rules. The SKIP options and TOKEN options were also moved to a single line; it is left to the reader to decide if the options are clearer on a single line or on multiple lines as was done in the original (the options could have been put on the same line in the original but that wasn't how they chose to format their options).
 
-After you run jcc and cmp, use the following command line instead of the tst alias:
+Clear your output directory with: 
+
+ rm out/*
+
+Next, run jcc and cmp, and then type in the following command and press Enter (instead of the tst alias):
 
  java -cp out Simple3Parser
 
 When you type in your desired input, your output will look something like the following: 
 
- $ java -cp out Simple3Parser
- {{{}}}
+ $ java -cp out Simple3Parser   (press Enter key)
+ {{{}}}                         (at blank line, type the desired number of braces)
  The levels of nesting is 3
  MatchedBraces
    {
@@ -143,3 +147,5 @@ When you type in your desired input, your output will look something like the fo
    }
 
 In this example, we entered the braces without any spaces or tabs between them but you can add as many spaces or tabs as you want and it will work fine. Also notice that we included the line `parser.rootNode().dump();` to the injected code. The dump() statement works because JavaCC 21 automatically generates the Nodes that are dumped which _legacy javacc_ required you to run jjtree to generate. We'll cover Nodes in more detail in a later chapter when we look at how jjtree functionality is incorporated into JavaCC 21.
+
+This isn't the end of recursion by any means; this is just the bare minimum that we need to cover to get the basic concepts down. We'll look more at recursion later when we look at the calculator example that allows us to string together arbitrarily complex mathimatical calculations that honors parentheses to get the correct order of operations.

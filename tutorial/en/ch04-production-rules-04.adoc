@@ -4,34 +4,153 @@ So far, we have only been printing pre-set messages, based on the rule that was 
 
 image::4Parser-Lexer-interplay-advanced.png[Flowchart of Lexer-Parser]
 
-The big takeaway here is the item lastConsumedToken. The lastConsumedToken is set to the Token that was most recently matched by the Lexer and given to the Parser to consume. The parser checks to see if it's the correct type of Token and if it is, "consumes" that Token, making it the lastConsumedToken.
+The big takeaway here is the box marked lastConsumedToken. The lastConsumedToken is set to the Token that was most recently matched by the Lexer and handed to the Parser to consume. The parser checks to see if it's the correct type of Token and if it is, "consumes" that Token, making it the lastConsumedToken.
 
-The lastConsumedToken is a variable of type Token declared in your Parser to help the Parser keep track of what it is processing. If you look at Token.java, you'll see that it has a bunch of public methods to perform a lot of processing chores and housekeeping, most of which we don't really need to know about unless we really want to know the nitty-gritty details of how JavaCC works.
+The lastConsumedToken is a variable of type Token declared in your Parser to help the Parser keep track of what it is processing. If you look at Token.java, you'll see that it has a bunch of public methods to perform a lot of processing chores and housekeeping, most of which we don't really need to know about right now. We will look at the nitty-gritty details of the code the JavaCC templates generate.
 
 Two public methods you'll probably use are getImage() and toString(), which really do the same thing; return the actual value of the text that was matched as a Token. For example:
 
  TOKEN: <NAME: ["A" - "G"] (["h" - "m"])* > ;
 
-Valid <NAME> Tokens could be "Ahijk" or "Blmkjih", etc. and you might need to process certain <NAME> Tokens differently. The actual text that was tokenized can be accessed using:
+Valid <NAME> Tokens would begin with a single capital letter between "A" and "G" inclusive followed by zero or more lowercase letters between "h" and "m" inclusive. For example, "Ahijk". Depending on the actual letters of the parsed word, you might need to process certain <NAME> Tokens differently. The actual text that was tokenized can be accessed using either:
 
 *   lastConsumedToken.getImage()
 *   lastConsumedToken.toString()
 *   lastConsumedToken.getNormalizedText()
 
-They can be used pretty much interchangeably. The getImage() method more closely resembles _legacy JavaCC_.  The toString() method is more familiar to Java users, but it is really just a wrapper for the getNormalizedText() method. The getNormalizedText() method returns "EOF" if the tokenType is <EOF> otherwise it just calls getImage(). So use the method that makes the most sense to you.
+They can be used pretty much interchangeably. The getImage() method most closely resembles the way that  _legacy JavaCC_ would access the tokenized value.  The toString() method is more familiar to Java users, but it is really just a wrapper for the getNormalizedText() method. The getNormalizedText() method returns "EOF" if the tokenType is <EOF> otherwise it just calls getImage(). So use the method that makes the most sense to you.
 
 NOTE:  Token objects in _legacy JavaCC_ include a String field named "image" to hold the text that was matched and made it public, for example, `myToken.image`. In keeping with more modern Java usage, JavaCC 21 makes the image field private and provides accessor methods to retrieve the contents of the image field.
 
+The Token objects can even be changed. This next example will retrieve the contents of the lastConsumedToken and modify it based on some arbitrary criteria. The following examples are not recommended practice but only an exploration of what can be done if needed.
 
+ SKIP  : " " | "\t" | "\n" | "\r";
 
+ TOKEN : < ALPHA_TWO : (<LOWER_ALPHA>){2} > 
+ |       < ALPHA_THREE : (<UPPER_ALPHA>){3} > 
+ |       < ALPHA_FOUR : (<ALPHA>){4} > 
+ ;
+ TOKEN : < #LOWER_ALPHA : ["a" - "z"] > 
+ |       < #UPPER_ALPHA : ["A" - "Z"] >
+ |       < ALPHA : <LOWER_ALPHA> | <UPPER_ALPHA> >
+ ;  
 
+ start : {System.out.println("Parser.start called");} 
+        (alpha2() | alpha3() | alpha4() )+ 
+        {System.out.println("DONE: Ready to dump the rootNode");} ;
 
+ alpha2 : {System.out.println("alpha2 called: LCT= " + lastConsumedToken.toString());}
+          <ALPHA_TWO> 
+         {System.out.println("alpha2 End LCT= " + lastConsumedToken.toString()); } ;
 
+ alpha3 :{System.out.println("alpha3 called: LCT= " + lastConsumedToken.toString()); }
+         <ALPHA_THREE>
+        {System.out.println("alpha3 End LCT= " + lastConsumedToken.toString());} ;
 
+ alpha4 :{System.out.println("alpha4 called: LCT= " + lastConsumedToken.toString()); } 
+	     <ALPHA_FOUR>
+        {System.out.println("alpha4 End LCT: " + lastConsumedToken.toString()); } ;
 
+ INJECT PARSER_CLASS : {
+	static public void main(String[] args) throws ParseException {
+		RulesLastConsumedTokenParser parser = new RulesLastConsumedTokenParser(System.in);
+		parser.start();
+		parser.rootNode().dump();
+	}
+ }
 
+So this probably looks pretty familiar but we've substituted alphabetic characters for the numerical digits that we had been using. We've added a few extra restrictions: 
 
+*   <ALPHA_TWO> Tokens must be lowercase letters 
+*   <ALPHA_THREE> Tokens must be uppercase letters
+*   <ALPHA_FOUR> Tokens must be either uppercase or lowercase letters
 
+Two things to notice. The private Tokens (LOWER_ALPHA and UPPER_ALPHA) aren't included in the same Token definition as the Tokens that use them. Also, the injected PARSER_CLASS doesn't have to be at the beginning of the grammar file. You could inject it between any of the rules, if you thought it made the most sense, but at the top or at the bottom of your grammar file are probably the places that would be easiest to find.
 
+So this would be a good time to clean your output directory with:
 
+ rm out/*
 
+You can just modify your existing rules.javacc file with the above contents or you can copy and paste the above grammar code into a new file named rulesAlpha.javacc or rulesA.javacc or anything else you prefer.
+
+Next, run jcc and cmp and then: 
+
+ java -cp out RulesAlphaParser
+ aa BBB cdEF
+
+And your output should looks like the following: 
+
+ $ java -cp out RulesAlphaParser
+ aa BBB cdEF
+ Parser.start called
+ alpha2 called: LCT= null
+ alpha2 End LCT= aa
+ alpha3 called: LCT= aa
+ alpha3 End LCT= BBB
+ alpha4 called: LCT= BBB
+ alpha4 End LCT: cdEF
+ DONE: Ready to dump the rootNode
+ start
+   aa
+   BBB
+   cdEF
+
+What is important to take from this example is that the lastConsumedToken isn't updated until a Token is actually consumed by the parser. For example, the first time the alpha2 rule is called, the lastConsumedToken in the "called" message is null because a Token has not yet been consumed. Once the <ALPHA_TWO> token is consumed, the lastConsumedToken is updated to whatever two characters you enter.
+
+Similarly, when alpha3 is called, the lastConsumedToken is whatever value was leftover in lastConsumedToken until the <ALPHA_THREE> Token is consumed. Same goes for alpha4 rule; lastConsumedToken only changes after it has consumed its Token.
+
+We can do more than just read and display the lastConsumedToken's value. We can also change its value. It doesn't seem like this would be a capability that you would use everyday but we'll go ahead and do it so you'll know how to do it if the need should arise.
+
+Just to make the changes noticable, we'll change all <ALPHA_TWO> Tokens from lower case to upper case and we'll change all <ALPHA_THREE> Tokens from upper case to lower case. And since <ALPHA_FOUR> Tokens can be either upper or lower case, we'll invert the case of each character in the Token.
+
+The changes to the alpha rules are shown below: 
+
+ alpha2 : {System.out.println("alpha2 called: LCT= " + lastConsumedToken.toString());}
+          <ALPHA_TWO>
+          {lastConsumedToken.setImage(lastConsumedToken.toString().toUpperCase());
+            System.out.println("alpha2 End LCT= " + lastConsumedToken.toString()); } ;
+
+ alpha3 : {System.out.println("alpha3 called: LCT= " + lastConsumedToken.toString()); }
+          <ALPHA_THREE>
+          {lastConsumedToken.setImage(lastConsumedToken.toString().toLowerCase());
+            System.out.println("alpha3 End LCT= " + lastConsumedToken.toString());} ;
+
+ alpha4 : {System.out.println("alpha4 called: LCT= " + lastConsumedToken.toString()); } 
+		  <ALPHA_FOUR>
+          {StringBuilder sb = new StringBuilder(lastConsumedToken.toString());
+           Character ch;
+           for(int i = 0; i < sb.length(); i++) {
+              ch = sb.charAt(i);
+              if (Character.isUpperCase(ch)) {
+         	    sb.setCharAt(i, Character.toLowerCase(ch));
+         	  } else {
+         		sb.setCharAt(i, Character.toUpperCase(ch));
+         	  }
+           }
+           lastConsumedToken.setImage(sb.toString());
+           System.out.println("alpha4 End LCT: " + lastConsumedToken.toString()); } ;
+
+The setImage() method is used to change the contents of the lastConsumedToken. Alpha2 and alpha3 are pretty straightforward changes because we know what their cases must be to match their Token definintions. The alpha4 rule is trickier because we have to move character by character through the String contained in the lastConsumedToken.
+
+When you have made these changes and re-run jcc and cmp, it should look like the following when run: 
+
+ $ java -cp out RulesAlphaParser
+ aa BBB cDeF
+ Parser.start called
+ alpha2 called: LCT= null
+ alpha2 End LCT= AA
+ alpha3 called: LCT= AA
+ alpha3 End LCT= bbb
+ alpha4 called: LCT= bbb
+ alpha4 End LCT: CdEf
+ DONE: Ready to dump the rootNode
+ start
+   AA
+   bbb
+   CdEf
+
+The above output shows that we have changed the capitalization of the input values as desired; lower case <ALPHA_TWO> Tokens were changed to upper case, upper case <ALPHA_THREE> Tokens were changed to lower case and the capitalization of <ALPHA_FOUR> Token was flipped.
+
+While this example is somewhat contrived, it represents how the lastConsumedToken can be examined and actions taken based on its contents. For example, you might want to respond differently if the parsed Token was "HELP" or if an illegal or obsolete value were entered into a Token.
+
+OK, so that's enough about the basics of production rules for now. The next chapter will look at some of the more advanced features of the Lexer and special capabilities it offers.
