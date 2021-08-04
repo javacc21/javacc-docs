@@ -9,8 +9,8 @@ Let's start by mentioning that we've been using rules since the very beginning. 
 === Chapter Setup
 Let's make a new directory for our next grammars:
 
-    % mkdir third
-    % cd third
+    % mkdir ch04
+    % cd ch04
     % mkdir build
 
 And let's update and add to our aliases as follows:

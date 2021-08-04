@@ -9,22 +9,22 @@ NOTE: If you are familiar with Tokens and RegEx, you might want to skim thru thi
 So before we go any further, let's get our environment set up a little better. So open your command line window (if required) and move to your tutorial directory and tidy up. First let's save off a couple of files and get rid of the generated files:
 
     % cd tutorial
-    % mkdir first
-    % mv First.javacc first
-    % mv FirstTest.java first
+    % mkdir ch02
+    % mv First.javacc ch02
+    % mv FirstTest.java ch02
     % rm *.java
     % rm *.class
 
 Now let's make a new directory for our next grammars:
 
-    % mkdir second
-    % cd second
+    % mkdir ch03
+    % cd ch03
     % mkdir build
 
-We're going to keep things a little cleaner now using the build directory. Our grammar will be saved in the "second" but all the generated and compiled files will end up in the "build" subdirectory. But that also requires that we change how we do things a little, so we're going to update and add to our aliases as follows:
+We're going to keep things a little cleaner now using the build directory. Our grammar will be saved in the ch03 directory but all the generated and compiled files will end up in the "build" subdirectory. But that also requires that we change how we do things a little, so we're going to update and add to our aliases as follows:
 
     % alias jcc='java -jar <path to>javacc-full.jar -d build'
-    % alias cmp='javac build/*.javac'
+    % alias cmp='javac build/*.java'
     % alias tst='java -cp build SoupTest'
 
 * The first alias, jcc (run JavaCC), should look familiar but we have added the -d directive so all of the generated java files will get put into the build directory. Just follow the alias with the name of the grammer file and it should run.
