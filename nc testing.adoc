@@ -1,6 +1,6 @@
 [cols=2*,stripes=even]
 |===
-|A1
+|testing A1
 |B1
 |A2
 |B2
