@@ -68,3 +68,5 @@ I recently (as of this writing, **today**!) added support for this. I added an e
 See https://github.com/javacc21/javacc21/blob/fault-tolerant/src/main/resources/templates/java/Parser.java.ftl#L126[here] and https://github.com/javacc21/javacc21/blob/fault-tolerant/src/main/resources/templates/java/FileLineMap.java.ftl#L508[here].
 
 As a side note, the ANTLR grammar for CSharp treats the BOM as part of the syntactic grammar. (See https://github.com/antlr/grammars-v4/blob/master/csharp/CSharpParser.g4#L10[here].) This is totally WRONG. The BOM is **NOT** part of the grammar, syntactic or lexical. It is clearly __pre-lexical__, like unicode escaping, for example.
+
+Delete this line for testing
