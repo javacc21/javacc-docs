@@ -123,6 +123,6 @@ Adding the "?" says that the second part is optional and the <EOF> shouldn't thr
 
 Comments, both one-line and multi-line, will be covered in more detail later when we discuss Lexical States.
 
-=== Saving MORE and SPECIAL_TOKEN for Later
+=== Saving Lexical States, MORE and SPECIAL_TOKEN for Later
 Two items that are half-way between Tokens and Regular Expressions are MORE and SPECIAL_TOKEN. These items will be covered in a later chapter in this Tutorial. Not to spoil the surprise, but MORE and SPECIAL_TOKEN both are associated with the next Token in the stream. We'll cover them in detail later.
 

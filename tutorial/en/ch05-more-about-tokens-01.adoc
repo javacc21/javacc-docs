@@ -1,0 +1,28 @@
+:imagesdir: ./images
+== More About Tokens
+In this chapter, we're going to circle back to the subject of tokens so we can explore some of their more advanced features. But before we do that, let's take a moment to review tokens and their basic structure.
+
+token diagram emphasizing its structure
+
+The above diagram shows the basic structure of a Token. The items in solid-line boxes are required; the items in broken-line boxes are optional. The numbers above the items are keyed to the numbered list below.
+
+.   *REQUIRED* - the word TOKEN (all caps) 
+.   *OPTIONAL* - directives, such as [IGNORE_CASE] (see Chapter 2 for an example)
+.   *REQUIRED* - the ":" (colon) character marks the beginning of the contents of the Token(s)
+.   *MULTIPLE* - the "{" (left curly brace) is required in _legacy JavaCC_ *ONLY*. It is optional in JavaCC 21 but it must be paired with the "}" (right curly brace) if it is used
+.   *REQUIRED* - the "<" (less than sign) is required at the beginning of a token definition
+.   *REQUIRED* - the identifier for the Token in all uppercase letters and multiple words separated by the underline character ("_")
+.   *REQUIRED* - the ":" (colon) character marks the end of the identifier and the beginning of what this token should match
+.   *REQUIRED* - what must be matched to be identified as this type of token. This can be: 
+..  a String literal
+..  a regular expression
+..  another token (private tokens frequently appear here)
+..  a combination of the above with each option separated by a "|" (vertical bar)
+.   *REQUIRED* - the ">" (greater than sign) is required at the end of the "what to match" element
+.   *OPTIONAL* - any Lexical Actions must be enclosed by curly braces ("{}") and any Java statement(s) inside the curly braces must be terminated by semi-colon(s) (";")
+.   *OPTIONAL* - Lexical State Identifier. Change to the named Lexical State as described below. The named Lexical State must follow the same rules as token identifiers (see #6 above).
+.   *MULTIPLE* - the "}" (right curly brace) is required in _Legacy JavaCC_ *ONLY*. It is optional in JavaCC 21 but if the TOKEN: section began with a left curly brace then you must have a matching right curly brace.
+.   *MULTIPE* - the ";" (semi-colon) cannot be used in _Legacy JavaCC_. A semi-colon is used in _JavaCC 21_ *ONLY* to mark the end of a TOKEN: section but only if curly braces were *NOT* used to mark the TOKEN: section.
+
+=== Lexical States
+Lexical States are tokenization contexts that help to organize our grammars by specifying how to convert text into tokens based on the currently encountered text.

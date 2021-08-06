@@ -39,6 +39,8 @@ include::ch04-production-rules-03.adoc[]
 
 include::ch04-production-rules-04.adoc[]
 
+include::ch05-more-about-tokens-01.adoc[]
+
 include::Appendix-A.adoc[]
 
 include::Appendix-B.adoc[]
