@@ -65,11 +65,11 @@ So this probably looks pretty familiar but we've substituted alphabetic characte
 *   <ALPHA_THREE> Tokens must be uppercase letters
 *   <ALPHA_FOUR> Tokens must be either uppercase or lowercase letters
 
-Two things to notice. The private Tokens (LOWER_ALPHA and UPPER_ALPHA) aren't included in the same Token definition as the Tokens that use them. Also, the injected PARSER_CLASS doesn't have to be at the beginning of the grammar file. You could inject it between any of the rules, if you thought it made the most sense, but at the top or at the bottom of your grammar file are probably the places that would be easiest to find.
+Two things to notice. The private Tokens (LOWER_ALPHA and UPPER_ALPHA) aren't included in the same Token definition as the Tokens that use them. Also, the injected PARSER_CLASS doesn't have to be at the beginning of the grammar file. You could inject it between any of the rules, if you thought it made the most sense, but at the top or at the bottom of your grammar file are probably the places that would be easiest to find. For now, the most important takeaway for injecting the PARSER_CLASS is that the filename of the grammar being processed will be used for the parser that is generated. In the above code, the file was named rulesLastConsumedToken.javacc which was changed into RulesLastConsumedTokenParser in the generated code. We will explore injecting code in much greater detail in Chapter 6, More About Production Rules.
 
 So this would be a good time to clean your output directory with:
 
- rm out/*
+ rm out/*   (or rm build/*   if you're using the build folder for output)
 
 You can just modify your existing rules.javacc file with the above contents or you can copy and paste the above grammar code into a new file named rulesAlpha.javacc or rulesA.javacc or anything else you prefer.
 

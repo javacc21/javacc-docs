@@ -1,0 +1,164 @@
+:imagesdir: ./images
+=== Extending the Lexical State Grammar
+
+OK, so far we've got our grammar reading a user file that contains either existing users who have data that needs updating or new users that need to be added. Now we need to gather their first and last names, with the seemingly appropriate tokens definitions added to each lexical state.
+
+NOTE: Sharp-eyed readers may be wondering why we have different names for tokens that appear in different lexical states. It turns out that token names are global and don't respect state boundaries, sort of like website names on the internet: if someone already claimed myfavoritewebsite.com you can't use it, even though you live in a different state or country.
+
+ DEBUG_LEXER = false;
+ DEFAULT_LEXICAL_STATE=DEFAULT;
+
+ <*>
+ SKIP : " " | "\n" | "\r" | "\t"; 
+
+ <DEFAULT>
+ TOKEN: <EXIST_USER: "ex">
+       {System.out.println("Switch to EXIST_USER_STATE"); } : EXIST_USER_STATE
+       |
+       <NEW_USER: "new">
+       {System.out.println("Switching to NEW_USER_STATE"); }  : NEW_USER_STATE ;
+
+ INJECT PARSER_CLASS : 
+ import java.io.*; 
+ {
+	static public void main(String[] args) throws ParseException {
+		try {
+		    FileReader fr = new FileReader(args[0]);
+		    BufferedReader bfr = new BufferedReader(fr);
+		    StatesParser parser = new StatesParser(bfr);
+		    parser.start();
+		    parser.rootNode().dump();
+		    bfr.close();
+		} catch (Exception ex) {
+		    ex.printStackTrace();
+		}
+	}
+ }
+
+ start: (<EXIST_USER> <EXIST_USER_ID> <FIRST_NAME> <LAST_NAME>
+      | <NEW_USER> <NEW_USER_ID> <NEW_FIRST_NAME> <NEW_LAST_NAME>)+ ;
+       
+ <NEW_USER_STATE>
+ TOKEN : <NEW_USER_ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} > 
+          {System.out.println("Adding NEW user"); } 
+      | <NEW_FIRST_NAME : ["A" - "Z"] (["a" - "z"])+ > 
+          {System.out.println("adding new first name"); }
+      | <NEW_LAST_NAME  : ["A" - "Z"] (["a" - "z"])+ > 
+          {System.out.println("adding new last name");  } :DEFAULT
+      ;
+      
+ <EXIST_USER_STATE>  
+ TOKEN : <EXIST_USER_ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} >
+          {System.out.println("Updating EXISTING user"); }
+      | <FIRST_NAME : ["A" - "Z"] (["a" - "z"])+ > 
+          {System.out.println("Updating existing first name"); }
+      | <LAST_NAME  : ["A" - "Z"] (["a" - "z"])+ > 
+          {System.out.println("Updating existing last name"); } :DEFAULT
+      ;
+
+And let's update the user file at the same time. Lots of tabs this time, even a blank line, just to make things interesting.
+
+ new     0Abc	Alan	Aardvark
+ ex1Def Dan Downton
+
+ ex		2Ghi   Gina Golightly
+ new         3Jkl Johann Jacobson
+
+Now clean the build directory and then run jcc, cmp, and tst it and it will blow up with a message similar to the following: 
+
+ Switching to NEW_USER_STATE
+ Adding NEW user
+ adding new first name
+ adding new first name
+ ParseException:
+ Encountered an error at (or somewhere around) input:1:19
+ Was expecting one of the following:
+ NEW_LAST_NAME
+ Found string "Aardvark" of type NEW_FIRST_NAME
+        at StatesParser.handleUnexpectedTokenType(StatesParser.java:329)
+        at StatesParser.consumeToken(StatesParser.java:317)
+        at StatesParser.start(StatesParser.java:183)
+        at StatesParser.main(StatesParser.java:16)
+
+What this error tells us is that because the first and last names use the same regular expressions the parser can't tell them apart so it does what JavaCC always does; it uses the first Token defined in the grammar that matches the text the lexer found. To verify this behavior, you can swap the NEW_FIRST_NAME and NEW_LAST_NAME token definitions and rerun jcc, cmp, and tst and it will blow up the same way except this time it will println that it "adding new last name" before displaying the ParseException message.
+
+The most common ways of dealing with this issue is: 
+*   prefixing some unique value to first and/or last name entries that would be unlikely to be part of someone's name, such as #f^name: or %%last
+*   writing rules to will programatically get the next token and make it the desired type of token
+
+Because we're working with lexical states, let's solve this issue using just lexical states and putting each "overlapping" token definition in its own lexical state. Update the code as follows: 
+
+ <NEW_USER_STATE>
+ TOKEN : <NEW_USER_ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} > 
+           {System.out.println("Adding NEW user: switch to NEW_FIRST_NAME_STATE") ;}
+           : NEW_FIRST_NAME_STATE ;
+
+ <NEW_FIRST_NAME_STATE>
+ TOKEN : <NEW_FIRST_NAME : ["A" - "Z"] (["a" - "z"])+ > 
+           {System.out.println("Adding NEW First name: switch to NEW_LAST_NAME_STATE") ;}
+           : NEW_LAST_NAME_STATE ;
+
+ <NEW_LAST_NAME_STATE>
+ TOKEN : <NEW_LAST_NAME  : ["A" - "Z"] (["a" - "z"])+ > 
+           {System.out.println("Adding NEW Last name: switch to DEFAULT state") ;}
+           :DEFAULT ;
+
+
+ <EXIST_USER_STATE> 
+ TOKEN : <EXIST_USER_ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} > 
+           {System.out.println("Updating EXISTING user: switching to EXIST_FIRST_NAME_STATE"); }
+           : EXIST_FIRST_NAME_STATE;
+
+ <EXIST_FIRST_NAME_STATE>
+ TOKEN : <FIRST_NAME : ["A" - "Z"] (["a" - "z"])+ > 
+           {System.out.println("Updating EXISTING user: switching to EXIST_LAST_NAME_STATE"); }
+           : EXIST_LAST_NAME_STATE;
+
+ <EXIST_LAST_NAME_STATE>
+ TOKEN : <LAST_NAME  : ["A" - "Z"] (["a" - "z"])+ > 
+           {System.out.println("Updating EXISTING user: switching to DEFAULT state"); }
+           :DEFAULT ;
+
+When a <NEW_USER_ID> Token is found, it switches to the NEW_FIRST_NAME_STATE lexical state which only has one type of token available: the <NEW_FIRST_NAME> token. And when it finds a <NEW_FIRST_NAME> Token, it switches to the NEW_LAST_NAME_STATE lexical state which only has one type of token available: the <NEW_LAST_NAME> token. And when that token has been consumed, it returns to the DEFAULT state. The same logic is used for existing users.
+
+Clean the build directory and then rerun jcc, cmp and tst and your output should look like the following: 
+
+ Switching to NEW_USER_STATE
+ Adding NEW user: switch to NEW_FIRST_NAME_STATE
+ Adding NEW First name: switch to NEW_LAST_NAME_STATE
+ Adding NEW Last name: switch to DEFAULT state
+ Switch to EXIST_USER_STATE
+ Updating EXISTING user: switching to EXIST_FIRST_NAME_STATE
+ Updating EXISTING user: switching to EXIST_LAST_NAME_STATE
+ Updating EXISTING user: switching to DEFAULT state
+ Switch to EXIST_USER_STATE
+ Updating EXISTING user: switching to EXIST_FIRST_NAME_STATE
+ Updating EXISTING user: switching to EXIST_LAST_NAME_STATE
+ Updating EXISTING user: switching to DEFAULT state
+ Switching to NEW_USER_STATE
+ Adding NEW user: switch to NEW_FIRST_NAME_STATE
+ Adding NEW First name: switch to NEW_LAST_NAME_STATE
+ Adding NEW Last name: switch to DEFAULT state
+ start
+   new
+   0Abc
+   Alan
+   Aardvark
+   ex
+   1Def
+   Dan
+   Downton
+   ex
+   2Ghi
+   Gina
+   Golightly
+   new
+   3Jkl
+   Johann
+   Jacobson
+
+The blank line in the user file doesn't cause any problems and doesn't even get mentioned; it just gets skipped.
+
+The sample code contains many duplicate regular expressions. We leave it to the reader to replace these duplicates with private tokens, such as `<#ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} >` and then changing the User ID token lines to `TOKEN : <NEW_USER_ID : <ID> >` and `TOKEN : <EXIST_USER_ID : <ID> >`. Try putting the private token in the DEFAULT state towards the top or in the EXIST_FIRST_NAME_STATE state towards the bottom.
+
+Do the same with the first and last names; replace their regular expressions with a private token that can be put any where it is legal to put a token.

@@ -115,13 +115,13 @@ Java provides for single-line comments that begin with "//" and end at the end o
 
 When the Lexer reaches "//" it begins to accept an unlimited number of any characters *except* a newline character or a return character. As soon as either of those characters are found, processing continues with the next expression that consumes a newline or a return or the combination of return+newline, fulfilling the ONE_LINE_COMMENT Token.
 
-A special case exists if the text you are reading ends with a single-line comment without a return or newline. If that is possible, the regular expression can be updated as follows:
+A special case exists if the text you are reading ends with a single-line comment without a return or newline. If that is a possibility, the regular expression should be updated as follows:
 
-    <ONE_LINE_COMMENT : "//" (~["\n", "\r"])* ("\r" | "\n" | "\r\n")*?* > 
+    <ONE_LINE_COMMENT : "//" (~["\n", "\r"])* ("\r" | "\n" | "\r\n")? > 
     
-Adding the "?" says that the second part is optional and the <EOF> shouldn't throw an exception. Which means that the Lexer won't thrown an exception because you had a single-line comment on the last line of your file but didn't end the line with a newline. One less thing to worry about.
+Adding the "?" says that the second part can happen zero or one time. Which means that it is not an error if the Lexer reaches the end of the file without reading a return or a newline. One less thing to worry about.
 
-Comments, both one-line and multi-line, will be covered in more detail later when we discuss Lexical States.
+Comments, both one-line and multi-line, will be covered in more detail later when we discuss Lexical States in Chapter 5.
 
 === Saving Lexical States, MORE and SPECIAL_TOKEN for Later
 Two items that are half-way between Tokens and Regular Expressions are MORE and SPECIAL_TOKEN. These items will be covered in a later chapter in this Tutorial. Not to spoil the surprise, but MORE and SPECIAL_TOKEN both are associated with the next Token in the stream. We'll cover them in detail later.

@@ -91,7 +91,7 @@ When you press enter (or Ctrl-D on some *nix systems), Simple3 will then try to 
 
 Following is the JavaCC 21 version of the same brace matching program. The first thing to notice is that the copyright notice from Sun Microsystems, Inc. has been abbreviated; however, all copyrights to the original code are still in effect and this streamlined version does not affect those original copyrights. 
 
-Next, notice that this code uses INJECT PARSER_CLASS to accomplish what the PARSER_BEGIN-PARSER_END block did. We'll cover injecting code more in a little bit, but for right now all we need to know is that the name of the file with the main() function is the name of the file that injects the PARSER_CLASS, so if you name your JavaCC 21 file simple3, the injected code is name Simple3Parser.
+Next, notice that this code uses INJECT PARSER_CLASS to accomplish what the PARSER_BEGIN-PARSER_END block or what the separate Testxxx file (that we have been using up until now) did. We'll cover injecting code more in a little bit, but for right now all we need to know is that the name of the file with the main() function is the name of the file that injects the PARSER_CLASS, so if you name your JavaCC 21 file simple3, the injected code is name Simple3Parser.
 
  /* Copyright (c) 2006, Sun Microsystems, Inc. 
   * Copied from JavaCC Legacy distribution - all previously stated copyrights apply
