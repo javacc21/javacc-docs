@@ -54,25 +54,25 @@ Once the Lexer has entered a lexical state, it will remain in that lexical state
 
 === Chapter Setup
 Let's make a new directory for our grammar.
-
+----
     $ mkdir ch05
     $ cd ch05
     $ mkdir build
-
+----
 And let's update our aliases as follows:
-
+----
     $ alias jcc='java -jar <path to>javacc-full.jar -d build states.javacc'
     $ alias cmp='javac build/*.java'
     $ alias tst='java -cp build StatesParser users.txt'
     $ alias clean='rm build/*'
-
+----
 The clean command will delete all the files in the build directory. Run it every time you make significant changes to the grammar OR when things are acting weird: clean the build directory and rerun jcc, cmp, and tst and see if you get different results.
 
 Our grammar in this chapter will read its input from the states.txt file instead of from the command line. Our grammar will also inject the ParserClass so we won't need a separate test file. If you really want to use the separate test file, please feel free. We don't judge personal preference.
 
 === Grammar for Exploring Lexical States
 The following grammar would be used to validate a text file that contains a list of new users to be added or existing users to be updated in a system. Each line in the file, "users.txt" has the information for just one user and begins with either the keyword "ex" or "new" followed by their user ID (we're starting small - don't worry, we'll get more user info). Depending on if it found the <EXIST_USER> or <NEW_USER> Token, the lexer will change to either the EXIST_USER_STATE or to the NEW_USER_STATE and will process additional Tokens based on the lexical state entered. Having separate lexical states makes sense here because existing users would only need the updated fields listed but new users would require all fields listed. 
-
+----
  SKIP : " " | "\n" | "\r" | "\t"; 
 
  TOKEN: <EXIST_USER: "ex">
@@ -110,20 +110,20 @@ The following grammar would be used to validate a text file that contains a list
  TOKEN : <NEW_USER_ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} > 
       {System.out.println("Adding NEW user"); }
       ;
-
+----
 The above grammar seems like it would do the job. When parser.start() is run, it gets either an <EXIST_USER> or it gets a <NEW_USER> Token. If it gets an <EXIST_USER>, it switches to the <EXIST_USER_STATE>. If it gets a <NEW_USER>, it switches to the <NEW_USER_STATE>.
 
 Here's the users.txt file (again we're starting small and simple): 
-
+----
  new	0Abc
  ex1Def
  ex		2Ghi
  new         3Jkl
-
+----
 Notice that the spacing is all screwy to make sure that our SKIP values are being honored. Some of those whitespace characters in the file are horizontal tabs.
 
 Now if we jcc, cmp, and tst, it will blow up with messages similar to the following: 
-
+----
  Updating EXISTING user
  ParseException:
  Encountered an error at (or somewhere around) input:1:1
@@ -132,25 +132,25 @@ Now if we jcc, cmp, and tst, it will blow up with messages similar to the follow
  Found string "new\t" of type INVALID
         at StatesParser.start(StatesParser.java:175)
         at StatesParser.main(StatesParser.java:16)
-
+----
 The first line above displays the println for an existing user but it should have been processing a new user. On the third line above, it shows that it blew up on the first line of our test file ("input:1:1") and didn't recognize "new" as being a <NEW_USER> Token. Worse, the fifth line above shows it didn't throw away the tab ("\t"). Time to turn on the debugger for the lexer. Insert `DEBUG_LEXER=true;` at the top of the grammar file and rerun jcc, cmp, and tst.
 
 Now when it runs, it should list about 20 lines of debugger info, ending with these 4 lines (before listing the previous error lines): 
-
+----
  Aug 16, 2021 4:57:58 PM StatesLexer jjMoveNfa_EXIST_USER_STATE
  INFO:    Currently matched the first 4 characters as a <EXIST_USER_ID> token.
  Aug 16, 2021 4:57:58 PM StatesLexer nextToken
  INFO: ****** FOUND A <EXIST_USER_ID> MATCH (0Abc) ******
-
+----
 What the heck? Why is it in the EXIST_USER_STATE? Let's take a look at the StatesConstants.java file: 
-
+----
   /**
    * Lexical States
    */
     public enum LexicalState {
         EXIST_USER_STATE, NEW_USER_STATE, DEFAULT, 
     }
-
+----
 It appears that the added lexical states were added before the DEFAULT state, which used to be the only entry. Let's define the state we want the grammar to start in at the top of the file with `DEFAULT_LEXICAL_STATE=DEFAULT;`.
 
 NOTE: _Legacy JavaCC Users:_ You won't be able to use the DEFAULT_LEXICAL_STATE option. Instead you will have to include the desires initial starting state as an additional parameter when the TokenManager is constructed.
@@ -162,20 +162,21 @@ Unfortunately, it blows up again. But reading through the Lexer debug messages, 
 What's going on? We've never had this problem before, SKIPping tabs. And if we replace that tab in the first line with spaces, it will still blow up. 
 
 It turns out that once we got into the NEW_USER_STATE, we no longer recognized (and skipped) our standard whitespace characters because we didn't define them in that state. The obvious answer is to define them for each lexical state, but this kind of duplication is not only a poor solution, it also doesn't work. A slightly better solution (that also doesn't work) is to define exactly which states the whitespace SKIP statement applies to, separating them with commas, like the following: 
-
+----
  <DEFAULT, NEW_USER_STATE, EXIST_USER_STATE>
  SKIP : " " | "\n" | "\r" | "\t"; 
-
+----
 But since we just listed all of our possible lexical states, we can replace that with `<*>` meaning that this SKIP statement applies to all lexical states. Go ahead and insert <*> before the SKIP statement - that won't fix everything but it will fix one problem, and allow all lexical states to SKIP whitespace.
 
 Now that we've dealt with whitespaces, we have to fix our main problem, that we're not reading through the users file because we're stuck in the NEW_USER_STATE. What's missing is that we never specify in the grammar that we want to switch back to the DEFAULT state after processing the <NEW_USER_ID> Token. Just like at the top of the grammar where we specified which lexical state to enter when a <EXIST_USER> or <NEW_USER> Token was found, we need to specify that we need to return to the DEFAULT state after a <NEW_USER_ID> is processed, by adding `: DEFAULT` after the println statement.
-
+----
  <NEW_USER_STATE>
  TOKEN : <NEW_USER_ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} > 
       {System.out.println("Adding NEW user"); } : DEFAULT
       ;
-
+----
 Go ahead and add `: DEFAULT` to the <EXIST_USER_ID> Token definition and rerun jcc, cmp, and tst and now you should end up with something similar to this:
+----
  ...... lines skipped
  Adding NEW user
  Aug 16, 2021 6:22:48 PM StatesLexer switchTo
@@ -195,9 +196,9 @@ Go ahead and add `: DEFAULT` to the <EXIST_USER_ID> Token definition and rerun j
    2Ghi
    new
    3Jkl
-
+----
 And if you set `DEBUG_LEXER=false;` and rerun jcc, cmp, and tst, you'll get: 
-
+----
  Switching to NEW_USER_STATE
  Adding NEW user
  Switch to EXIST_USER_STATE
@@ -215,3 +216,4 @@ And if you set `DEBUG_LEXER=false;` and rerun jcc, cmp, and tst, you'll get:
    2Ghi
    new
    3Jkl
+----

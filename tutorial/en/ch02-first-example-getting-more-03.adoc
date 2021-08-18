@@ -13,14 +13,13 @@ So far, we have gotten a lot of insight into the functioning of JavaCC by examin
 In this next section we're going to watch the generated code in action to better understand how these parts work together. We're going to do that by setting a few options at the top of our code.
 
 // I would say that it would probably be better to move towards using an INJECT for the main() method once you're past the first example. Then you have something that is totally self-contained. For the very first Hello, World sort of thing, I think it makes sense to create a separate FirstTest.java that contains the main, but then once you get past that, it seems beter to just have:
-
-    INJECT PARSER_CLASS : {
-        static public void main(String[] args) {
-            ...
-        }
-    }
-
-right in the First.javacc file.    
+//
+//    INJECT PARSER_CLASS : {
+//        static public void main(String[] args) {
+//            ...
+//        }
+//    }
+//  right in the First.javacc file.    
 
 ==== The DEBUG_LEXER Option
 
@@ -35,10 +34,10 @@ The option, DEBUG_LEXER can be uppercase or lowercase and you can add spaces bet
 NOTE: _Legacy users_ will notice that the debug option is not walled off from the rest of the grammar by an explicit option block, complete with the word "options" and a matching pair of curly braces surrounding the selected options. Since the only legal place for an options block is at the top of a file, it is easy enough for JavaCC to recognize when these first lines are options, without all the cruft. Just be sure to include a semi-colon at the end of each option.
 
 Back at the command line, run First.javacc thru JavaCC and recompile the generated Java code as follows.
-
+----
     % jcc First.javacc
     % javac *.java
-
+----
 Now when you run the program with `java FirstTest bar:baz:baz`, you get output similar to the following screenshots:
 
 image::FirstDebugLex1.jpg[Debug_Lexer Screenshot Part 1]

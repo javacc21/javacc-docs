@@ -23,7 +23,7 @@ They can be used pretty much interchangeably. The getImage() method most closely
 NOTE:  Token objects in _legacy JavaCC_ include a String field named "image" to hold the text that was matched and made it public, for example, `myToken.image`. In keeping with more modern Java usage, JavaCC 21 makes the image field private and provides accessor methods to retrieve the contents of the image field.
 
 The Token objects can even be changed. This next example will retrieve the contents of the lastConsumedToken and modify it based on some arbitrary criteria. The following examples are not recommended practice but only an exploration of what can be done if needed.
-
+----
  SKIP  : " " | "\t" | "\n" | "\r";
 
  TOKEN : < ALPHA_TWO : (<LOWER_ALPHA>){2} > 
@@ -58,7 +58,7 @@ The Token objects can even be changed. This next example will retrieve the conte
 		parser.rootNode().dump();
 	}
  }
-
+----
 So this probably looks pretty familiar but we've substituted alphabetic characters for the numerical digits that we had been using. We've added a few extra restrictions: 
 
 *   <ALPHA_TWO> Tokens must be lowercase letters 
@@ -68,18 +68,18 @@ So this probably looks pretty familiar but we've substituted alphabetic characte
 Two things to notice. The private Tokens (LOWER_ALPHA and UPPER_ALPHA) aren't included in the same Token definition as the Tokens that use them. Also, the injected PARSER_CLASS doesn't have to be at the beginning of the grammar file. You could inject it between any of the rules, if you thought it made the most sense, but at the top or at the bottom of your grammar file are probably the places that would be easiest to find. For now, the most important takeaway for injecting the PARSER_CLASS is that the filename of the grammar being processed will be used for the parser that is generated. In the above code, the file was named rulesLastConsumedToken.javacc which was changed into RulesLastConsumedTokenParser in the generated code. We will explore injecting code in much greater detail in Chapter 6, More About Production Rules.
 
 So this would be a good time to clean your output directory with:
-
+----
  rm out/*   (or rm build/*   if you're using the build folder for output)
-
+----
 You can just modify your existing rules.javacc file with the above contents or you can copy and paste the above grammar code into a new file named rulesAlpha.javacc or rulesA.javacc or anything else you prefer.
 
 Next, run jcc and cmp and then: 
-
+----
  java -cp out RulesAlphaParser
  aa BBB cdEF
-
+----
 And your output should looks like the following: 
-
+----
  $ java -cp out RulesAlphaParser
  aa BBB cdEF
  Parser.start called
@@ -94,7 +94,7 @@ And your output should looks like the following:
    aa
    BBB
    cdEF
-
+----
 What is important to take from this example is that the lastConsumedToken isn't updated until a Token is actually consumed by the parser. For example, the first time the alpha2 rule is called, the lastConsumedToken in the "called" message is null because a Token has not yet been consumed. Once the <ALPHA_TWO> token is consumed, the lastConsumedToken is updated to whatever two characters you enter.
 
 Similarly, when alpha3 is called, the lastConsumedToken is whatever value was leftover in lastConsumedToken until the <ALPHA_THREE> Token is consumed. Same goes for alpha4 rule; lastConsumedToken only changes after it has consumed its Token.
@@ -104,7 +104,7 @@ We can do more than just read and display the lastConsumedToken's value. We can 
 Just to make the changes noticable, we'll change all <ALPHA_TWO> Tokens from lower case to upper case and we'll change all <ALPHA_THREE> Tokens from upper case to lower case. And since <ALPHA_FOUR> Tokens can be either upper or lower case, we'll invert the case of each character in the Token.
 
 The changes to the alpha rules are shown below: 
-
+----
  alpha2 : {System.out.println("alpha2 called: LCT= " + lastConsumedToken.toString());}
           <ALPHA_TWO>
           {lastConsumedToken.setImage(lastConsumedToken.toString().toUpperCase());
@@ -129,11 +129,11 @@ The changes to the alpha rules are shown below:
            }
            lastConsumedToken.setImage(sb.toString());
            System.out.println("alpha4 End LCT: " + lastConsumedToken.toString()); } ;
-
+----
 The setImage() method is used to change the contents of the lastConsumedToken. Alpha2 and alpha3 are pretty straightforward changes because we know what their cases must be to match their Token definintions. The alpha4 rule is trickier because we have to move character by character through the String contained in the lastConsumedToken.
 
 When you have made these changes and re-run jcc and cmp, it should look like the following when run: 
-
+----
  $ java -cp out RulesAlphaParser
  aa BBB cDeF
  Parser.start called
@@ -148,7 +148,7 @@ When you have made these changes and re-run jcc and cmp, it should look like the
    AA
    bbb
    CdEf
-
+----
 The above output shows that we have changed the capitalization of the input values as desired; lower case <ALPHA_TWO> Tokens were changed to upper case, upper case <ALPHA_THREE> Tokens were changed to lower case and the capitalization of <ALPHA_FOUR> Token was flipped.
 
 While this example is somewhat contrived, it represents how the lastConsumedToken can be examined and actions taken based on its contents. For example, you might want to respond differently if the parsed Token was "HELP" or if an illegal or obsolete value were entered into a Token.

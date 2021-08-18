@@ -8,22 +8,22 @@ Let's start by mentioning that we've been using rules since the very beginning. 
 
 === Chapter Setup
 Let's make a new directory for our next grammars:
-
+----
     % mkdir ch04
     % cd ch04
     % mkdir build
-
+----
 And let's update and add to our aliases as follows:
-
+----
     % alias jcc='java -jar <path to>javacc-full.jar -d build rules.javacc'
     % alias cmp='javac build/*.java'
     % alias tst='java -cp build RulesTest'
-
+----
 We're going to start with some rule experiments so we'll name our grammar rules.javacc and our test progarm RulesTest.java. Once we get more familiar with rules, we'll get back to our soup. For now, we'll leave it cooling on the back burner (sorry, I couldn't resist it).
 
 === Starting with Rules
 Our first grammar, rules.javacc, is very simple, with just one private Token, three regular Tokens and four rules. Each of the regular Tokens includes a Lexical Action to show when they are matched. In the RootRule, instead of specifying the actual Tokens, rootRule makes calls to other rules, each of which specifies which Token to match. In this example, each rule also includes an action, enclosed in curly braces, which prints out the name of the rule that was run.
-
+----
     DEBUG_LEXER = false;
     DEBUG_PARSER= false;
 
@@ -44,7 +44,7 @@ Our first grammar, rules.javacc, is very simple, with just one private Token, th
             }
 
     four_nbr_rule : <FOUR_DIGIT> {System.out.println("four_nbr_rule executed"); } ;
-
+----
 Notice the inconsistency in the way the RootRule calls to the other rules; this was intentionally done to highlight the flexibility you have in JavaCC 21. Also notice how differently the rules are formatted:
 
 *   twoNbrRule was called without parentheses that would indicate that a rule was being call. Both Threenbrrule() and four_nbr_rule() were called using empty parentheses.
@@ -70,7 +70,7 @@ The Action Block is where stuff gets done. In our examples so far we have been l
 
 === Test Code for Our First Rules
 Our testing code is just like we used in the our First example; it creates an instance of the Parser and then runs its RootRule method, which is the rule named RootRule in our grammar. When RootRule is completed, it lists all of the items it matched on the command line. Here's the code:
-
+----
   public class RulesTest {
           static public void main(String[] args) throws ParseException {
                   RulesParser parser = new RulesParser(args[0]);
@@ -78,10 +78,10 @@ Our testing code is just like we used in the our First example; it creates an in
                   parser.rootNode().dump();
           }
   }
-
+----
 === Running the First Rules
 Now run jcc and cmp as required to get a clean compile. Then run the test program with parameters similar to `tst "22 333 4444"` and you should get an output similar to the following:
-
+----
   TWO_DIGIT found
   twoNbrRule executed
   THREE_DIGIT found
@@ -92,7 +92,7 @@ Now run jcc and cmp as required to get a clean compile. Then run the test progra
     22
     333
     4444
-
+----
 === A More Consistent Version of the Rules
 The next example will use modified versions of these same Nbr rules. For the rest of this chapter, the general formatting guidelines will be as follows:
 
@@ -105,7 +105,7 @@ The next example will use modified versions of these same Nbr rules. For the res
 *   Lexical actions will only be used when needed, not for notification or troubleshooting.
 
 Update the rules grammer to look like the following:
-
+----
  DEBUG_LEXER = false;
  DEBUG_PARSER= false;
 
@@ -125,13 +125,13 @@ Update the rules grammer to look like the following:
                 {System.out.println("threeNbrRule executed ");} ;
  fourNbrRule : {System.out.println("fourNbrRule executed "); } 
 			    <FOUR_DIGIT>  ;
-
+----
 NOTE: rootRule was renamed starterRule in this example. You can name your first rule any legal name that you want, but start() and run() are popular choices because start() and run() are commonly used in the Java API.
 
 If you change rootRule to starterRule (or any other name), be sure to update RulesTest.java to use the new name.
 
 Now when we rerun jcc and cmp and `tst "22 333 4444"`` your output should look similar to the following:
-
+----
  starterRule called
  twoNbrRule executed
  threeNbrRule executed
@@ -141,12 +141,12 @@ Now when we rerun jcc and cmp and `tst "22 333 4444"`` your output should look s
    12
    123
    1234
-
+----
 Notice that the rootNode is whatever you named your first rule, in our case, "starterRule". Also notice that if you rerun the example code that it will list the executed rules in the order that the dump lists them, no matter how many of 2-digit, 3-digit or 4-digit numbers you list. 
 
 === Longest Token Matched First (aka Greedy Matching)
 But what happens if you don't leave whitespace between the numbers in the argument? If, for example, you enter `tst 121231234` or `tst 1212312345`. JavaCC will match the longest Token that it can (<FOUR_DIGIT>) as many times as it can and then, when there are less than 4 digits remaining, try to match any shorter tokens. So, for the "121231234" example, the last digit is discarded because it doesn't match any Token:
-
+----
  $ tst "121231234"
  starterRule called
  fourNbrRule executed
@@ -155,11 +155,11 @@ But what happens if you don't leave whitespace between the numbers in the argume
  starterRule
    1212
    3123
-
+----
 NOTE: What about the leftover "4" at the end, you're probably asking. Why wasn't there an error or message about an invalid token? The starterRule provided rules for responding to different kinds of tokens but no rules for the leftover single digit. The logic of JavaCC assumes that if it has successfully matched a token and/or a rule then it has fulfilled its assigned duties and that something else will process that leftover token.
 
 However, in the "1212312345" example, the <FOUR_DIGIT> token is matched twice and the remaining digits are matched to a <TWO_DIGIT> token.
-
+----
  $ tst "1212312345"
  starterRule called
  fourNbrRule executed
@@ -170,10 +170,10 @@ However, in the "1212312345" example, the <FOUR_DIGIT> token is matched twice an
    1212
    3123
    45
-
+----
 === Turn ON DEBUG_LEXER for a Moment
 Now go back into the grammar and turn on the debugger for the lexer (DEBUG_LEXER=true;), then rerun jcc and cmp. After running tst "22 333 4444" you'll get a bunch of debug output in addition to the previous output. Let's tighten our focus and do:
-
+----
  $ tst "1234"
  Jul 19, 2021 3:22:23 PM RulesEx2Lexer nextToken
  INFO: Current character : 49 (49) at line 1 column 1
@@ -200,7 +200,7 @@ Now go back into the grammar and turn on the debugger for the lexer (DEBUG_LEXER
  INFO: Returning the <EOF> token.
  Ready to dump the rootNode
  1234
-
+----
 Reading thru the debugging messages, the Lexer began by reading the first character but couldn't match any literals so it then read the next character and discovered that it could match a token so it displayed the line "Currently matched the first 2 characters as a <TWO_DIGIT> token." The Lexer then read the next character and discovered that it could match a <THREE_DIGIT> token and displayed the appropriate message. The Lexer then read another character and discovered that it could match a <FOUR_DIGIT> token and displayed the appropriate message.
 
 Only after after reading in "1234" and recognizing it as a <FOUR_DIGIT> token does the starterRule continue running and display the message "starterRule called". The starterRule continues running and selects the appropriate rule to execute.

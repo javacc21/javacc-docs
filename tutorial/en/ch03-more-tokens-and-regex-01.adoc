@@ -7,26 +7,26 @@ NOTE: If you are familiar with Tokens and RegEx, you might want to skim thru thi
 === Chapter Setup
 
 So before we go any further, let's get our environment set up a little better. So open your command line window (if required) and move to your tutorial directory and tidy up. First let's save off a couple of files and get rid of the generated files:
-
+----
     % cd tutorial
     % mkdir ch02
     % mv First.javacc ch02
     % mv FirstTest.java ch02
     % rm *.java
     % rm *.class
-
+----
 Now let's make a new directory for our next grammars:
-
+----
     % mkdir ch03
     % cd ch03
     % mkdir build
-
+----
 We're going to keep things a little cleaner now using the build directory. Our grammar will be saved in the ch03 directory but all the generated and compiled files will end up in the "build" subdirectory. But that also requires that we change how we do things a little, so we're going to update and add to our aliases as follows:
-
+----
     % alias jcc='java -jar <path to>javacc-full.jar -d build'
     % alias cmp='javac build/*.java'
     % alias tst='java -cp build SoupTest'
-
+----
 * The first alias, jcc (run JavaCC), should look familiar but we have added the -d directive so all of the generated java files will get put into the build directory. Just follow the alias with the name of the grammer file and it should run.
 * The cmp (compile) alias compiles all of the java files in the build directory and puts all the resulting class files in the build directory. 
 * The tst (testing) alias sets the classpath to the build directory and then runs the SoupTest class file so all you have to do is add the command line arguments, such as `tst "broth chicken carrot onion salt"` (be sure to add the quotation marks around your arguments).
@@ -51,7 +51,7 @@ Alright, let's try out our new soup. Create a test program, SoupTest.java, in th
 image:3souptestScreenshot1.jpg[Soup Test]
 
 All set. Run the following commands:
-
+----
     % cp SoupTest.java build
     % jcc Soup.javacc
     % cmp
@@ -62,17 +62,17 @@ All set. Run the following commands:
       carrot
       onion
       salt
-
+----
 If everything was entered correctly, your results should match the last 6 lines shown above. Test it again using any one item from each of the Tokens _in the correct order_ and "recipes" for soup should be listed. 
 
 Which makes our soup grammar pretty rigid and inflexible. Let's go back into our Soup.javacc and give ourselves a little more flexibility. Change the last line as follows:
-
+----
     Soup : (<LIQUID> | <PROTEIN> | <VEGGIEs> | <HERBS> | <SPICES>)+ ;
-
+----
 In this line, we added the veritcal bar "|" between each item in the list so any _one_ of items will be accepted. So if that were our only change, the Lexer would stop after the first item because we had successfully met all of the requirements of the Soup rule. Since a single item soup wouldn't taste very good, we put the parentheses around all of the potential items in our soup and added the plus sign "+" to mean that Tokens from this list would be accepted one or more times. This is the same RegEx magic that we did for for ":baz" in the last chapter, and we'll cover RegEx in more detail in the next section. 
 
 After changing the last line and running JavaCC and javac, we can now enter the command line arguments in any order, such as shown below.
-
+----
     % tst "salt onion carrot beef broth"
     Soup
       broth
@@ -80,46 +80,44 @@ After changing the last line and running JavaCC and javac, we can now enter the 
       carrot
       onion
       salt
-
+----
 Unfortunately, we can now also enter any of the items multiple times, for example:
-
+----
     % tst "salt salt salt"
     Soup
       salt
       salt
       salt
-
+----
 Which wouldn't make a very good soup. We'll improve on this grammar later in the section on Regular Expressions but for now this is good enough. For now, let's just explore Tokens a little more.
 
 ==== Token Grouping
 
 For example, you may have been wondering why all of the ingredient Tokens are lumped together under a single TOKEN section, and the answer is that they don't have to be. The general rule of thumb is to lump related Tokens together in one TOKEN section; that just makes good sense organizationally, to help us find items/Tokens more easily in the future. However, if you prefer to give every ingredient its own TOKEN section, as shown below, that works too.
-
+----
     TOKEN : < LIQUID : "broth" | "water"  | "wine" > ;
     TOKEN : < PROTEIN: "beef"  | "chicken"| "pork" > ;
     TOKEN : < VEGGIES: "carrot"| "potato" | "spinach" | "tomatoes" >;
     TOKEN : < HERBS  : "onion" | "garlic" | "oregeno" | "basil" > ;
     TOKEN : < SPICES : "salt"  | "pepper" | "cumin" | "tumeric" >;
-
+----
 If you compare the SoupConstants.java file that is generated when each Token has its own TOKEN section with the SoupConstants.java file that is generated with the ingredients lumped together, they will be identical. And when you re-compile and run the program, it works exactly as it did before. Just make sure that each TOKEN section terminates with a semi-colon ";".
 
 ==== Capitalization
 While capitalization isn't essential for our Soup recipe, it is worth mentioning that the [IGNORE_CASE] directive can be applied to each TOKEN section that you wish to be case insensitive. For example, if you wanted to allow uppercase and lowercase letters for one or more Tokens, you could add [IGNORE_CASE] to the appropriate TOKEN as follows:
-
+----
     TOKEN [IGNORE_CASE] : < PROTEIN: "beef" | "chicken" | "pork" > ;
-
+----
 When you re-run JavaCC, re-compile, and then run the program, you'll find that "BEef" and "ChIcKeN" and "poRK" will all be accepted but using a capital letter in any of the other tokens will fail. Which could suggest a possible grouping strategy for your tokens; Tokens that you want to be case insensitive would be grouped together into a single TOKEN section with the [IGNORE_CASE] directive while all the other Tokens would be grouped with other similar tokens.
 
 ==== Private Token Definitions #
 One more kind of Token to mention is the Private Token Definition, which is any Token whose name begins with a "#". These Tokens are used as meaningful "abbreviations" used in the definitions of other Tokens. For example, if you wanted to include more cuts of meat but don't want to overwhelm the <PROTEIN> line with all of the possibilities, you could do something like the following:
-
+----
       | < PROTEIN: <BEEF>  | "chicken"| "pork" >
       | <#BEEF : "sirloin" | "flank" | "chuck" | "ground beef">
-
-
+----
 // Yeah, a "private" token definition is really a kind of alias or macro to be used
 // elsewhere. I do think that, when I've got this part of the code in a tractable state, there are bound to be some interesting (and useful) things to be done on this front. I think that having a bunch of predefine aliases, such as #JAVA_IDENTIFIER_PART that you can just use and are defined in the .jar file somewhere. In general, the Unicode consortium has all these various "character classes" that represent different punctuation and mathematical symbols and so on and so forth. So just being able to alias these things looks attractive. By the way, I was looking at https://jflex.de/ and they've done a lot of these sorts of things. Well, really, the lexical/scanning side of JavaCC is very primitive and also quite obsolete, given that it doesn't support the full Unicode spec.
-
 In the <PROTEIN> Token definition, we include the <BEEF> Token and then later define the private <#BEEF> Token that defines four different cuts of beef, including one that has a space internally. Now when you list a <PROTEIN> ingredient, you can use any one of the four choices for beef.
 
 Another good use for private Tokens is to provide a symbolic name for commonly used values or ranges of values. Instead of having to cut and paste the values or ranges of values into every Token where they are used, the more meaningful symbolic name can be used instead. This can be especially useful if a long complicated Token definition is used in several places and a slightly different definition is used in another place, using a different private Token _with *different* descriptive name_ can make it easier to spot the differences.
@@ -132,7 +130,7 @@ The following screenshot shows what this would look like. Each Token definition 
 image::3SoupjavaccScreenshot1LA.jpg[Soup.javacc with Lexical Actions]
 
 After saving these changes, running JavaCC and javac, re-run the test program and you should get output similar to the following:
-
+----
   Found a LIQUID Token
   Found a PROTEIN Token
   Found a VEGGIES Token
@@ -144,7 +142,7 @@ After saving these changes, running JavaCC and javac, re-run the test program an
     carrot
     onion
     salt
-
+----
 IMPORTANT: Each lexical action was performed as soon as each Token (the current token) was matched, so they were all performed before the dump of the ingredients was performed.
 
 Lexical actions can be used for minor fix-ups, such as capitalization changes to the current token or logging certain events, etc. Larger blocks of actions will be covered in the chapter on Production Rules.

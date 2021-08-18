@@ -3,13 +3,13 @@
 When last spotted, our soup grammar was little more than a list of ingredients. To be useful, a recipe needs to include the amounts of each ingredient. And to be really useful, it needs to be written down so we don't have to keep retyping the recipe at the command line.
 
 So let's tackle the second item first; let's add the ability to read our recipe from a file. Create a new file in the build directory and name it something memorable, like soup1.recipe and put one item from each ingredient catagory in it, one per line, similar to the following:
-
+----
     broth
       chicken
     carrot
   onion
     salt
-
+----
 Notice that the ingredients aren't lined up. I did that just to point out that variable amounts of whitespace (spaces, tabs, etc) will all be skipped in our recipe. 
 
 And now to make the test program read the recipe file, make the following changes:
@@ -19,24 +19,24 @@ image::3souptestScreenshot2.jpg[Updated Testfile]
 Instead of reading the ingredients from String args[0], we're reading the name of the recipe file from args[0]. The new program uses the String in args[0] as the filename to make an instance of FileReader and then uses the FileReader to make an instance of BufferedReader (grabs a buffers-worth of the file at a time for better efficiency) and thens use the BufferedReader to create an instance of the SoupParser. Then, just like before, the parser executes it main rule, Soup, and then dumps the tree of ingredients to the console.
 
 The other change we need to make is to update SKIP: in our soup grammar to recognize newlines and tabs, as follows:
-
+----
     SKIP  : " " | "\n" | "\r" | "\t";
-
+----
 Run jcc, cmp, and tst and fix any problems. It should work just like before and dump the recipe like before:
-
+----
   Soup
     broth
     chicken
     carrot
     onion
     salt
-
+----
 Now is a good time to mess around with the recipe and verify that it's back to its original state, where each ingredient has to be listed in the correct order and spelled correctly (cannot use carrots, plural). And note that you can modify the recipe without running Javacc or javac again. The parser that we built using JavaCC is like the Mad Libs story and the recipe that we gave it are the answers to fill in the blanks in the story.
 
 Time to make a vegetarian soup by making the <PROTEIN> optional. Put parentheses around <PROTEIN> followed by a "?" to show that zero or one item of <PROTEIN> can be included in the soup, as follows:
-
+----
   Soup : <LIQUID> (<PROTEIN>)? <VEGGIES> <HERBS> <SPICES> ;
-
+----
 Run jcc and cmp and then remove your <PROTEIN> from the recipe. Now when you run tst, it should work just fine, but with one less item in the ingredients list.
 
 Just for curiosity's sake, what do you think happens if you add the <PROTEIN> after the <SPICES>? You're right - it will run without complaint but will only print the ingredients up to and including the <SPICES>. That is because once the <SPICES> had been consumed, the Soup production rule had completed itself and successfully filled in every blank in its Mad Libs recipe and control returned to the SoupTest program where it then dumps the list of ingredients. 
@@ -44,31 +44,31 @@ Just for curiosity's sake, what do you think happens if you add the <PROTEIN> af
 The Soup production rule was absolutely indifferent to anything following the <SPICES>. This is NOT a defect or a flaw but correct behavior. Grammars normally have multiple production rules and in something more realistic than our Soup grammar, the following text would be expected to be handled as other Tokens by other production rules, picking up where that production rule left off.
 
 So let's start changing this Soup grammar into more of a recipe parser by adding the amounts for each ingredient. Let's start by adding the following Token to the Soup.javacc:
-
+----
   TOKEN : < AMT : (<NBR>)+ >
         | <#NBR: ["0" - "9"] > ;
-
+----
 The private regular express, #NBR, can be any character from 0 to 9 inclusive. Then in the <AMT> Token, we define that the amount must be at least 1 numerical digit but as many more digits as needed. Depending on the recipe, we can specify from 1 to 9999999 or more of any ingredient. And then we add the <AMT> Token to each item, similar to the following:
-
+----
   Soup : <AMT> <LIQUID>
         (<AMT> <PROTEIN>)?
          <AMT> <VEGGIES>
          <AMT> <HERBS>
          <AMT> <SPICES> ;
-
+----
 I put each ingredient on a separate line just to make it easier to read the list. Notice that the <AMT> Token has to go inside the parentheses around the optional <PROTEIN> ingredient so the <AMT> is only required if a <PROTEIN> is included.
 
 Now go back and update your recipe to precede every ingredient with an amount. Use any numbers that you like for the <AMT>s. Run jcc, cmp, and tst and verify that everything works as expected. But now each number is dumped on its own line between each ingredient. And if you delete the <PROTEIN> and its associated amount, it should work without complaint.
 
 But very few recipes use exactly even amounts so let's go back and update our <AMT> Token to handle decimal fractional amounts, such as .5 or .125. The <AMT> Token should look like the following:
-
+----
   TOKEN : < AMT : (<NBR>)+ ("." (<NBR>){1,3} )? >
         | <#NBR: ["0" - "9"] > ;
-
+----
 Just like before, the <AMT> definition begins an unlimited number of numerical digits. But now those digits are followed by an optional part that begins with "." and is followed by 1 to 3 digits that represent the fractional amount. If you enter a decimal point ("."), you must enter at least 1 number and not more than 3 numbers.
 
 So now go back and update your recipe to include some amounts that include fractional amounts. And be sure to leave at least one line without a fractional amount to verify that we haven't accidentally required every <AMT> to include a fractional amount. After running jcc, cmp, your tst results should look similar to the following:
-
+----
   Soup
     1.125
     water
@@ -80,15 +80,15 @@ So now go back and update your recipe to include some amounts that include fract
     garlic
     300
     salt
-
+----
 Now to be useful, we need to include some kind of measurment unit, so we know if we're listing teaspoons or kilograms. So first we need to add another Token, the <UNIT> that defines what measurement unit to use with each ingredient. And to make it more interesting, we'll either metric units (grams, liters, etc.) or untis from the U.S. Customary System (USCS) such as cups, ounces, etc. So add to Soup.javacc the following Token:
-
+----
   TOKEN : <UNIT   : <METRIC> | <USCS> >
         | <#METRIC: "gram" | "g" | "gm" | "kilogram" | "kilo" | "liter" | "ml" >
         | <#USCS  : "tsp" | "tbsp" | "ounce" | "oz" | "pound" | "cup" | "pint" | "quart" >;
-
+----
 And then we'll have to also update our Soup definition to include the <UNIT> Token similar to `<AMT> <UNIT> <LIQUID>` for each of the ingredients. When that's done, we have to update our recipe to use <UNIT>s. When that's all done, re-run jcc, cmp, and then tst your recipe. You should get a result similar to the following:
-
+----
   Soup
     8.25
     quart
@@ -105,7 +105,7 @@ And then we'll have to also update our Soup definition to include the <UNIT> Tok
     2
     tsp
     salt
-
+----
 Here's a final look at our Soup grammar for this chapter:
 
 image::3soupjavaccScreenshot2.jpg[Our Grammar So Far]

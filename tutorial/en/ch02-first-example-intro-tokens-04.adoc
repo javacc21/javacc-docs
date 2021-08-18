@@ -34,22 +34,22 @@ NOTE: *_Legacy users_* will note that JavaCC 21 has again streamlined the presen
 In the last line of the grammar, the new BAR token has been substituted for the word "bar". While this change might not seem like a big improvement, this substitution will provide us with significant power and flexibility in a little bit. For now, let's do a little more setup and then let's make sure that everything works like it did before. At the command line:
 
 * Setup (Make sure we don't have to keep retyping FirstTest.java)
-
+----
     % mkdir save
     % cp FirstTest.java save
-
+----
 * Cleanup (Get rid of obsolete files)
-
+----
     % rm *.class
     % rm *.java
-
+----
 * Run JavaCC, compile, and then test
-
+----
     % jcc First.javacc
     % cp save/FirstTest.java .
     % javac *.java
     % java FirstTest bar:baz:baz
-
+----
 Hopefully, everything ran just like before. If not, go back thru the grammar and make sure you added the new Token and TOKEN section as shown in the above screenshot. And re-run the Cleanup steps to make sure you're getting a clean build.
 
 ==== Modifying Our First Token
@@ -62,7 +62,7 @@ After the "bar", we added the vertical bar symbol followed by "BAR". The vertica
 
 Run the Cleanup and Run steps above but this time, change the command line args to use BAR.
 And when it runs, it should look similiar to the following output:
-
+----
     % java FirstTest BAR:baz:baz
     Foo
         BAR
@@ -70,7 +70,7 @@ And when it runs, it should look similiar to the following output:
         baz
         :
         baz
-
+----
 If you run it again with "bar", it should also run without complaint.
 
 But what if we don't care about which case (uppercase or lowercase) these three letters are entered. Because there are only 3 letters, there are eight possible combinations (3^^2)-1 so we could list each one of them ("bar" | "Bar" | "bAr" etc.) or we could enter them as shown in the following screenshot:
@@ -94,7 +94,7 @@ When you're all done, it should look similar to the following screenshot:
 image::FirstToken4.jpg[Punctuation Variations]
 
 Clean and compile your updated grammar as before. This time test it with the following line and it should respond with the appropriate output (not an error message):
-
+----
     % java FirstTest bAr@baz:baz
     Foo
         bAr
@@ -102,9 +102,9 @@ Clean and compile your updated grammar as before. This time test it with the fol
         baz
         :
         baz
-
+----
 Note that we capitalized the "a" to prove that <BAR> is still case insensitive. Then we used the "@" symbol instead of the ":" and it was recognized as punctuation as well. Let's expand <PUNCT> to read as follows: `< PUNCT : "@" | "#" | "$" | "%" | "^" | ":" >` and then compile it (no need to clean unless you're getting weird error messages). Then test it and it should respond with the appropriate output as follows:
-
+----
     % java FirstTest Bar@baz#baz$baz%baz^baz:baz
     Foo
         Bar
@@ -118,8 +118,7 @@ Note that we capitalized the "a" to prove that <BAR> is still case insensitive. 
         baz
         :
         baz
-
-
+----
 ==== Making Our Third And Final Token
 
 So to finish off our grammar, let's make "baz" into a Token. And this time, we'll also change it so that the last character can be _any_ alphabetic letter, far too many possibilities to use the vertical bar symbol. Edit First.javacc so it looks like the following screenshot:
@@ -129,7 +128,7 @@ image::FirstToken5.jpg[BAZ Token]
 In the BAZ token, we specified that the first two characters must be lowercase "ba" followed by the stuff in the square brackets. That stuff begins with a range specifier that says that any single lowercase character from "a" to "z" can be used, including "a" and "z". Next comes a comma, meaning that another specifier follows, and that specifier says that any single uppercase character from "A" to "Z" can be used, including "A" and "Z". It is important to understand, however, that these are OR ranges; either one character from a-z can be used OR one character from A-Z _but only one character._
 
 After compiling, run the test program with command line arguments similar to the following:
-
+----
     $ java FirstTest BAR@bav#baH$bas%baP^baq:baM
     Foo
         BAR
@@ -143,7 +142,7 @@ After compiling, run the test program with command line arguments similar to the
         baq
         :
         baM
-
+----
 It should run without complaint. <BAR> can be any combination of uppercase and lowercase letters. The <PUNCT> characters have all been successfully processed. And <BAZ> accepts the first two letters as "ba" and then allows any single alphabetic lowercase or uppercase character at the end of the token.
 
 IMPORTANT: Sharp-eyed readers will note that $bas isn't listed. That is because of the Bash shell reserves "$" for its own use and consumed "$bas" itself. Trying to use the "!" will similarly cause problems - this time Bash halts everything because it expects to use the BANG symbol to execute something. Which is just a long winded way of saying that you can expect surprises when you use punctuation so always test carefully.
