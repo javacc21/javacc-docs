@@ -111,7 +111,7 @@ And if you really want to know about Unicode characters, a random walk thru the 
 === Another Java Example
 Java provides for single-line comments that begin with "//" and end at the end of the current line. One way to code the regular expression is:
 ----
-    <ONE_LINE_COMMENT : "//" (~["\n", "\r"])* ("\r" | "\n" | "\r\n") >. 
+    <ONE_LINE_COMMENT : "//" (~["\n", "\r"])* ("\r" | "\n" | "\r\n") >    
 ----
 When the Lexer reaches "//" it begins to accept an unlimited number of any characters *except* a newline character or a return character. As soon as either of those characters are found, processing continues with the next expression that consumes a newline or a return or the combination of return+newline, fulfilling the ONE_LINE_COMMENT Token.
 

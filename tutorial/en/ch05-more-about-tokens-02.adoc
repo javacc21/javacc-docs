@@ -161,4 +161,16 @@ The blank line in the user file doesn't cause any problems and doesn't even get 
 
 The sample code contains many duplicate regular expressions. We leave it to the reader to replace these duplicates with private tokens, such as `<#ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} >` and then changing the User ID token lines to `TOKEN : <NEW_USER_ID : <ID> >` and `TOKEN : <EXIST_USER_ID : <ID> >`. Try putting the private token in the DEFAULT state towards the top or in the EXIST_FIRST_NAME_STATE state towards the bottom.
 
-Do the same with the first and last names; replace their regular expressions with a private token that can be put any where it is legal to put a token.
+Do the same with the first and last names; replace their regular expressions with a private token that can be put any where it is legal to put a token. Then rerun jcc, cmp, and tst and verify that you get the same results.
+
+One of the main reasons for separating the existing users from the new users is so that different actions can be taken based on the status of the listed user (new or existing). And the desired behavior is that existing users would only validate and update changed fields. But that creates a whole set of problems which essentially revolve around the issue of identifying which field the input data represents. 
+
+In the above example we got around this issue by requiring both first and last name (same as for a new user) so we haven't really fulfilled the goal of separating new and existing users. There are three approaches that could be used to resolve this issue using just tokens: 
+
+*   Special field terminators, similar to CSV files, where every field ends with a special value (such as a comma) and a separate lexical state would exist for each field. If the consumed text matched that's state's token, the appropriate update action would be specified. But if the entry before the comma was blank or non-existent, then that field would not be updated. Finally, when the comma was reached, the grammar would advance to the next lexical state. Which would result in entries like "ex 7Abq , , , , , , 23, , , " for existing users. 
+*   Special field prefixes, such as "#ln:" to uniquely identify the last name field and "^by:" to uniquely identify the birth year field, and so on. While it could work, it would likely produce input files with lines of gibberish for existing users.
+*   JSON-like entries, where a special token would be defined for each field and the value immediately after token would be the updated value. For example, lastname:Johnson would match the characters "lastname:" would match the <LAST_NAME> token which would switch to the LAST_NAME_UPDATE state where the next characters consumed would be used to update the Last_Name field in the user database. This solution has the advantage that if one entered "lastname:12345" the error would be more obvious than in the preceeding solutions. This option also has the advantage that the fields to update wouldn't have to be listed in any specific order.
+
+In all probability, none of these solutions would be selected because most programmers prefer to write rules: rules are more familiar to progammers and provide more flexibility than coding grammars using pure lexical states. So an actual real-world solution would use fewer lexical states and more rules to produce updates for existing users.
+
+So now that we've gotten a fair bit of exposure to lexical states, let's look at two more types of tokens that are most commonly used with lexical states: MORE and UNPARSED/SPECIAL_TOKEN.

@@ -43,6 +43,8 @@ include::ch05-more-about-tokens-01.adoc[]
 
 include::ch05-more-about-tokens-02.adoc[]
 
+include::ch05-more-about-tokens-03.adoc[]
+
 include::Appendix-A.adoc[]
 
 include::Appendix-B.adoc[]
