@@ -2,29 +2,33 @@
 == More About Tokens
 In this chapter, we're going to circle back to the subject of tokens so we can explore some of their more advanced features. But before we do that, let's take a moment to review tokens and their basic structure.
 
-token diagram emphasizing its structure
+image::5TokenStructure.png[Save As PNG,width=80%,pdfwidth=80%,align="center"]
 
-The above diagram shows the basic structure of a Token. The items in solid-line boxes are required; the items in broken-line boxes are optional. The numbers above the items are keyed to the numbered list below.
+The above diagram shows the basic structure of a Token. The numbers above the items are keyed to the numbered list below. The black circles are required items and must appear in every Token definition. The green items with solid black outlines are optional and can be safely omitted from any Token definition. The pink items with dotted outlines are Exclusive OR, meaning that you can use one or the other but not both (you can use a PAIR of curly braces *OR* you can use the semi-colon).
 
 .   *REQUIRED* - the word TOKEN (all caps) 
 .   *OPTIONAL* - directives, such as [IGNORE_CASE] (see Chapter 2 for an example)
 .   *REQUIRED* - the ":" (colon) character marks the beginning of the contents of the Token(s)
-.   *MULTIPLE* - the "{" (left curly brace) is required in _legacy JavaCC_ *ONLY*. It is optional in JavaCC 21 but it must be paired with the "}" (right curly brace) if it is used
+.   *EXCLUSIVE OR* - the "{" (left curly brace) is required in _legacy JavaCC_ *ONLY*. It is optional in JavaCC 21 but it must be paired with the "}" (right curly brace) if it is used, in which case a semi-colon cannot be used.
 .   *REQUIRED* - the "<" (less than sign) is required at the beginning of a token definition
 .   *REQUIRED* - the identifier for the Token in all uppercase letters (by convention) and multiple words separated by a "_" (underline character). It is technically allowed to use lowercase letters in the token name but you'll be as popular as a skunk at a picnic if you do.
 .   *REQUIRED* - the ":" (colon) character marks the end of the identifier and the beginning of what this token should match
-.   *REQUIRED* - what must be matched to be identified as this type of token. This can be: 
+.   *REQUIRED* - the regular expression that must be matched to be identified as this type of token. This can be: 
 ..  a String literal
 ..  a regular expression
 ..  another token (private tokens frequently appear here)
 ..  a combination of the above with each option separated by a "|" (vertical bar)
 .   *REQUIRED* - the ">" (greater than sign) is required at the end of the "what to match" element
-.   *OPTIONAL* - any lexical sctions must be enclosed by curly braces ("{}") and any Java statement(s) inside the curly braces must be terminated by semi-colon(s) (";")
-.   *OPTIONAL* - lexical state Identifier, beginning with a colon. Change to the named lexical state as described below. The named lexical state must follow the same rules as token identifiers (see #6 above).
-.   *MULTIPLE* - the "}" (right curly brace) is required in _Legacy JavaCC_ *ONLY*. It is optional in JavaCC 21 but if the TOKEN: section began with a left curly brace then you must have a matching right curly brace.
-.   *MULTIPE* - the ";" (semi-colon) cannot be used in _Legacy JavaCC_. A semi-colon is used in _JavaCC 21_ *ONLY* to mark the end of a TOKEN: section but only if curly braces were *NOT* used to mark the TOKEN: section.
+.   *OPTIONAL* - any lexical actions must be enclosed by curly braces ("{}") and any Java statement(s) inside the curly braces must be terminated by semi-colon(s) (";")
+.   *OPTIONAL* - lexical state Identifier, beginning with a colon. Change to the named lexical state as described below. The named lexical state should follow the same rules as token identifiers (see #6 above).
+.   *EXCLUSIVE OR* - the "}" (right curly brace) is required in _Legacy JavaCC_ *ONLY*. It is optional in JavaCC 21 but if the TOKEN: section began with a left curly brace then you must have a matching right curly brace.
+.   *EXCLUSIVE OR* - the ";" (semi-colon) cannot be used in _Legacy JavaCC_. A semi-colon can *ONLY* be used in _JavaCC 21_ to mark the end of a TOKEN: section but only if curly braces were *NOT* used to delimit the TOKEN: section.
+
+In _Legacy JavaCC_, items 4 and 12 are required and item 13 cannot be used. Because _JavaCC 21_ retains backward compatibility on most elements of a grammar, the Exclusive OR items (4, 12) can be used instead item 13, or item 13 can be used instead of items 4 and 12, but in no case can they all be used (4, 12, 13).
 
 === Lexical States
+Item 11, Lexical State, is a subject that hasn't been described before because our grammars haven't needed them. However, as our grammars become more complex, the successful use lexical states can improve their readability and usability.
+
 Lexical states are tokenization contexts that help logically partition our grammars by specifying how to convert text into tokens based on the surrounding text. For example, the "<" symbol will be tokenized differently in a math statement than when it is the beginning of an HTML comment. JavaCC allows you to define different lexical states wherein the appropriate tokenization can be specified.
 
 Until now all of the grammars have used just the DEFAULT lexical state. If you go back to any of the xxConstants.java files that were generated from our grammars, they will all contain a statement like the following: 
@@ -36,7 +40,7 @@ Until now all of the grammars have used just the DEFAULT lexical state. If you g
         DEFAULT, 
     }
 
-The LexicalState enum lists all possible lexical states that your grammar can access, or in this example just the DEFAULT state. If you add lexical states alpha, beta, gamma, delta, the xxConstants.java file will be changed as follows: 
+The LexicalState enum lists all possible lexical states that your grammar can access, or in this example just the DEFAULT state. If you add lexical states alpha, beta, gamma, the xxConstants.java file will be changed as follows: 
 
 
   /**
@@ -46,9 +50,9 @@ The LexicalState enum lists all possible lexical states that your grammar can ac
         DEFAULT, ALPHA, BETA, GAMMA, 
     }
 
-These state names (ALPHA, BETA, GAMMA) are OK for demonstrating the concept but not poor names for lexical states because they don't help explain what to expect in these lexical states. Popular names for lexical states include ONE_LINE_COMMENT, MULTILINE_COMMENT, JAVADOC_COMMENT because they describe what will be processed inside a lexical state. Using meaningful names for lexical states is considered good hygiene, just like using meaningful names for variables.
+These state names (ALPHA, BETA, GAMMA) are OK for demonstrating the concept but are poor names for lexical states because they don't help explain what to expect in these lexical states. Popular names for lexical states include ONE_LINE_COMMENT, MULTILINE_COMMENT, JAVADOC_COMMENT because they describe what will be processed inside a lexical state. Using meaningful names for lexical states is considered good hygiene, just like using meaningful names for variables.
 
-Lexical state names are _by convention_ ALL_CAPITALS with an underscore optionally used between any separate words. Lowercase letters are accepted but other punctuation marks are unacceptable. When the lexical state is called out per item #11 in above list, it must be entered without surrounding angle brackets ("< >") but when the lexical state is defined/used, it _MUST_ be surrounded by angle brackets.
+Lexical state names are _by convention_ ALL_CAPITALS with an underscore optionally used between any separate words. Lowercase letters are accepted but other punctuation marks are unacceptable. When the lexical state is called out per item #11 in above list, it must be entered without surrounding angle brackets ("< >") but when the lexical state is inserted above the items it applies to, it _MUST_ be surrounded by angle brackets.
 
 Once the Lexer has entered a lexical state, it will remain in that lexical state until it is switched to a different state, most commonly back to the DEFAULT state. Let's take a look at a short example.
 
@@ -68,7 +72,7 @@ And let's update our aliases as follows:
 ----
 The clean command will delete all the files in the build directory. Run it every time you make significant changes to the grammar OR when things are acting weird: clean the build directory and rerun jcc, cmp, and tst and see if you get different results.
 
-Our grammar in this chapter will read its input from the states.txt file instead of from the command line. Our grammar will also inject the ParserClass so we won't need a separate test file. If you really want to use the separate test file, please feel free. We don't judge personal preference.
+Our grammar in this chapter will read its input from a text file (named in the alias line as users.txt) instead of from the command line. Our grammar will also inject the ParserClass so we won't need a separate test file. If you really want to use the separate test file, please feel free. We don't judge anyone's personal preferences.
 
 === Grammar for Exploring Lexical States
 The following grammar would be used to validate a text file that contains a list of new users to be added or existing users to be updated in a system. Each line in the file, "users.txt" has the information for just one user and begins with either the keyword "ex" or "new" followed by their user ID (we're starting small - don't worry, we'll get more user info). Depending on if it found the <EXIST_USER> or <NEW_USER> Token, the lexer will change to either the EXIST_USER_STATE or to the NEW_USER_STATE and will process additional Tokens based on the lexical state entered. Having separate lexical states makes sense here because existing users would only need the updated fields listed but new users would require all fields listed. 
@@ -111,16 +115,18 @@ The following grammar would be used to validate a text file that contains a list
       {System.out.println("Adding NEW user"); }
       ;
 ----
-The above grammar seems like it would do the job. When parser.start() is run, it gets either an <EXIST_USER> or it gets a <NEW_USER> Token. If it gets an <EXIST_USER>, it switches to the <EXIST_USER_STATE>. If it gets a <NEW_USER>, it switches to the <NEW_USER_STATE>.
+The above grammar seems like it will do the job. When parser.start() is run, it gets either an <EXIST_USER> or it gets a <NEW_USER> Token. If it gets an <EXIST_USER>, it switches to the <EXIST_USER_STATE>. If it gets a <NEW_USER>, it switches to the <NEW_USER_STATE>. The following diagram shows the intended switching between states.
 
-Here's the users.txt file (again we're starting small and simple): 
+image::5StateDiagram1.png[Simplified Diagram]
+
+The following text is the contents of the text file - you can name it anything you want but make sure that it matches the name specified in your alias. Again, we're starting small and simple, with just the literals "new" and "ex", each followed by a user ID: 
 ----
  new	0Abc
  ex1Def
  ex		2Ghi
  new         3Jkl
 ----
-Notice that the spacing is all screwy to make sure that our SKIP values are being honored. Some of those whitespace characters in the file are horizontal tabs.
+Notice that the spacing is all screwy to make sure that our SKIP values are being honored. Also, to be sure it's a good test, make sure some of those whitespace characters in the file are horizontal tabs.
 
 Now if we jcc, cmp, and tst, it will blow up with messages similar to the following: 
 ----
@@ -161,14 +167,18 @@ Unfortunately, it blows up again. But reading through the Lexer debug messages, 
 
 What's going on? We've never had this problem before, SKIPping tabs. And if we replace that tab in the first line with spaces, it will still blow up. 
 
-It turns out that once we got into the NEW_USER_STATE, we no longer recognized (and skipped) our standard whitespace characters because we didn't define them in that state. The obvious answer is to define them for each lexical state, but this kind of duplication is not only a poor solution, it also doesn't work. A slightly better solution (that also doesn't work) is to define exactly which states the whitespace SKIP statement applies to, separating them with commas, like the following: 
+It turns out that once we got into the NEW_USER_STATE, we no longer recognized (and skipped) our standard whitespace characters because we didn't define them in that state. The obvious answer is to define them for each lexical state, but this kind of duplication is not only a poor solution, it also doesn't work. A slightly better solution is to define exactly which states the whitespace SKIP statement applies to, separating them with commas, like the following: 
 ----
  <DEFAULT, NEW_USER_STATE, EXIST_USER_STATE>
  SKIP : " " | "\n" | "\r" | "\t"; 
 ----
 But since we just listed all of our possible lexical states, we can replace that with `<*>` meaning that this SKIP statement applies to all lexical states. Go ahead and insert <*> before the SKIP statement - that won't fix everything but it will fix one problem, and allow all lexical states to SKIP whitespace.
 
-Now that we've dealt with whitespaces, we have to fix our main problem, that we're not reading through the users file because we're stuck in the NEW_USER_STATE. What's missing is that we never specify in the grammar that we want to switch back to the DEFAULT state after processing the <NEW_USER_ID> Token. Just like at the top of the grammar where we specified which lexical state to enter when a <EXIST_USER> or <NEW_USER> Token was found, we need to specify that we need to return to the DEFAULT state after a <NEW_USER_ID> is processed, by adding `: DEFAULT` after the println statement.
+Now that we've dealt with whitespaces, we have to fix our main problem, that we're not reading through the users file because we're stuck in the NEW_USER_STATE. What's missing is that we never specify in the grammar that we want to switch back to the DEFAULT state after processing the <NEW_USER_ID> Token. 
+
+image::5StateDiagram2.png[Include return to Default]
+
+Just like at the top of the grammar where we specified which lexical state to enter when a <EXIST_USER> or <NEW_USER> Token was found, we need to specify that we need to return to the DEFAULT state after a <NEW_USER_ID> is processed, by adding `: DEFAULT` after the println statement.
 ----
  <NEW_USER_STATE>
  TOKEN : <NEW_USER_ID : ["0" - "9"] ["A" - "Z"] (["a" - "z"]){2} > 
@@ -177,7 +187,7 @@ Now that we've dealt with whitespaces, we have to fix our main problem, that we'
 ----
 Go ahead and add `: DEFAULT` to the <EXIST_USER_ID> Token definition and rerun jcc, cmp, and tst and now you should end up with something similar to this:
 ----
- ...... lines skipped
+ ...... many debug lines skipped
  Adding NEW user
  Aug 16, 2021 6:22:48 PM StatesLexer switchTo
  INFO: Switching from lexical state NEW_USER_STATE to DEFAULT
@@ -217,3 +227,12 @@ And if you set `DEBUG_LEXER=false;` and rerun jcc, cmp, and tst, you'll get:
    new
    3Jkl
 ----
+There's no requirement that lexical states return to the DEFAULT state; that's just the way the logic of this example flowed. If your grammar was to parse the progress of a student in school, if their grades were good enough to move to the next higher grade and if not they would repeat, the token logic would be something like the following: 
+----
+<GOOD_ENOUGH_5TH : <MATH_OK> <SCIENCE_OK> . . . >  : FIFTH_GRADE_STATE
+<REPEAT_GRADE_4TH: <MATH_NOT_OK> | <SCIENCE_NOT_OK . . . > : FOURTH_GRADE_STATE
+. . . . .
+<GOOD_ENOUGH_6TH : <MATH_OK> <SCIENCE_OK> . . . >  : SIXTH_GRADE_STATE
+<REPEAT_GRADE_5TH: <MATH_NOT_OK> | <SCIENCE_NOT_OK . . . > : FIFTH_GRADE_STATE
+----
+Each time the student did well enough to be promoted to the next grade, their lexical state would advance to the next state and any time their performance wasn't acceptable, they would repeat their current lexical state and there would be no need to return to the DEFAULT or initial state.

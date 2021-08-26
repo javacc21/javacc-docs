@@ -116,14 +116,14 @@ If this is unset, files are generated relative to the grammar file location.
 |
 |
 |PARSER_CLASS
-|
-|
+|Sets the parser to a name that is different than the grammar file. It does NOT automatically append "Parser" to the generated file name and uses the name exactly as you entered it.
+|PARSER_CLASS=BarBazParser
 |LEXER_CLASS
-|
-|
+|Sets the lexer to a name that is different than the grammar file. It does NOT automatically append "Lexer" to the generated file name and uses the name exactly as you entered it.
+|LEXER_CLASS=BarBazLexer
 |CONSTANTS_CLASS
-|
-|
+|Sets the constats file to a name that is different than the grammar file. It does NOT automatically append "Constants" to the generated file name and uses the name exactly as you entered it.
+|CONSTANTS_CLASS=BarBazConstants
 |BASE_SRC_DIR
 |
 |
@@ -145,9 +145,6 @@ If this is unset, files are generated relative to the grammar file location.
 |DEFAULT_LEXICAL_STATE
 |Set the initial lexical state to non-default state. If not set, lexing begins in DEFAULT state. See Chapter 5 for more details. 
 |DEFAULT_LEXICAL_STATE = JAVA;    (Lexing will begin in the JAVA state)
-|NODE_CLASS
-|
-|
 |OUTPUT_DIRECTORY
 |
 |
