@@ -1,4 +1,4 @@
-== Appendix B JavaCC Options and Settings
+== JavaCC Options and Settings
 The following tables identify the options available in JavaCC 21. Many options are identical in name and behavior to the _legacy JavaCC_ to retain backwards compatibility. Some options are new to JavaCC 21 and some have been dropped from JavaCC as obsolete.
 
 === Command Line Options

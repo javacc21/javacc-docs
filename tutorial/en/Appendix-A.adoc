@@ -1,5 +1,5 @@
 :imagesdir: ./images
-== Appendix A - Installation Instructions - Clean this up later
+== Installation Instructions - Clean this up later
 === Installing Java
 Many Java 8 (1.8) or later products are available, including:
 
