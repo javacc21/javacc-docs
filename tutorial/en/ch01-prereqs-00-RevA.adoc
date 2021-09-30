@@ -15,7 +15,7 @@ This tutorial is meant to be an introduction to JavaCC and how parsers work. The
 The method used in this tutorial is to start with simple examples and then explore and develop step-by-step these examples to handle more cases and situations. If you find that some of the steps are too small or too obvious, go ahead and skip forward a couple of steps and see if it still makes sense. If it does, keep skipping forward until you find new material. After all, we've just met and I have no way of knowing what you know or don't know.
 
 === Tutorial Overview
-The rest of this chapter will cover all the usual stuff: intended audience, conventions and settting up our computers for using JavaCC in a text window. Many of the computer setup details are pushed into Appendix A where separate sections will be dedicated to Linux setup, Windows setup, Mac setup and Raspberry Pi setup.
+The rest of this chapter will cover all the usual stuff: intended audience, conventions and setting up our computers for using JavaCC in a text window. Many of the computer setup details are pushed into Appendix A where separate sections will be dedicated to Linux setup, Windows setup, Mac setup and Raspberry Pi setup.
 
 Chapter 2 will cover our first example where we will generate a parser for the "BarBaz" language. BarBaz is non-functional and nonsensical language whose only virtue is its extreme simplicity. BarBaz is the parser equivalent of the classic "hello world" program, which exists solely to demonstrate the simplest possible compilable program in many languages. We go into a lot of detail about the basics to make sure that you're following the right sequences and getting the right results.
 
@@ -34,9 +34,9 @@ Broadly speaking, the audience for this tutorial can be divided into three group
 . *Parser user.* Users with parser generator experience. Typically, you will have used https://en.wikipedia.org/wiki/Yacc[Yacc] or https://en.wikipedia.org/wiki/GNU_Bison[Bison] or possibly https://antlr.org/[ANTLR], so the basic concepts are not new.
 . *Legacy user.* Users of the https://javacc.org/[_legacy_ JavaCC tool]. You are familiar with the original JavaCC tool and want to learn about JavaCC 21 or upgrade to it.
 
-This tutorial is written primarily for the first group, the novices, and will use a step-by-step approach to demonstate the capabilities and functionaliry of JavaCC. 
+This tutorial is written primarily for the first group, the novices, and will use a step-by-step approach to demonstrate the capabilities and functionality of JavaCC. 
 
-However, there can easily be some overlap between the groups, such as an ANTLR user with some Legacy JavaCC experience, or a novice user who might have briefly dabbled in Yacc or Legacy JavaCC. So don't worry if you don't fit neatly into a single catagory; few of us ever do.
+However, there can easily be some overlap between the groups, such as an ANTLR user with some Legacy JavaCC experience, or a novice user who might have briefly dabbled in Yacc or Legacy JavaCC. So don't worry if you don't fit neatly into a single category; few of us ever do.
 
 === Conventions
 
@@ -69,7 +69,7 @@ This tutorial will assume a _lowest common denominator_ toolset. While this may 
 NOTE: I am not at all suggesting that this toolset (JDK + command line) is optimal. IDE's such as Eclipse and IntelliJ exist for a reason (for _many_ reasons) and so do modern build tools like Maven or Gradle. This tutorial takes this _lowest common denominator_ approach because its simplicity and predictability seems like the best way to demystify what is really going on.
 
 === Installing JavaCC 21
-Using JavaCC 21 requires javacc-full.jar which contains all of the logic and functionality needed to process your grammar files and generate the appropriae java files. Download the latest JavaCC 21 from https://javacc.com/download/javacc-full.jar[here]. Using this link will place the jar file in your standard download location.
+Using JavaCC 21 requires javacc-full.jar which contains all of the logic and functionality needed to process your grammar files and generate the appropriate java files. Download the latest JavaCC 21 from https://javacc.com/download/javacc-full.jar[here]. Using this link will place the jar file in your standard download location.
 
 If you prefer to use the command line, change to an appropriate development directory and then type one of the following commands at your shell prompt:
 
@@ -89,7 +89,7 @@ It should respond with Java 1.8.x or greater. If it responds that java wasn't fo
 
  % javac -version
 
-Again, it should respond with version 1.8.x or greater. If it didn't find javac, or if it displays an older (or mismatched) version, go to Appendix A for installation infomation. Once these commands succeed, continue with the next command.
+Again, it should respond with version 1.8.x or greater. If it didn't find javac, or if it displays an older (or mismatched) version, go to Appendix A for installation information. Once these commands succeed, continue with the next command.
 
 In your command window, type:
 

@@ -194,7 +194,7 @@ So let's double it up; run tst with "12 12 345 345 6789 6789" and we should get 
          6789
          6789
 ----
-But notice that the msg values printed for the xNbrRules at the top only goes up to 3 even though we processed twice as many numbers than we did in the preceeding example. That's because the Repetition Quantifier ("+") keeps consuming matching digits without leaving its current rule.
+But notice that the msg values printed for the xNbrRules at the top only goes up to 3 even though we processed twice as many numbers than we did in the preceding example. That's because the Repetition Quantifier ("+") keeps consuming matching digits without leaving its current rule.
 
 What if we flip the input values around, to "9876 9876 543 543 21 21"? You should get an output similar to the following: 
 ----

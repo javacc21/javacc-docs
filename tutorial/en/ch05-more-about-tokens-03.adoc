@@ -1,6 +1,6 @@
 :imagesdir: ./images
 === The MORE token
-One of the more common usages of MORE is when processing comments. The meaning of MORE is that more stuff is comming that goes with the next piece. So let's back up a little bit and take a look at one way of handling a one line comment.
+One of the more common usages of MORE is when processing comments. The meaning of MORE is that more stuff is coming that goes with the next piece. So let's back up a little bit and take a look at one way of handling a one line comment.
 ----
     <ONE_LINE_COMMENT : "//" (~["\n", "\r"])* ("\r" | "\n" | "\r\n")? > 
 ----
@@ -22,7 +22,7 @@ MORE :
 MORE : <ANY_CHAR : ~[] > ;
 
 <IN_SINGLE_LINE_COMMENT>
-SPECIAL_TOKEN :
+UNPARSED :
  <SINGLE_LINE_COMMENT: "\n" | "\r" | "\r\n"> 
    {System.out.println("End 1 line comment: value = " + input_stream.getImage()); }
  : DEFAULT ;
@@ -46,16 +46,24 @@ import java.io.*;
 	}
 }
 ----
-In this example, the first MORE is part of the DEFAULT lexical space and when a <SINGLE_LINE_COMMENT_START> Token ("//") is found, it performs a lexical action to notify us that it had found the start of a single line comment and then switches to the IN_SINGLE_LINE_COMMENT state. Once in the IN_SINGLE_LINE_COMMENT state, there is another MORE that captures any characters until the character(s) match a "\n", a "\r", or a "\r\n" pair. When one of these characters is processed, the SINGLE_LINE_COMMENT Token is fulfilled, a lexical action is performed, and then processing returns to the DEFAULT lexical state.
+In this example, the first MORE is part of the DEFAULT lexical space and when a <SINGLE_LINE_COMMENT_START> Token ("//") is matched, it performs a lexical action to notify us that it had found the start of a single line comment and then switches to the IN_SINGLE_LINE_COMMENT state. Once in the IN_SINGLE_LINE_COMMENT state, there is another MORE that captures any characters until the character(s) read match a "\n", a "\r", or a "\r\n" pair. When one of these end-of-line (EOL) characters is processed, the UNPARSED <SINGLE_LINE_COMMENT> Token is matched, a lexical action displays the combined MOREs and the UNPARSED tokens, and then processing returns to the DEFAULT lexical state.
 
-Let's give it a text file similar to the following: 
+The following diagram illustrates the process.
+
+image::5MORE and UNPARSED.png[]
+
+NOTE:   _Legacy JavaCC_ users will note that UNPARSED was used instead of SPECIAL_TOKEN. UNPARSED and SPECIAL_TOKEN are both available in JavaCC 21 and can be used interchangeably. UNPARSED is used in this example because it more closely describes their functionality.
+
+It is also important to note in this example that the start: rule only expects to find a single <BAR> token.
+
+Now let's give it a text file similar to the following: 
 ----
 //this is a single line comment
     //this is another single line comment that goes on a lot longer
 bar
 //this is yet another single line comment
 ----
-And let's update our aliases: 
+You can save this test file to any name you want, but I've named it comments.txt for my convenience. If a different filename is more convenient for you, go ahead and use that name, just remember to use that name in your alias. So let's update our aliases: 
 ----
 $ alias jcc="java -jar <location of javacc-full.jar>/javacc-full.jar -d build comments.javacc"
 $ alias cmp="javac build/*.java"
@@ -73,19 +81,19 @@ End 1 line comment: value = //this is another single line comment that goes on a
 BAR token found
 bar
 ----
-The first thing to notice is that the complete single line comment was captured in the <SINGLE_LINE_COMMENT> Token and not just the line ending characters that it matched. This is the MORE token in action. Because <SINGLE_LINE_COMMENT_START> was defined as a MORE instead of a TOKEN, the contents of <SINGLE_LINE_COMMENT> is carried forward to the next Token.
+The first thing to notice is that the complete single line comment was captured in the UNPARSED <SINGLE_LINE_COMMENT> Token and not just the line ending characters that it matched. This is MORE in action. Because <SINGLE_LINE_COMMENT_START> was defined as a MORE instead of a TOKEN, the contents of <SINGLE_LINE_COMMENT> is carried forward to the next Token.
 
 The next text encountered matched the MORE: <ANY_CHAR> Token so the "//" was combined with its contents and they were carried forward to the next Token, the <SINGLE_LINE_COMMENT> Token and all combined into a single String that is displayed in the lexical action for <SINGLE_LINE_COMMENT>.
 
 The next thing to notice is how the contents of <SINGLE_LINE_COMMENT> Token is displayed, using input_stream.getImage() instead of lastConsumedToken.toString() as was done previously. This is because at the moment when the <SINGLE_LINE_COMMENT> lexical action is performed, a token has not been consumed by the Parser so there is nothing can be displayed. 
 
-For right now, pretend that you didn't notice the SPECIAL_TOKEN keyword in the <IN_SINGLE_LINE_COMMENT> lexical state. The whole next section is dedicated to UNPARSED (JavaCC21) and SPECIAL_TOKEN (legacy JavaCC).
+Also notice how UNPARSED (SPECIAL_TOKEN) works in the <IN_SINGLE_LINE_COMMENT> lexical state; it allows you to capture input text without parsing it. What do you think happens if you changed UNPARSED to a TOKEN. That's right - it will blow up with an error message saying that it was expecting a <BAR> Token. Think how complicated your grammar file would need to be if you had to specify every situation where it would be legal to insert a single line comment Token and/or a multi-line comment Token. The whole next section is dedicated to UNPARSED (JavaCC 21) and SPECIAL_TOKEN (legacy JavaCC).
 
-The last thing to notice is that only two comments were displayed, even though the test file contains three comments. Because the last comment came after the <BAR> Token, it was ignored because the start: rule had been fulfilled when it read a single "bar" so it exited and the final comment was never processed. 
+The last thing to notice is that only two comments were displayed, even though the test file contains three comments. Because the last comment came after the <BAR> Token, it was ignored because the start: rule had been fulfilled when it read a single "bar" Token so it exited and the final comment was never processed. 
 
-So change the start: rule so the <BAR> token can be listed one or more times and rerun jcc, cmp, and tst. Now the third comment should be displayed. If you only get "Start 1 line comment" for the last comment, add a newline at the end of your test file. Conversely, if the whole final comment appeared, remove the last newline(s) and watch it NOT match the <SINGLE_LINE_COMMENT> because it never found the newline character(s) so that lexical action is never performed.
+So change the start: rule so the <BAR> token can be listed one or more times, (for example: (<BAR>)+  ) and rerun jcc, cmp, and tst. Now the third comment should be displayed. If you only get "Start 1 line comment" for the last comment, add a newline at the end of your test file. Conversely, if the whole final comment appeared, remove the last newline(s) and watch it NOT match the <SINGLE_LINE_COMMENT> because it never found the newline character(s) so that lexical action is never performed.
 
-Feel free to sprinkle more bars in your test file and verify that comments following a <BAR> Token are successfully process but that <BAR> Tokens after the <SINGLE_LINE_COMMENT_START> Token are ignored. When there are more bars in your test file, the parser.rootNode().dump() will look more normal, with the start rule listed with all of the bars indented under the "start".
+Feel free to sprinkle more <BAR> Tokens in your test file and verify that comments following a <BAR> Token are successfully processed but that <BAR> Tokens within a SINGLE_LINE_COMMENT are ignored. When there are more bars in your test file, the parser.rootNode().dump() will look more normal, with the start rule listed with all of the bars indented under the "start".
 
 Now let's add the ability to process through a multi-line comment. Make the following changes to your grammar: 
 ----
@@ -110,7 +118,7 @@ UNPARSED :
 ----
 You can add the <IN_MULTI_LINE_COMMENT> state any where in the file that you want but I added it right after the second MORE just to consolidate the changes. Be sure to change the second MORE so that it applies to both the IN_SINGLE_LINE_COMMENT and the IN_MULTI_LINE_COMMENT states.
 
-Now rerun jcc, cmp, and tst and it should all run without errors. Now add a multi-line comment to your test file and rerun tst and it should display the multi-line comment without errors.
+Now rerun jcc, cmp, and tst and it should all run without errors. Now add a multi-line comment to your test file and rerun tst and it should display the multi-line comment without errors. Also notice if you insert EOLs within your multi-line comments, they will be passed through in the MORE: <ANY_CHAR> and handled correctly by the println function.
 
 Although having separate lexical states for single line comments may have seemed excessive, using multiple lexical states makes it more convenient when adding additional types of comments.
 
@@ -118,14 +126,14 @@ Although having separate lexical states for single line comments may have seemed
 
 Your assignment, dear reader, is to update your grammar so it can capture JavaDoc comments. You will need to add a MORE for the start of the JavaDoc comment ("/**") that will switch to a separate JavaDoc state to process the contents of the JavaDoc. As designer, you'll need to decide if you can combine the JavaDoc state with MULTI_LINE_COMMENT state or if it is better manage the JavaDoc separately. JavaDocs can contain special annotations (@author, @param, etc); if you were building a real product you would have to be able to respond appropriately to each of the different kinds of annotations. For this exercise, you get full credit if you can display the full text of the JavaDoc comment to the screen using a lexical action. You get bonus points for figuring out how/where you'd insert the special processing needed for the JavaDoc annotations.
  
-You can almost imagine the real JavaDoc generator setting the default lexical state to JUNK and by-passing all of the text (code and single-line and multi-line comments) until it reaches a JavaDoc comment and focussing on just its contents. In truth it isn't that simple; the JavaDoc generator is very aware of the Java code that it is documenting, ignoring JavaDoc comments that were written for private objects and variables and noticing all the public and protected items that you were supposed to write JavaDocs for but haven't gotten around to. Still, it's nice to have an insight into how JavaDocs are generated.
+You can almost imagine the real JavaDoc generator setting the default lexical state to JUNK and by-passing all of the text (code and single-line and multi-line comments) until it reaches a JavaDoc comment and focusing on just its contents. In truth it isn't that simple; the JavaDoc generator is very aware of the Java code that it is documenting, ignoring JavaDoc comments that were written for private objects and variables and warning you of all the public and protected items that you were supposed to write JavaDocs for but haven't gotten around to. Still, it's nice to have an insight into how JavaDocs are generated.
 
-=== SPECIAL_TOKEN and UNPARSED Tokens
-_Legacy JavaCC_ used the SPECIAL_TOKEN identifier to specify Tokens that are not meant to be part of the parsing process. _JavaCC 21_ created a new identifier, UNPARSED, for Tokens that are not meant to be part of the parsing process. If you change your MULTI_LINE_COMMENT from UNPARSED to TOKEN, you need to define every location where it is legal for MULTI_LINE_COMMENT to appear. The beauty of UNPARSED/SPECIAL_TOKEN items not being parsed is that they can appear anywhere in the text your grammar processes.
+=== SPECIAL_TOKEN and UNPARSED Usage
+_Legacy JavaCC_ used the SPECIAL_TOKEN identifier to specify Tokens that are not meant to be part of the parsing process. _JavaCC 21_ created a new equivalent identifier, UNPARSED, for Tokens that are not meant to be part of the parsing process. 
 
-JavaCC 21 retains backward compatibility with SPECIAL_TOKEN so it can use either UNPARSED or SPECIAL_TOKEN. If your grammar must maintain compatibility with _Legacy JavaCC_ going forward, you should use SPECIAL_TOKEN and not use UNPARSED.
+_JavaCC 21_ retains backward compatibility with SPECIAL_TOKEN so _JavaCC 21_ can use either UNPARSED or SPECIAL_TOKEN. If your grammar must maintain compatibility with _Legacy JavaCC_ going forward, you should use SPECIAL_TOKEN and not use UNPARSED.
 
-Personally, I would use UNPARSED for any new grammars that I intend to use with JavaCC 21 going forward. If you are using and updating a previously existing grammar that contains SPECIAL_TOKEN(s), I would keep them as reminders that I didn't create these grammars, even if I were going to use the grammar with JavaCC 21.
+Personally, I would use UNPARSED for any new grammars that I create and intend to use with _JavaCC 21_ going forward. If you are using and updating an existing _Legacy JavaCC_ grammar that contains SPECIAL_TOKEN(s), I would keep them as reminders that I didn't create these grammars, even if I were going to use the grammar exclusively with _JavaCC 21_. And of course, any grammars you create to use exclusively with _Legacy JavaCC_ you must use only SPECIAL_TOKEN.
 
 === Conclusion
 We have covered a lot of ground in this chapter, covering lexical states, MORE and UNPARSED (yeah, yeah, SPECIAL_TOKEN). Hopefully this chapter has made their concepts and uses clear and haven't left you in a state of confusion. As powerful as these features are, most grammars don't seem to use them very much.

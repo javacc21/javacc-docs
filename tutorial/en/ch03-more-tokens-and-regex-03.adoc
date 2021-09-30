@@ -2,7 +2,7 @@
 === And Now, Back to Our Soup
 When last spotted, our soup grammar was little more than a list of ingredients. To be useful, a recipe needs to include the amounts of each ingredient. And to be really useful, it needs to be written down so we don't have to keep retyping the recipe at the command line.
 
-So let's tackle the second item first; let's add the ability to read our recipe from a file. Create a new file in the build directory and name it something memorable, like soup1.recipe and put one item from each ingredient catagory in it, one per line, similar to the following:
+So let's tackle the second item first; let's add the ability to read our recipe from a file. Create a new file in the build directory and name it something memorable, like soup1.recipe and put one item from each ingredient category in it, one per line, similar to the following:
 ----
     broth
       chicken
@@ -81,7 +81,7 @@ So now go back and update your recipe to include some amounts that include fract
     300
     salt
 ----
-Now to be useful, we need to include some kind of measurment unit, so we know if we're listing teaspoons or kilograms. So first we need to add another Token, the <UNIT> that defines what measurement unit to use with each ingredient. And to make it more interesting, we'll either metric units (grams, liters, etc.) or untis from the U.S. Customary System (USCS) such as cups, ounces, etc. So add to Soup.javacc the following Token:
+Now to be useful, we need to include some kind of measurement unit, so we know if we're listing teaspoons or kilograms. So first we need to add another Token, the <UNIT> that defines what measurement unit to use with each ingredient. And to make it more interesting, we'll either metric units (grams, liters, etc.) or units from the U.S. Customary System (USCS) such as cups, ounces, etc. So add to Soup.javacc the following Token:
 ----
   TOKEN : <UNIT   : <METRIC> | <USCS> >
         | <#METRIC: "gram" | "g" | "gm" | "kilogram" | "kilo" | "liter" | "ml" >

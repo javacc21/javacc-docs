@@ -61,7 +61,7 @@ image::FirstToken2.jpg[Adding to the token]
 After the "bar", we added the vertical bar symbol followed by "BAR". The vertical bar shows that an OR condition exists; "bar" OR "BAR" will be accepted for the Token <BAR>. In JavaCC, the vertical bar symbol works pretty much like the symbol meaning OR ("||") in Java.
 
 Run the Cleanup and Run steps above but this time, change the command line args to use BAR.
-And when it runs, it should look similiar to the following output:
+And when it runs, it should look similar to the following output:
 ----
     % java FirstTest BAR:baz:baz
     Foo

@@ -13,16 +13,16 @@ The following tables identify the options available in JavaCC 21. Many options a
 If this is unset, files are generated relative to the grammar file location.
 |-jdkN
 |Specify the target JDK version. N is a number from 8 to 16.
-|Default is 8
+|Default is 8. If this is set on command line, the ??? takes precedence. If a number greater than 8 is specified, then modules-info.java ???WILL/will NOT??? be generated.
 |-n
 |Suppress the check for a newer version
-|
+|The version of javacc-full.jar is used and may become stale overtime.
 |-p
 |Define one or more comma-separated (no spaces) symbols to pass to the preprocessor.
 |For example:   -p debug,strict
 |-q
-|Quieter output
-|
+|Normal processing messages are not displayed. Error messages will still be displayed.
+|JavaCC normally displays the name of each file as it is being generated. Using the -q option will suppress these messages, which can be useful when running JavaCC as part of a script.
 |===
 
 === Boolean Settings 
@@ -62,7 +62,7 @@ If this is unset, files are generated relative to the grammar file location.
 |
 |SMART_NODE_CREATION
 |True
-|When true, a node is only created when more than one Token was matched. When false, a node is created everytime a token is matched.
+|When true, a node is only created when more than one Token was matched. When false, a node is created every time a token is matched.
 |NODE_USES_PARSER
 |
 |
@@ -122,7 +122,7 @@ If this is unset, files are generated relative to the grammar file location.
 |Sets the lexer to a name that is different than the grammar file. It does NOT automatically append "Lexer" to the generated file name and uses the name exactly as you entered it.
 |LEXER_CLASS=BarBazLexer
 |CONSTANTS_CLASS
-|Sets the constats file to a name that is different than the grammar file. It does NOT automatically append "Constants" to the generated file name and uses the name exactly as you entered it.
+|Sets the constants file to a name that is different than the grammar file. It does NOT automatically append "Constants" to the generated file name and uses the name exactly as you entered it.
 |CONSTANTS_CLASS=BarBazConstants
 |BASE_SRC_DIR
 |
@@ -160,5 +160,5 @@ If this is unset, files are generated relative to the grammar file location.
 |Example: TABS_TO_SPACES=4
 |JDK_TARGET
 |Specify the target JDK version. N is a number from 8 to 16.
-|If this is set on command line, the xxx takes precedence
+|Default is 8. If this is set on command line, the ??? takes precedence. If a number greater than 8 is specified, then modules-info.java ???WILL/will NOT??? be generated.
 |===

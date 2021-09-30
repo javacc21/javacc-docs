@@ -101,7 +101,7 @@ Similarly, when alpha3 is called, the lastConsumedToken is whatever value was le
 
 We can do more than just read and display the lastConsumedToken's value. We can also change its value. It doesn't seem like this would be a capability that you would use everyday but we'll go ahead and do it so you'll know how to do it if the need should arise.
 
-Just to make the changes noticable, we'll change all <ALPHA_TWO> Tokens from lower case to upper case and we'll change all <ALPHA_THREE> Tokens from upper case to lower case. And since <ALPHA_FOUR> Tokens can be either upper or lower case, we'll invert the case of each character in the Token.
+Just to make the changes noticeable, we'll change all <ALPHA_TWO> Tokens from lower case to upper case and we'll change all <ALPHA_THREE> Tokens from upper case to lower case. And since <ALPHA_FOUR> Tokens can be either upper or lower case, we'll invert the case of each character in the Token.
 
 The changes to the alpha rules are shown below: 
 ----
@@ -130,7 +130,7 @@ The changes to the alpha rules are shown below:
            lastConsumedToken.setImage(sb.toString());
            System.out.println("alpha4 End LCT: " + lastConsumedToken.toString()); } ;
 ----
-The setImage() method is used to change the contents of the lastConsumedToken. Alpha2 and alpha3 are pretty straightforward changes because we know what their cases must be to match their Token definintions. The alpha4 rule is trickier because we have to move character by character through the String contained in the lastConsumedToken.
+The setImage() method is used to change the contents of the lastConsumedToken. Alpha2 and alpha3 are pretty straightforward changes because we know what their cases must be to match their Token definitions. The alpha4 rule is trickier because we have to move character by character through the String contained in the lastConsumedToken.
 
 When you have made these changes and re-run jcc and cmp, it should look like the following when run: 
 ----
