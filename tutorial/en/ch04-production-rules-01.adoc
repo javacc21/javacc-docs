@@ -19,7 +19,7 @@ And let's update and add to our aliases as follows:
     % alias cmp='javac build/*.java'
     % alias tst='java -cp build RulesTest'
 ----
-We're going to start with some rule experiments so we'll name our grammar rules.javacc and our test progarm RulesTest.java. Once we get more familiar with rules, we'll get back to our soup. For now, we'll leave it cooling on the back burner (sorry, I couldn't resist it).
+We're going to start with some rule experiments so we'll name our grammar rules.javacc and our test program RulesTest.java. Once we get more familiar with rules, we'll get back to our soup. For now, we'll leave it cooling on the back burner (sorry, I couldn't resist it).
 
 === Starting with Rules
 Our first grammar, rules.javacc, is very simple, with just one private Token, three regular Tokens and four rules. Each of the regular Tokens includes a Lexical Action to show when they are matched. In the RootRule, instead of specifying the actual Tokens, rootRule makes calls to other rules, each of which specifies which Token to match. In this example, each rule also includes an action, enclosed in curly braces, which prints out the name of the rule that was run.
@@ -49,8 +49,8 @@ Notice the inconsistency in the way the RootRule calls to the other rules; this 
 
 *   twoNbrRule was called without parentheses that would indicate that a rule was being call. Both Threenbrrule() and four_nbr_rule() were called using empty parentheses.
 *   The definition of twoNbrRule skips the return type (void in this rule) but does include empty parentheses, showing that no parameters were passed in. It also includes an empty pair of curly braces for the initialization block required in _legacy JavaCC_ only. It encloses the Java statement (System.out....) in curly braces and terminates the Java statement with a semi-colon inside the curly braces.
-*   Threenbrrule includes the return type of void but skips the parentheses and the empty curly braces. It also encloses the the Java statment (with its own curly braces) and the entire rule contents in curly braces but does _NOT_ use a semi-colon at the end.
-*   four_nbr_rule skips the return type, empty parentheses, and curly braces (both initiliation and enclosing). It does enclose the Java statement in curly braces and terminates the rule with a semi-colon.
+*   Threenbrrule includes the return type of void but skips the parentheses and the empty curly braces. It also encloses the the Java statement (with its own curly braces) and the entire rule contents in curly braces but does _NOT_ use a semi-colon at the end.
+*   four_nbr_rule skips the return type, empty parentheses, and curly braces (both initialization and enclosing). It does enclose the Java statement in curly braces and terminates the rule with a semi-colon.
 *   All three called rules use different capitalization styles and use of underscores but all three styles are accepted.
 
 The above example is not the recommended formatting for rules; it was intentionally doneS inconsistently to demonstrate the flexibility that you have with JavaCC 21. However, it is recommended that you pick a style and stick with it. The following section discusses the actual structure of rules.
@@ -100,11 +100,11 @@ The next example will use modified versions of these same Nbr rules. For the res
 *   Rules without parameters will be defined without empty parentheses
 *   Rules that are called will include parentheses, even if they are empty. They are included to make it clearer that a rule is to be run. As you get more experienced with Javacc 21, you may prefer to skip the parentheses unless you are actually passing parameters to the rule.
 *   Rule names will begin with a lowercase letter, just like method calls in Java normally begin with a lowercase letter. The rest of the rule name will use camelCase, like in Java.
-*   The curly braces for empty initialization blocks will be omitted. If initialization is required, it will be handlded in the action block.
+*   The curly braces for empty initialization blocks will be omitted. If initialization is required, it will be handled in the action block.
 *   The action block will skip the enclosing curly braces and instead terminate the block with a semi-colon.
 *   Lexical actions will only be used when needed, not for notification or troubleshooting.
 
-Update the rules grammer to look like the following:
+Update the rules grammar to look like the following:
 ----
  DEBUG_LEXER = false;
  DEBUG_PARSER= false;

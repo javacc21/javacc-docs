@@ -84,7 +84,7 @@ What this error tells us is that because the first and last names use the same r
 
 The most common ways of dealing with this issue is: 
 *   prefixing some unique value to first and/or last name entries that would be unlikely to be part of someone's name, such as #f^name: or %%last
-*   writing rules to will programmatically get the next token and make it the desired type of token
+*   writing rules to will programmatically get the next token and make it the desired type of token (See Chapter 6).
 
 Because we're working with lexical states, let's solve this issue using just lexical states and putting each "overlapping" token definition in its own lexical state. Update the code as follows: 
 ----

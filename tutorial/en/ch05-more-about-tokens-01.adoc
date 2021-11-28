@@ -57,7 +57,7 @@ Lexical state names are _by convention_ ALL_CAPITALS with an underscore optional
 Once the Lexer has entered a lexical state, it will remain in that lexical state until it is switched to a different state, most commonly back to the DEFAULT state. Let's take a look at a short example.
 
 === Chapter Setup
-Let's make a new directory for our grammar.
+Let's make a new directory for our grammar. Starting from you tutorials directory: 
 ----
     $ mkdir ch05
     $ cd ch05
