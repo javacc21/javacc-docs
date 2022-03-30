@@ -1,0 +1,85 @@
+=== ATTEMPT-RECOVER
+
+(((Try-Catch, JavaCC))) (((ATTEMPT-RECOVER)))
+An infrequently used feature in legacy JavaCC (perhaps using the term "feature" loosely) is try-catch. I don't mean the try-catch that is part of the  Java language. I mean the JavaCC try-catch where you put a grammatical expansion inside the try block. Like so:
+----
+ try {
+   Foo() Bar() Baz()
+ }
+ catch (ParseException e) {
+   // Some arbitrary Java code
+ }
+----
+
+So you have a grammar expansion inside the try block and then you have a catch (one or more catch blocks and maybe a finally block, just like Java) in which you put your Java code to handle the error. Except.... hold on...
+
+What do you do inside the recovery block?
+
+Beats me. JavaCC provides no real disposition for error recovery. With this sort of try-catch, the general situation is that the exception bubbled up from deep in the bowels of our grammar. So what are we supposed to do in the catch block? Or to frame the question more precisely: What do we do in the catch/finally section that is more useful than just letting the exception bubble up to whatever default handler?
+
+Well, I think the cold hard truth of the matter is that there really is not much to do be done in this spot.  Ergo, this "feature" is simply not very useful. And that could explain why nobody uses it! I scoured the web trying to find real-world usage examples of this this try-catch and came up with nothing. Really nothing, even less than JAVACODE productions. I can't find a single JavaCC grammar out there that does this.
+
+Of course, the feature not being useful is only one explanation for nobody using it. Another possible explanation for nobody using the feature is that people don't even know about it! After all, the main way that people learn JavaCC is by studying and adapting existing grammars, and if the existing grammars simply never use this...
+
+Well, anyway, the existing try/catch really is not useful for a very simple reason: it doesn't rewind to the state of the parse before the attempted expansion. So I introduced an alternative construct that does do that. And instead of try/catch, it is ATTEMPT-RECOVER. The syntax (and if I get feedback, it could still change) looks like this!
+----
+ ATTEMPT(Foo() Bar())
+ RECOVER 
+ {
+   // optional java code block
+ }
+ (
+    FooBar() Schmoobar()
+ )
+----
+
+IMPORTANT: the recover blocks have been changed. The above code example is no longer valid. See the section, ATTEMPT-RECOVER is Back for details.
+
+In any case, the idea is that your java code tweaks something or other so that you can recover. Maybe it skips past some invalid goo or it changes to another lexical state before resuming the parse.
+
+Regardless, when you hit RECOVER, the state of your world is restored to what it was right before the ATTEMPTed expansion. That includes the state of the tree building machinery and your lexical state and such.
+
+==== ATTEMPT-RECOVER Original Syntax
+
+(((ATTEMPT-RECOVER, Original Syntax)))
+Now, this is an experimental new feature and I am quite interested in getting feedback about how it should work. For example, I am grappling with the question of how syntactic lookaheads should deal with an ATTEMPT-RECOVER block. The current state of things is that if you write:
+----
+ void Foobar() : 
+ {}
+ { 
+   ATTEMPT(Foo()Bar())RECOVER(Baz())
+ }
+----
+In the above case, a syntactic LOOKAHEAD, like LOOKAHEAD(Foobar()) will create a lookahead routine that scans forward for the ATTEMPTed expansion Foo() Bar() but does not check for Baz().
+
+The idea is that the Foobar() production really only completes normally via Foo() Bar(), not the recovery expansion Baz(), which we are using to fallback to if we can't do Foo()Bar().
+
+It could be argued that LOOKAHEAD(Foobar()) should check forward for Foo()Bar() OR Baz() since both of them would end up matching the production. I'm really not sure and would be quite happy to discuss with people how this should work. This would be anybody's chance to have some input at an early stage to how the next generation of this tool will work.
+
+So I'll just close by saying that this new feature is currently experimental and subject to change and we are very interested in feedback. I would also add that the feature, though already far more useful than the existing try-catch (that is still available, by the way) it will become more useful over the coming weeks and months, as more error-recovery machinery is introduced, so that there is a clearer answer to what one can do in the recovery block!
+
+==== ATTEMPT-RECOVER Updated Syntax
+
+(((ATTEMPT-RECOVER, Updated Syntax)))
+The ATTEMPT-RECOVER construct was removed for further development but it has been put back into JavaCC 21. It should work but is largely untested. The syntax is slightly changed. You write:
+----
+  ATTEMPT Foo Bar 
+  RECOVER {some Java code...} 
+----
+
+OR
+----
+  ATTEMPT Foo Bar 
+  RECOVER (Baz Bat)
+----
+
+So, if you use curly braces, what is inside is Java code.  And if you use parentheses, it is a JavaCC grammar expression. This is not quite as restrictive as it sounds: you can put a Java code block in any grammar expansion anyway, so you can write:
+----
+  ATTEMPT Foo Bar
+  RECOVER ({some java code} Baz {more java code} Bat {even more java code})
+----
+
+(((ATTEMPT-RECOVER, Compared to Try-Catch)))
+The above construct will parse (well, attempt to match) the expansion, in this case Foo Bar, and then if a ParseException is thrown it tries to recover with the code after RECOVER. BUT... only after rolling back the state of the world to before it entered Foo!
+
+That is the key difference between ATTEMPT-RECOVER and the older try-catch.

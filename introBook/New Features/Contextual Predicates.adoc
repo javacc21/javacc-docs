@@ -1,0 +1,93 @@
+=== Contextual Predicates
+
+(((Contextual Predicates, Introduction)))
+A _contextual predicate_ allows you to add conditions at choice points (see Chapter 4 Section on Choice Points for more information) based on scanning back in the call/lookahead stack. Note that this is a completely new feature in JavaCC 21 that does not exist in the legacy JavaCC tool.
+
+The easiest way to describe this is with some actual examples.
+
+==== Specifying that a Production is Non-Reentrant
+
+(((Production, Non-Reentrant)))
+Probably the most typical usage will be to guarantee that a production is *not* _re-entrant_, i.e. that it is not allowed to nest recursively. This can now be expressed very cleanly with a _contextual predicate_ as follows:
+----
+ [ SCAN ~\...\Foo => Foo ]
+----
+
+First of all, the tilde “~” character that starts the predicate indicates negation. The above predicate indicates that we scan backward in the call stack to see whether we have previously entered a Foo production. If that is _not_ the case (because the condition is negated with the “~”) then we can enter the Foo production.
+
+The above sort of predicate will probably be the most commonly used pattern. However, more complex conditions can be formed.
+
+==== Scanning Forward vs. Backward Ellipsis and Wild-card
+
+(((Scanning, Forward and Backward)))
+Note that the elements in a _contextual predicate_ are separated either with a backslash “\” or a forward slash “/”. The previous example used a backslash and that means that we scan backwards from the current production up towards the root; a forward slash means that we are scanning forward from the root.
+
+(((Scanning, Ellipsis Usage))) (((Scanning, Wild-card Usage)))
+In the above example, the ellipsis “...” that follows the backslash means that there can be an arbitrary number of intervening productions in the call stack. The wild-card or simply dot means that we match the occurrence (exactly one!) of any production. If, for example, we wrote:
+----
+ [ SCAN ~\.\Bar => Foo] 
+----
+
+this would mean that we enter the Foo production _only if_ the direct parent of the current production _is not_ a Bar.
+
+Or alternatively,
+----
+ [ SCAN \.\Bar => Foo ]
+----
+
+would mean that we enter the Foo production if the parent of the current production _is_ a Bar. (Note that this predicate does not start with a “~”, so thus is _not_ negated.
+
+Now, consider the following predicate that uses a forward slash:
+----
+ [ SCAN /Foo/Bar => Baz ]
+----
+This means that we enter the Baz production only if the root production is a Foo and we then entered directly a Bar.
+
+==== Optional Ending Slash
+
+(((Scanning, Optional Ending Slash)))
+If the predicate begins with a forward slash, it may end _optionally_ with a backslash. And vice versa. If a predicate begins with a backslash, it may _optionally_ end with a forward slash. For example, consider the following predicate:
+----
+ [ SCAN /Root/.../Foo\ => Bar ]
+----
+
+This means that we check whether the root production, our entry point, was Root and the current production is Foo. The ending backslash means that Foo must be the current production. Note also that the following two predicates are equivalent:
+----
+ [ SCAN /Root/.../Foo/...\ => Bar]
+----
+
+and simply:
+----
+ [ SCAN /Root/.../Foo => Bar]
+----
+
+==== Contextual Predicate Summary
+
+(((Contextual Predicates, Summary)))
+A _contextual predicate_ starts optionally with a tilde “~” to indicate negation. The first character after the tilde (or simply the first character if there is no tilde) must be either a backslash or a forward slash. 
+
+*   The backslash indicates that we are scanning backwards from the current production
+
+*   The forward slash means that we are scanning forward from the current production.
+
+*   An ellipsis “...” means that we can have an arbitrary number (including zero) of intervening productions. 
+
+*   A dot “.” means that we have exactly one production of any type.
+
+*   A lookahead predicate can be combined with other conditions in a SCAN instruction. It can be combined with numerical or syntactical lookahead.
+----
+ ( SCAN 2 ~\...\Foo => Foo )*
+----
+
+The above would mean that we check that we aren't already inside a Foo production AND we also scan ahead up to 2 tokens of lookahead when deciding whether to enter Foo. Otherwise, we break out of the loop.
+
+Or alternatively, we can specify a _syntactic_ and/or _semantic_ lookahead:
+----
+ ( SCAN ~\...\Foo "bar" "baz" => Foo )*
+----
+
+In the above we specify that Foo must be _non-reentrant_ and also that the next 2 tokens must be “bar” followed by “baz”, or else we jump out of the loop.
+
+Note that if you have a SCAN statement that does not specify either numerical or syntactic lookahead, then the generated code will scan ahead an _unlimited_ number of tokens. (Unless the expansion to be parsed is constrained by an up to here (REF doc) marker.) This is a key characteristic of the newer scan statement (REF DOC).
+
+Note also that _contextual predicates_, like syntactic lookahead in JavaCC 21, can be nested arbitrarily and work in an arbitrarily nested scanahead routine.

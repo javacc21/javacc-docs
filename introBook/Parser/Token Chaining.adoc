@@ -1,0 +1,149 @@
+:imagesdir: ../images
+//Token Chaining, JavaCC’s Dark Underbelly?, December 6, 2021
+=== Token Chaining, JavaCC's Dark Underbelly?
+
+What we see frequently with JavaCC is cases where the original authors were actually quite perceptive: they anticipated certain problems and put in some dispositions to deal with them. Unfortunately, the solution they put in place was sometimes quite crude, unfinished or, in some cases, really just fundamentally broken. To be clear, I don't think this is such a harsh criticism. It's hard to get things right the first time. I usually don't!
+
+(((Token Hooks and Token Chaining)))
+In any case, what I call token hooks and token chaining is an example of an unfinished or potentially broken solution. The original JavaCC tool had some disposition for adding some code to deal with a problem. It offered a COMMON_TOKEN_ACTION (((CommonTokenAction)))option. If you set
+----
+ COMMON_TOKEN_ACTION=true;
+----
+
+at the top of your grammar, the generated lexer (TokenManager in their nomenclature) would call a user-written CommonTokenAction method every time a Token was matched. Well, the best way to see what I mean is with an example.
+
+Suppose that, under certain conditions, you want to insert an extra "virtual" token into the token stream. Specifically, if the next token is of type FOO, we are going to insert a BAR after it. So we could have a CommonTokenAction that looks like this:
+----
+ void CommonTokenAction(Token tok) {
+     if (tok.kind == FOO && someOtherConditionIsSatisfied())) {
+         Token insertedToken = new Token(BAR, "bar");
+         insertedToken.next = tok.next;
+         tok.next = insertedToken;
+     }
+ }
+----
+
+Actually, the above example is a bit too simple to work in the general case. You see, this whole disposition requires the application programmer to do various housekeeping. Well, the code above does a bit of it. If the tok arg already has a non-null next set, then presumably that should become the next field of the token that we are about to insert. The above method does that, but it does not do the housekeeping to make sure that the inserted token has its location information, the beginLine, endLine, etcetera fields that a Token is supposed to have. And, generally speaking, you could see that you might also want to remove a Token from the chain and that also entails some housekeeping that are also the application programmer's responsibility.
+
+Also, only one CommonTokenAction per grammar file is allowed, which means that if you wanted to perform different actions on different types of Tokens, you would need to add else if cases for each different kind of Token you wanted to process, adding to the complexity of the solution.
+
+The whole thing is really very error-prone. Not for nothing, my esteemed collaborator Vinay Sajip referred to this kind of legacy token chaining as an "accident waiting to happen". He said that in private conversation a few months ago and he seemed quite happy when I told him that I had every intention of fixing the whole thing.
+
+I managed to do this about a month ago but finally, it did involve exercising a sort of nuclear option. You see, legacy JavaCC was designed with the assumption that the parser/lexer machinery only worked with a small part of the file in memory at any given time. Actually, I would venture the guess that this was already a tradition with this sort of tool. You see, the landmark LEX and YACC tools were developed at a time when a megabyte of RAM cost hundreds of thousands of dollars. (Currently a megabyte of RAM costs $0.003, about a third of a penny.) So, the original disposition in JavaCC, allocating a 4K buffer and grudgingly increasing it by 2K in size might have been considered profligate even in that 1970's world!
+
+Generally speaking, to turn JavaCC into a tool capable of attacking new problems like parsing with error handling/recovery, it would be necessary to assume that the parser/lexer has access to the entire file being parsed. And thus, we would be able to scan forwards or backwards and reset the parsing/lexing machinery to any arbitrary point in the input.
+
+Now, to be absolutely fair and honest about this, there surely are some use cases where you would want to read in and parse some arbitrarily huge input and thus, not have the entire file in memory. However, in a world in which a megabyte of RAM costs far less than a penny, such cases are few and far between. And, finally, the bottom line is that if you are in the small (and shrinking) minority of people who really do have a need for that, you will just have to find another tool to use, I guess. (Sorry...)
+
+==== This is Not Your Father's Token Manager! (Or Lexer...)
+
+(Or should that be your father's Lexus?)
+
+With this latest refactoring, the XXXLexer object takes on a larger and more active role. A funny thing about this is that the older, rather verbose nomenclature of XXXTokenManager (which was changed to XXXLexer in JavaCC 21) may actually be a more apt name now. I have been considering changing the default naming to XXXTokenSource. However, for now, I have left it as XXXLexer because I am changing enough things that I don't want to overwhelm users with (possibly frivolous) renamings. But it might be a good idea to bear in mind that the generated XXXLexer object is now somewhat misnamed since it actually does a lot more than just lexing. Namely...
+
+(((Tokens, Updated)))
+For one thing, it stores the entire contents of the input to be parsed and also where lines start and end, and also the offsets where tokens are located. That. by the way, is how the new version of the code got rid of the next field. A Token (or any Node object) holds a reference to the associated XXXLexer object and delegates to it the task of "knowing" what the next token is, or for example, translating zero-based absolute offsets in the file to 1-based line/column information. Thus, a Token no longer stores its beginLine or endLine and simply "asks" the XXXLexer object for this information, based on its beginOffset or endOffset, which it does store, of course.
+
+This is the case for any kind of Node, not just Tokens, which are the terminal node type. So we have the default implementation of getBeginLine() as follows:
+----
+ default int getBeginLine() {
+    FooLexer tokenSource = getTokenSource();
+    return tokenSource == null ? 0 : tokenSource.getLineFromOffset(getBeginOffset());                
+ };
+----
+
+where Foo is the name of the grammar that was prefixed to "Lexer".
+
+The XXXLexer object can translate a node's beginning location (an absolute zero-based offset) to a line or column number (one-based). However, this is a very nice simplification that is possible because we have the full file content sitting in memory. (We have an array of the starting line offsets and finding the corresponding line number is just a binary search actually, really quite cheap even for arbitrarily large input.)
+
+(((Tokens, Get Next or Previous)))
+The Token object does not have a next (or a previous or a specialToken field for that matter). It simply gets the next and previous tokens from the (rather misnamed) XXXLexer object.
+
+Thus, we see that Token now has a nextCachedToken() method but does not have any next field. Again, it is implemented by simply delegating to the XXXLexer object. Something like:
+----
+ public Token nextCachedToken() {
+    return getTokenSource().nextCachedToken(getEndOffset());
+ }
+----
+
+All the Token object needs to "know" is which XXXLexer object it came from and also what its endOffset is. The XXXLexer object "knows" where the Token locations are and can simply get the next cached token at that offset. (Assuming there is one. If not, it returns null...)
+
+Well, you see, in this brave new world in which RAM is so plentiful, many problems, previously quite messy and complicated, become much simpler and cleaner. (Though, admittedly, at the cost of a typical JavaCC based app having a MUCH larger memory footprint.)
+
+==== The MINIMAL_TOKEN setting
+
+(((Options and Settings, MINIMAL_TOKEN)))
+Now, at this juncture, let me tell you about a new setting, MINIMAL_TOKEN. This is not set by default, though at a later stage, I could imagine this becoming the default. With this setting set, a "minimal" Token API is defined, which does not allow manual token chaining (which I haven't explained yet!)
+
+You see, I actually told a little lie in the preceding exposition. The new Token API is not quite as simple as I made it out to be. Well, actually it is, if you set MINIMAL_TOKEN=true, but if not, we do have some extra details that I glossed over in the preceding explanation. For example, we have these two extra fields that I didn't mention:
+----
+ private Token prependedToken, appendedToken;
+----
+
+(((Token Chaining)))
+that are used in token chaining. (Though, again, this is not your father's token chaining!)
+
+These two extra fields exist to allow one to insert a virtual token into the token chain. In the example I gave up top of using a token hook method to insert an extra token into the chain. That would now look more like this:
+----
+ private Token TOKEN_HOOK(Token tok) {
+     if (tok.getType() == BAR && someConditionSatisfied()) {
+         Token insertedToken = Token.newToken(TokenType.FOO, "foo", this);
+         tok.preInsert(insertedToken);
+         return insertedToken;
+     }
+     return tok;
+ }
+----
+
+Well, the above is not exactly the same as the example I gave above. What the above token hook does is that it prepends a token of type FOO to the BAR and then the method returns said prepended token.
+
+The difference here is that all the housekeeping I mentioned happens transparently and is encapsulated. The insertedToken has its appendedToken field set to tok and tok has its prependedToken set to insertedToken. Also, all of the location info is handled automagically. The inserted token is taken to have a beginOffset and endOffset that are the same as beginOffset of tok.
+
+Well, in short, you can still do token chaining but it is now implemented to be pretty safe, kind of like the difference between shaving with a safety razor as opposed to a raw blade.
+
+This, for example, is how the Python lexer prepends a virtual INDENT token at the appropriate place. See here. The constructor of the INDENT token looks like this:
+----
+ public INDENT(Token followingToken, List<Integer> indents) {
+   setType(TokenType.INDENT);
+   this.indents = new ArrayList(indents.size());
+   this.indents.addAll(indents);
+   followingToken.preInsert(this);
+ }
+----
+
+Well, some people might think that I'm getting a bit too cute in the above implementation. You see, the constructor to INDENT takes the token immediately following (where the indentation begins basically) as a parameter and a list of the indent offsets. The key line is the last one, where the newly constructed INDENT token prepends itself to the followingToken. But the important thing to understand is that all the token chaining housekeeping is taken care of automagically.
+
+Well, to be honest, though I am satisfied that the implementation of indent/dedent in the current JavaCC 21 Python grammar is quite robust and correct, it is still not terribly simple, and as such, I'm not sure I'm 100% satisfied with it. But the problem is that this python indentation stuff really just is not very easy to implement. And that, I think, is really just because token chaining, even cleaned up as it is, is still complicated!
+
+This brings us back to the question of the new MINIMAL_TOKEN option. If you set that option, there is no appendedToken/prependedToken field generated in Token.java. Also, the aforementioned preInsert method is not generated. So, basically, setting this option precludes doing this sort of fancy token chaining. And probably.... in general.... that is a good thing!
+
+==== Look, ma! No image field!
+
+(((Tokens, image field changes)))
+Another aspect of MINIMAL_TOKEN is that when it is set, the image field in Token is completely gone. In the general case, we don't need an image field because we can always get the token's "image" by simply getting the text that the beginOffset/endOffset pair spans. However, it is still there because there are probably some use cases where you want to override that and give the Token object an image that is different from what it is in the file. Of course, this is particularly the case when you sometimes insert virtual tokens since, if those tokens do not correspond to any actual location in the source file, then we need to set their "image" separately, no? One can envisage other usages. For example, this could be a way of doing aliasing.
+
+Here is the implementation of getImage() with MINIMAL_TOKEN set to false:
+----
+ public String getImage() {
+      if (image != null) return image;
+      return getTokenSource().getSource(getStartOffset(), getEndOffset());
+ }
+----
+
+And we generate the field and the setter:
+----
+  private String image;
+
+  public void setImage(String image) {this.image = image;}
+----
+
+However, with MINIMAL_TOKEN set to true, we can simply have:
+----
+  public String getImage() {
+      return getTokenSource().getSource(getStartOffset(), getEndOffset());
+  }
+----
+
+And of course, the image field and the setter are gone. 
+
+So, for now, I blow you all a KISS. (Keep it simple, stupid!)

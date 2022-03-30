@@ -1,0 +1,296 @@
+=== Parsing Theory and Choice Points
+
+Many of the concepts in parsing, at least as regards the use of a tool like JavaCC, are surely not particularly more difficult than middle school mathematics. That x-y is _always_ the same thing as x + (-1*y) is an invariant that surely everybody understands. Is it any more complicated to point out that:
+----
+ (Foo)+ 
+----
+
+is the same thing (always) as:
+----
+ Foo (Foo)*
+----
+
+How about this one? The zero or one choice:
+----
+ (Foo)?
+----
+
+(or alternatively [Foo]) is the same thing as:
+----
+ Foo | {}
+----
+
+In JavaCC, the empty code block {} can be used as a sort of do-nothing or null expansion. In pure theory, there is surely some alternative notation... But whichever way you write it, the concept is clear enough: you either match a Foo or nothing.
+
+Or, more generally:
+----
+ [ Foo | Bar | Baz ]
+----
+
+is the same thing as:
+----
+ Foo | Bar | Baz | {}
+----
+
+Either way you write it, you match a Foo, a Bar, or a Baz -- or nothing at all.
+
+It is amazing how the use of a tool like JavaCC (or parser generators in general) has such a mystique built up around it -- like this is guru level stuff -- when the key concepts you have to master are no more complex than junior high school algebra, things that are fairly easy to understand (at least if the concepts are explained competently!)
+
+_(Truth told, I can't quite dispel the unsettling feeling that there is some sort of con job being foisted on people...But never mind that...)_
+
+==== Choice Points
+
+(((Choice Points))) (((Parsing Theory, Choice Points)))
+A key concept in all of this is that of being at a _choice point_. So, in principle, there are four kinds of choice point:
+
+*   Foo | Bar | Baz
+*   (Foo)? (alternatively written [Foo])
+*   (Foo)*
+*   (Foo)+
+
+Of course, since (Foo)+ could be thought of as a shorthand for Foo (Foo)*, it is not clear whether this constitutes a separate kind of choice point. _(By the same token, it is unclear that we really have four basic arithmetic operations. If x-y is just a shorthand for x+(-1*y) then subtraction is not really a separate operation for addition, so we only have three basic operations, no?!)_
+
+The other aspect of thinking about (Foo)+ as a shorthand for Foo (Foo)* is that it is a bit murky whether Foo is a choice point. Well, it is a choice point, _but only after the first iteration_. On the first iteration of the loop, Foo is not a choice point. And that is clearer if you write it the longer way:
+----
+ Foo (Foo)*
+----
+
+Well, that is clear enough surely, but what about the last choice, the Baz in:
+----
+ ( Foo | Bar | Baz )
+----
+
+It seems pretty obvious that Foo and Bar are choice points, but it doesn't really seem that Baz is. Once you check for whether we enter Foo, then Bar, there is no remaining choice but Baz, so it doesn't seem quite correct to say that it is a choice point, does it? Well, it is a choice point if it is part of an enclosing choice construct, so Baz is a choice point here:
+----
+ (Foo | Bar | Baz)?
+----
+
+If we reject Foo and then Bar, then we can still go into Baz or not. This is clearer if we write this the alternative way:
+----
+ ( Foo | Bar | Baz | {} )
+----
+
+There we see that Baz clearly is a choice point, since there is still one remaining choice, the _do-nothing or null expansion_, which is only implicit when written the previous way. So, properly understood, Baz is not actually the last choice in this case.
+
+==== "But I had no choice, your honor!"
+
+(((Parsing Theory, No-choice Points)))
+Now, the opposite of being at a choice point is having no choice. A clear way of saying this is that you are committed. For example, in the following:
+----
+ "foo" "bar" "baz"
+ |
+ "bat" "bam" "baz"
+----
+
+If the next token in the stream is a "foo", then you are committed to parsing a "bar" followed by a "baz". This is the same thing as saying that these are *not* _choice points_.
+
+The _default_ or _implicit_ predicate (if no lookahead is specified) is to see if the first token matches, and if it does, then we are _committed_ to what follows, right? If you wanted to check ahead 2 tokens instead of the default of 1, you could replace the first line above with:
+----
+ SCAN "foo" "bar"
+ => "foo" "bar" "baz"
+----
+
+(Or in legacy syntax: LOOKAHEAD("foo" "bar") "foo" "bar" baz")
+
+This is equivalent to:
+----
+ SCAN 2 "foo" "bar" "baz"
+----
+
+(Or in legacy syntax: LOOKAHEAD(2) "foo" "bar" "baz")
+
+NOTE: The legacy LOOKAHEAD syntax still works in JavaCC 21.
+
+I would say that the preferred way to write the above in JavaCC 21 is now:
+----
+ "foo" "bar" =>|| "baz"
+----
+
+This avoids the _Dmitry Dmitryevich problem_ of having to repeat the "foo" "bar" part and it is clearer than the LOOKAHEAD(2) because it separates the expansion "foo" "bar" "baz into two clear parts. On the right side of the =>|| (up-to-here) marker, you *not* at a choice point, i.e. you are _committed_.
+
+This actually works if the expansion above is broken out into a separate production.
+----
+ Foobar : "foo" "bar" =>|| "baz" ;
+----
+
+If you write elsewhere in your grammar:
+----
+ [ Foobar ] Baz
+----
+
+then the generated code will check for the "foo" "bar" tokens when deciding whether to enter Foobar. If not, it just goes straight ahead to the Baz that follows.
+
+However, if we have instead:
+----
+ Foobar Baz
+----
+
+then it does not check for the initial "foo" "bar" (or even the "foo"): it just goes straight into Foobar.
+
+Why? _Because we are committed. (I had no choice, your honor.)_
+
+Of course, in that spot, if the next two tokens are not "foo" followed by "baz" then the parser is going to throw an exception. But that is right and proper and to be expected. (Refer to the documentation on fault-tolerant parsing for more on how to deal with these situations.)
+
+I should also point out that if you write:
+----
+ [=>Foobar] Baz
+----
+
+then the lookahead will go to the very end of the Foobar production, i.e. to the end of "baz" token when deciding whether to enter Foobar.
+
+By the way, the above, in legacy syntax (which still works) would be:
+----
+ [LOOKAHEAD(Foobar()) Foobar()] Baz
+----
+
+In legacy JavaCC, if you only wanted to scan ahead the first two tokens when deciding to enter Foobar, you would have to write:
+----
+ [LOOKAHEAD("foo" "bar") Foobar()] Baz
+----
+
+Or more tersely (but it is a bit less clear maybe)
+----
+ [LOOKAHEAD(2) Foobar()] Baz
+----
+
+Well, a funny (_not ha-ha funny_) thing about legacy JavaCC is that in the above, the LOOKAHEAD cannot be specified inside the production itself. Why? Because the expansion inside a production is not a choice point, I guess.
+
+But that is clearly not quite correct, it seems to me. The expansion inside a production is at a _choice point_. Or _potentially_ it is. It might or might not be. I mean, if you do have the production:
+----
+ Foobar : "foo" "bar" Baz ;
+----
+
+then the "foo" "bar" Baz expansion inside is a choice point if it is being referenced by a non-terminal that _is itself at a choice point_, i.e.
+----
+ [Foobar]
+----
+
+or
+----
+ (Foobar)*
+----
+
+But if it is not at a choice point, then it isn't, i.e.
+----
+ Bar Baz Foobar
+----
+
+So, the expansion inside a production is at a choice point or not depending on whether it is being referred to from a context that is itself a _choice point_.
+
+That could be considered confusing, but probably not particularly more confusing than saying that in:
+----
+ (Foobar)+
+----
+
+Foobar is *not* at a _choice point_ on the first iteration of the loop, but after that, *yes*, it is.
+
+Well, where I'm going with all this is that the expansion inside a BNF Production is sometimes at a choice point and sometimes it isn't, just as the expansion inside a one-or-more construct is a choice point or not.
+
+And, by the way, consider:
+----
+ [ (Foobar)+ ]
+----
+
+Here, the Foobar is always a choice point, even on the first iteration, but note also that the above is simply another way of writing:
+----
+ (Foobar)*
+----
+
+_(Another deep, ineffable concept, eh?)_
+
+So, if the expansion inside a grammar production is always potentially at a choice point, then it makes perfect sense for us to able to write a lookahead (or SCAN) for it. So, it makes perfect sense to be able to write:
+----
+ Foobar : SCAN 2 "foo" "bar" "baz" ;
+----
+
+And, of course, the instruction to look ahead 2 tokens is ignored if we are not at a _choice point_, i.e. we are committed at this point.
+
+Until recently (last week or ten days or so) JavaCC 21 did not let you write a lookahead predicate at the top of a BNF production. It would complain that you put a lookahead at a _non-choice point_. I realize now that this is wrong and, in fact, the outermost expansion in any production is always _potentially_ a choice point. So, I confess that my own thinking about all this was actually quite confused!
+
+==== Parsing theory is bullshit, redux
+
+A few months ago, I wrote a blog post with the rather provocative title: _Is all this Parsing Theory just Bullshit or What?_. Really, I was just expressing my honest befuddlement about certain issues. I could not fathom why anybody would talk about a so-called dangling else problem (https://en.wikipedia.org/wiki/Dangling_else) that, as far as I could see, did not really exist.
+
+I was thinking (or even hoping) that somebody would show up and take the opportunity to educate me on this subject. But that never happened. Since then, I gained a better understanding of the whole issue. _(Or somewhat better...)_
+
+In the theoretical framing of the parsing problem that is most typically used, that of the context-free grammar, the various choices at a choice point are assumed to all have _equal precedence_. (((Context-free Grammar, Choice Points, Equal Precedence)))
+
+So, if you write:
+----
+ ("foo | "bar") 
+ |
+ ("foo" | "baz")
+----
+
+the expansion is _ambiguous_ because if the next token is "foo", you don't know whether to enter the first choice or the second choice. (If the next token is "bar" or "baz" then you there is absolute clarity, of course.)
+
+Now, in the aforementioned blog post, I made no bones about the fact that I consider this nonsense. To me, it is obvious that there is no real ambiguity, since any choice is processed _sequentially_ and quite clearly, it simply takes the first choice if the next token is "foo". To me, it is just obvious that the earlier choice has precedence so there is no real ambiguity.
+
+But the issue really is that my thinking is entirely based on how the tool is _actually implemented_, not on some sort of _formal language theory_ in which the choices have equal precedence. Besides, if you really took seriously the notion that the various choices in a choice construct all have equal precedence, how does this work? I mean, _in practice. (That, I don't fathom...)_
+
+You see, all of these _choice point_ constructs in a grammar have a very clear mapping to the way pretty much all programming languages work -- at least the procedural ones, I'm not too up on functional programming, I have to admit...
+
+A zero-or-one, i.e. (..)? is just:
+----
+ if (someCondition()) {matchInnerExpansion()}
+ followingExpansion()
+----
+
+A zero-or-more, i.e. (...)* is just:
+----
+ while (someCondition()) {matchInnerExpansion()}
+ followingExpansion();
+----
+
+A one-or-more, i.e. (...)+ is:
+----
+ do {matchInnerExpansion()} while (someCondition());
+ followingExpansion();
+----
+
+And a choice, i.e. A|B|C maps to an if...else if...else construct.
+
+So, this leads to one of the points above, whether the last choice in a choice construct is really a _choice point_ or not. You see, if you really think that all the choices have equal precedence, then yes, the last choice, ChoiceN here:
+----
+Choice1 | Choice2 |.... | ChoiceN
+----
+
+is a choice point. However, it seemed obvious to me on reflection that ChoiceN is not really a _choice point_ because once you've rejected the first N-1 options, you no longer have a choice but to enter ChoiceN. _(But I had no choice, your honor!)_
+
+But that is based on my _conceptual model_ that the earlier choices have precedence, so once you reach the last one, you have no more choices! But if all the options have equal precedence, then they all must be choice points!
+
+Well, I understand the issue somewhat better now, but my reaction is not very different. I have to ask:
+
+_Why base your theoretical explanation of what a tool does on a theory that is completely different from how the thing really works?_
+
+(((Parsing Theory vs Parsing Implementation)))
+Quite clearly, the way that a parser generator tool works _in practice_ is that it goes through the choices _sequentially_. They do not have equal precedence. So why the continual attempt to superimpose some _formal language theory_ on top, that does not correspond to what you are really doing?
+
+Well, I dunno really. Maybe, like modern abstract art, this is just part of a larger grand conspiracy to convince regular folks that they are actually stupid.
+
+==== PEG (Parsing Expression Grammar) to the Rescue!
+
+(((Parsing Expression Grammar))) (((PEG)))
+It turns out that there is an alternative theoretical formulation of what is called an _analytic formal grammar_ that corresponds to how things actually work in practice. That is the Parsing expression grammar or PEG for short, introduced by one Bryan Ford in 2004.
+
+Here is the last sentence of the first paragraph from its Wikipedia article:  (https://en.wikipedia.org/wiki/Parsing_expression_grammar#Semantics)
+
+____
+Syntactically, PEGs also look similar to context-free grammars (CFGs), but they have a different interpretation: the choice operator *selects the first match in PEG, while it is ambiguous in CFG. This is closer to how string recognition tends to be done in practice*, e.g. by a recursive descent parser. 
+____
+(Bold emphasis added by author)
+
+Another interesting fact here is that the PEG formalism was "introduced by Bryan Ford in 2004". This is well after the original JavaCC was written in 1996/1997 or thereabouts. Is it not curious that the original authors felt the need to emit warnings about "ambiguities" that only exist in some theoretical framing of the problem (CFG) that does not correspond to how the tool really works!
+
+The Wikipedia article later adds:
+____
+The fundamental difference between context-free grammars and parsing expression grammars is that the PEG's choice operator is ordered. If the first alternative succeeds, the second alternative is ignored.
+____
+
+(((PEG, JavaCC and JavaCC21)))
+So, there it is. It seems that what JavaCC does is actually based on PEG (Parsing Expression Grammar), not on CFG (Context-free Grammar). And that provides me the theoretical basis for having removed all of those warnings about ambiguity. _(We're doing PEG, not CFG, and so these things are not ambiguities.)_
+
+Truth be told, I feel like the character from the Molière play who exclaimed:
+____
+Well, what do you know about that! These forty years now I've been speaking in prose without knowing it!
+____

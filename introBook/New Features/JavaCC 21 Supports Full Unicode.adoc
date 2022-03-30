@@ -1,0 +1,104 @@
+=== JavaCC 21 Now Supports Full Unicode!
+
+(((Unicode, Available in JavaCC 21)))
+A few weeks ago, in a previous post I wrote:
+____
+The problem, at the time of this writing, is that neither JavaCC21 nor legacy JavaCC have any concept of characters outside of plane 0, which are the ones that require 4 bytes of internal storage. Or another way of putting this is that the assumption that a character is 2 bytes is hard-coded into the thing and it will take some amount of refactoring to address this.
+____
+
+Well, I am happy to report that this has now been addressed and the current version of JavaCC21 now supports full Unicode. You can see this in the definition of a Java identifier (https://github.com/javacc21/javacc21/blob/master/examples/java/Java16IdentifierDef.javacc#L1110-L1417) from the built-in Java lexical grammar that it includes the character ranges that need to be specified with double Unicode escapes. (I'll explain this further down in case you don't understand what that means.) But first...
+
+==== A Bit of History
+
+(((Unicode, History of)))
+Interestingly, the evolution of Java is about contemporaneous with that of the Unicode standard. Well, more or less... The Unicode 1.0 standard was released in October of 1991 and the first stable JDK 1.0 was released in January of 1996.
+
+Fast-forwarding to the present, we see that the latest Unicode standard is 13.0, released in March of 2020, while the latest Java release is JDK 17, released in September 2021. Throughout that whole period, Java was adding new functionality, while Unicode was adding more characters -- or character sets, to be more precise.
+
+The really key point to understand is that, in the early days of Java (and of Unicode) the assumption was that 2 bytes was enough to specify any character that needed to be specified -- Chinese characters, Arabic script, mathematical symbols, and so on...
+
+This turned out to be not quite true. As best I can figure, the Unicode group decided, at some point in the early 2000's that they needed to move to 4-byte characters, UTF-32. This has two problems:
+
+*   Java (and surely other systems that supported Unicode) were based on the idea that the internal representation of strings would be with 2-byte characters. Moving to 4-byte characters would be terribly backward-incompatible.
+
+*   Using 4-byte characters throughout would be terribly wasteful of memory, since only very few characters _in the wild_ really require 4 bytes. (Probably the majority do not even require 2 bytes!) Certainly the characters specified in UTF-16 include the vast majority of characters really needed on a regular basis. For example, the supplemental Chinese characters that are beyond 0xFFFF are ones that are very rarely used.
+
+Well, to solve these two issues, the Java platform continues to use UTF-16 internally _except_ that if a character is beyond the _basic multilingual plane_ (BMP) or in other words, is greater than 0xFFFF, then it is encoded in two 16-bit characters.
+
+==== Code Units vs. Code Points
+
+(((Unicode, Code Units and Code Points)))
+To be honest, all of this is stuff that I only learned about in the last few weeks and it was initially quite confusing, so, as a bit of a public service, in what follows, I explain what I figured out.
+
+The key distinction to understand is between a _code unit_ and a _code point_. A _code unit_ is what was always just called a char in Java -- a plain old character, if you will, that always occupies exactly 2 bytes internally. A _code point_, on the other hand, is either a regular plain old 16-bit character, or is a special sequence of _two code units_ that make up a _high-low surrogate pair_ that represents a single _code point_.
+
+IMPORTANT: All of the pre-existing core API's for String, CharSequence, StringBuilder and such, all just work as before, with the logic of _code units_. Thus, String.length, which is part of Java from the beginning, always just returns the number of two-byte characters, *_not_* the number of actual human readable characters -- well, assuming that you have 4-byte code points in the String, which you usually don't, admittedly. In that case, if you want the number of code points, you need to use java.lang.String.codePointCount (see Java API documentation of this method).
+
+(((Unicode, High-Low Surrogate Pair)))
+Unicode code points that are greater than 0xFFFF are represented with two 16-bit characters, the first in the high surrogate range (0xD800 to 0xDBFF) and the second in the low surrogate range (0xDC00 to 0xDFFF). 
+
+For example, the following range:
+----
+ "\ud800\udc00"-"\ud800\udc0b"
+----
+
+represents the characters from 0x10000 to 0x1000B. By the way, those are characters from something called the Linear B Syllabary which is apparently a syllabic script used for writing ancient Mycenaean Greek. Here, for example, is a bit of Java code that uses a couple of these characters in a variable name:
+----
+ public class Hello {
+    static String \ud800\udc00\ud800\udc0b = "Hello, World";
+    static public void main(String[] args) {
+        System.out.println(\ud800\udc00\ud800\udc0b);
+    }
+ }
+----
+
+I noted that the JDK handles compiling and running the above code just fine as shown in the following:
+----
+ javac Hello.java
+ java Hello
+----
+
+More importantly (for me) the Java parser built into JavaCC 21 also handles the above code._(Now it does!)_ Oh, and also, if you change the \ud800\udc0b to ud800\udc0c in the above code, javac refuses to compile it and also the JavaCC 21 Java parser reports an error. This is quite correct, since \ud800\udc0c, i.e. 0x1000C, is not a valid character that can be used in a Java identifier.
+
+Now, truth told, I have a gnawing suspicion that the above code I wrote is the first time in all of the history of the Java language that anybody has actually defined a variable using characters from the Mycenaean Greek syllabary. But the spec says this is permissible and if our goal is to have a maximally correct reference Java grammar then we have to support this!
+
+And we do support it! And it works! Hurrah!
+
+==== Concluding Notes on Full Unicode Support
+
+(((Unicode, Concluding Notes)))
+The current version of JavaCC allows you to specify the full range of Unicode characters (including the ones that are _code points_ beyond the _basic multilingual plane_, i.e. above 0xFFFF) in your lexical grammar.
+
+Now, I should make a little clarification because there is one aspect of all this that could confuse people. Some people might swear on a stack of bibles (or Korans or Talmuds) that they have previously generated lexers using JavaCC that can consume the full set of Unicode characters.
+
+Well, that is possible, but it does not contradict my preceding point. Let me explain...
+
+As long as the regular expressions in your lexical grammar are _defined negatively_, then, due to the way Java's support for extended Unicode works, the generated lexer can work as expected. What I mean by _defined negatively_ is something like this, for example. Here is the definition of a string literal from the JSON grammar:
+----
+ <STRING_LITERAL : "\"" (<REGULAR_CHAR>|<ESCAPE2>|<ESCAPE1>)* "\"">
+----
+
+In the above, REGULAR_CHAR is a private regexp that looks like this:
+----
+ <#REGULAR_CHAR : ~["\u0000"-"\u001F","\"","\\"]>
+----
+
+In other words, a character matches REGULAR_CHAR as long as it is _not_ a character from 0 to 0x1F and _not_ a double quote or a backslash. Thus, when the scanner code reaches a 4-byte _code point_, i.e. a high-low surrogate pair (((Unicode, High-Low Surrogate Pair)))(doesn't that sound like something from a kinky sex manual?) it simply scans it as two consecutive code units. So, if it encounters a string literal like:
+----
+ "\ud800\udc00\ud800\udc0b"
+----
+
+with characters from the ancient Mycenaean script, say, then it does match it as a STRING_LITERAL. Since the regular expression is defined _negatively_, it simply accepts the above string literal as a sequence of 6 characters -- the opening and closing double-quote and the four high-low surrogate _code units_ in the middle. The code works, but has no awareness of the extended Unicode that it is actually scanning.
+
+And, as I say, this tends to work because the definition of the input is like: _we accept characters that are *not* in the following ranges_. The problem is that you cannot define a regular expression with these extended code points in a _positive_ way and have it work. For example, now, in JavaCC 21, you could say that you accept, for example, the following range of _code points_:
+----
+  "\ud83d\ude00"-"\ud83d\ude4f"
+----
+
+The above range of characters corresponds to emoticon characters.
+
+And that, you can assuredly _not_ specify using legacy JavaCC!
+
+Moving forward, there are doubtless some interesting (and convenient) things to be done on the token definition side, like having built-in aliases for commonly used ranges or sets of characters. The current situation, where more than 1000 lines of boilerplate always being included in the Java grammar seems a tad silly.And it seems even sillier since many of the versions of Java use slightly different ranges or sets of characters. 
+
+But that's a big improvement compared to other software tools where the only way to to re-use the definition of a Java identifier was to copy-paste the whole mess into your grammar, which... well... probably no further disparaging comments are required about that method of gaining Unicode capabilities.

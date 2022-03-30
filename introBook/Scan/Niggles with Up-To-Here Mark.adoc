@@ -1,0 +1,105 @@
+:imagesdir: ../images
+//From: Niggles with the New Up-To-Here Marker, September 20, 2020
+=== Issues with the New Up-To-Here Marker
+
+(((Up-To-Here Marker, Issues))) (((=>||, Issues))) 
+Not too long ago, I implemented a new syntactical element in JavaCC, that I call the _Up-To-Here_ marker 
+
+Suppose you have a production like this:
+----
+ FooBar : "foo" "bar" Baz;
+----
+
+And you decide whether you want to enter the production, you want to scan ahead two tokens, i.e. check whether the next _two_ tokens in the stream are "foo" and "bar".
+
+Using the new _Up-To-Here_ syntax, the production would be written as:
+----
+ FooBar : "foo" "bar" =>|| Baz;
+----
+
+The _Up-To-Here_ marker =>|| indicates that we scan up to this point to check whether to enter the production.
+
+Suppose further that elsewhere (or possibly in more than one place) that you want to scan and consume multiple instances of FooBar. You could write something like:
+----
+ ( FooBar )*
+----
+
+Which means that you have a loop that consumes all the FooBars you scan until there aren't any more.
+
+*Except...*
+
+What if you don't always want to look ahead as specified in the production. Maybe in certain cases you want to lookahead only 1 token. Or maybe you want to look ahead more than those two tokens. 
+
+In other words, you want to be able to override what is specified via the _Up-To-Here_ syntax. Well, you can. You can write:
+----
+ (SCAN 1 => FooBar)*
+----
+
+or equivalently
+----
+ (SCAN "foo" => FooBar)*
+----
+
+then your loop will only check one token. Or alternatively, supposing that in a specific spot, you want to check ahead more tokens, like 3 or 4, you could specify that too. 
+
+So, here is the rule:
+
+_If you specify an *explicit* lookahead, either *numerical* or *syntactical*, at a given choice point, that will *override* any Up-To-Here notation._
+
+A second issue is when an _Up-To-Here_ in an expansion sequence overrides what is specified in nested productions. 
+
+For example, suppose you have a loop like:
+----
+ ( FooBar FooBaz =>|| FooBat )*
+----
+
+This, on its own, means that we scan up to the end of the FooBaz production when deciding whether to stay in the loop. Now, if the FooBar production already contains its own _Up-To-Here_ marker, then it will be ignored in this spot because we have a higher level _Up-To-Here_ marker in the expansion that overrides it. 
+
+If that higher level _Up-To-Here_ marker was not present, we would use the _Up-To-Here_ marker in FooBar and scan two tokens on each iteration of the loop. 
+
+If there was no _Up-To-Here_ marker at all, and no explicit numerical LOOKAHEAD/SCAN instruction, then the generated code would just use the default, which would be to look ahead one token and would check only for "foo".
+
+And if you use the terse syntax of:
+----
+ (=>FooBar)*
+----
+
+this is considered an _explicit_ lookahead that overrides any LOOKAHEAD/SCAN specified in the FooBar production.
+
+==== Up-To-Here Recap
+
+If an expansion at a choice point starts with a non-terminal that refers to a production that contains an _Up-To-Here_ marker, that is used when generating the code. So, if we have two productions:
+----
+ FooBar : "foo" "bar" =>|| Baz;
+----
+
+and
+
+----
+ FooBaz : "foo" "baz" Bat;
+----
+
+in a choice construct, say, like:
+----
+ ( FooBar | FooBaz )
+----
+
+the generated code will scan past "foo" and "bar" to check whether to enter FooBar, and if not, will then enter FooBaz. If the _Up-To-Here_ marker was not present in the FooBar production, it would only lookahead only one token. This would almost always be a code defect because the FooBaz option would be unreachable because the "foo" in FooBar would always be matched. 
+
+The same would apply in other cases, such as:
+----
+ ( FooBar )+ FooBaz
+----
+
+Just as in the previous case, FooBaz above is also unreachable IF there is no _Up-To-Here_ marker in FooBar.
+
+(((Up-To-Here Marker, Override Rules))) (((=>||, Override Rules)))
+
+So, consider the following rules:
+
+*   An _Up-To-Here_ marker in an expansion at a choice point overrides any _Up-To-Here_ marker specified in a production referenced by a non-terminal in the expansion.
+
+*   An explicit syntactic or numerical lookahead overrides either of the above.
+
+The _Up-To-Here_ construct is used internally in JavaCC development, so it should be pretty robust moving forward because it gets exercised pretty much every time I work on the internal code. So if _Up-To-Here_ stops working correctly, most likely the whole JavaCC 21 won't even build!
+

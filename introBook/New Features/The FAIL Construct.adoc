@@ -1,0 +1,175 @@
+:imagesdir: ../images
+//New Feature: FAIL Statement, 7/28/2020
+=== The FAIL Construct
+
+(((FAIL Construct, Introduced)))
+The FAIL construct is really pretty simple. Here is an example:
+----
+ (
+   "foo"
+   |
+   "bar"
+   |
+   FAIL "Was expecting \"foo\" or \"bar\" here!"
+ )
+----
+
+At first I thought the above was just syntactic sugar, since you can, of course, already write:
+----
+ (
+    "foo"
+    |
+    "bar"
+    |
+    {throw new ParseException("Was expecting \"foo\" or "\bar\" here!");}
+ )
+----
+
+But actually, it isn't just syntactic sugar. There are actually several reasons why the first construct above is preferable and I shall list them here in order of increasing importance.
+
+==== The FAIL Construct is Language Neutral
+
+(((FAIL Construct, Language Neutral)))
+Now that JavaCC generates parsers in languages other than Java, the first example should continue to work if you want to generate your parser in Python or C# or whatever. (Currently, only Java, Python, and C# are supported.)
+
+By the way, a similar consideration also applies to the new Lookbehind construct. If you use that in spots where you previously had some ad hoc Java code in a "semantic lookahead", your grammar ought to work unchanged even when generating code in other languages.
+
+However, it is entirely possible that the vast majority of people reading this would not care anyway. They may not anticipate any requirement at any point in the future to generate code in any other language anyway.
+
+But, this does lead naturally to a related consideration:
+
+_Using the FAIL construct (first example rather than the second example above) gives JavaCC developers extra degrees of freedom to evolve the tool._
+
+==== Extended or Updated Features
+
+(((FAIL Construct, Future-Proof)))
+Suppose that, at some point, a new ParseException constructor is added with an extra parameter (or more than one) so that error messages are more informative. Using the FAIL (first) example above would typically get the benefits of that improvement without any changes to your grammar. One can expect that using FAIL will automatically generate code using the newer API without to your existing grammar.
+
+Or, here is another example. At some future time, logging is likely to be far more fleshed out (it is not yet at the top of the TODO list). In that case, using the FAIL construct above, without making any changes to your grammars, different levels of logging could be configured for these FAIL conditions.
+
+Well, I should point out a general point here:
+
+_Typically, if you have a choice between using a construct built into JavaCC and dropping down into Java code to get the same result, you will be far better off using the construct built into JavaCC._
+
+Here is the most important reason that you should prefer using FAIL (first example) instead of using Java code (second example):
+
+==== The Second Example Doesn't Really Work!
+
+(((FAIL Construct, Fixes Java code issue)))
+Well it works, in a sense, but really it isn't quite right. The semantics are simply wrong. Suppose you have the following in a grammar production somewhere, like:
+----
+ Foobar : "foo" | "bar" | {throw new ParseException("expecting foo or bar here");};
+----
+
+And elsewhere, you use Foobar in a lookahead:
+----
+ SCAN Foobar => Baz
+----
+
+(or: LOOKAHEAD(Foobar()) Baz() in the legacy syntax)
+
+Here is the rub: _the above syntactic lookahead *always succeeds*!_
+
+This is because the Java code block where the exception is thrown is considered by internal JavaCC machinery to be an expansion that _always succeeds!_
+
+This, by the way, was one problem with using JAVACODE productions for error handling. (In JavaCC grammars _in the wild_ they were almost exclusively used for error handling.) You'd see something out there like:
+----
+ void Foobar() :
+ {}
+ {
+    Foo()
+    |
+    Bar()
+    |
+    ErrorHandler()
+ }
+----
+
+And elsewhere, maybe ErrorHandler would be defined as a JAVACODE production, something like:
+----
+ JAVACODE void ErrorHandler() {some error handling Java code here}
+----
+
+(Without using the JAVACODE construct, you would write the above as simply {ErrorHandler();} where the ErrorHandler is just a Java method you define normally. So the JAVACODE construct never had any real reason to exist.)
+
+The problem is that any syntactic lookahead of the Foobar production would always succeed. And even more problematic is that the lookahead would be ignored in situations where it would be reasonable to expect to be be taken into account, such as nested syntactic lookaheads. 
+
+Granted, the way to deal with the above situation would be to have a way to mark that the Java code you reach is to be considered a success or failure in a lookahead. (That still might be a feature well worth adding, it occurs to me..​.)
+
+However, if you write the above as:
+----
+ void Foobar : Foo | Bar | FAIL "Oops!"
+----
+
+then write the lookahead, like:
+----
+ SCAN Foobar => ....
+----
+
+would be effectively the same as:
+----
+ SCAN Foo | Bar => ....
+----
+
+In other words, if it reaches a FAIL statement inside a lookahead routine, it treats that as a _failure_, NOT as a success. (Different people may perceive things differently, but I reckon that most people would agree that your parser blowing up with an exception being thrown does not correspond to their intuitive notion of what constitutes "success".)
+
+As a little addendum, this feature, in particular in conjunction with negative lookahead, provides a rough and ready way of writing an assertion. You could have something like:
+----
+[
+    SCAN ~Foobar => FAIL "We are supposed to have a Foobar here!"
+]
+----
+
+See the section about Assertions in JavaCC 21 in the Parser chapter for more information about Assertions.
+
+==== Concluding Thoughts on the FAIL Statement
+
+On first implementation, the FAIL statement allowed you to write something like:
+----
+ FAIL "some message"
+----
+
+And this would be a shorthand for:
+----
+{throw new ParseException("some message");}
+----
+
+Well, except that the constructor to ParseException likely has some other parameters that allow the machinery to generate a better error trace.
+
+However, the other important aspect of this new construct is that it is treated as a failure in a scanahead routine. So, if you have a production like:
+----
+ FooBar : 
+    "foo"
+    |
+    "bar"
+    |
+    FAIL "Was expecting a foo or bar here!"
+ ;
+----
+
+Then, if you have a lookahead, like:
+----
+ SCAN FooBar => 
+----
+
+In legacy JavaCC, the above sort of construct is always considered to be "successful". In JavaCC 21, the above lookahead would return true if the next token is a "foo" or a "bar" but otherwise, i.e. if you hit the FAIL statement, the lookahead routine returns false.
+
+This finally struck me as such a key concept that I extended the FAIL statement to take an arbitrary block of Java code, so you can write:
+----
+ "foo"
+ |
+ "bar"
+ |
+ FAIL {some kludge maybe here}
+----
+
+But again, a LOOKAHEAD(FooBar) would return true if you hit "foo" or "bar" and false otherwise. In all other respects, the semantics would be the same as:
+----
+ "foo"
+ |
+ "bar"
+ |
+ {some kludge here}
+----
+
+which in either legacy JavaCC or JavaCC 21 is always considered "successful".

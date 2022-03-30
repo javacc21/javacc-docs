@@ -1,0 +1,34 @@
+
+=== Command Line Options
+The following options can be included on the command line when invoking JavaCC. 
+
+*   In _Legacy_ JavaCC options could be included either in an options block at the top of the grammar file OR they could be included on the command line. 
+*   The available JavaCC 21 command line options are listed in the following table:  
+
+.JavaCC 21 Command Line Options
+[cols="1,3,3"]
+|===
+|Option | Description | Comments
+
+|-d <directory>
+|Specify the directory (relative or absolute) for the generated files. If the directory doesn't exist, it will be created.
+|*Example:* -d out   (Generated files are written into the "out" subdirectory of the grammar file directory.)
+
+If this option is not set, the generated files are written into the same directory as the grammar file. 
+|-jdkN
+|Specify the target JDK version. N is a number from 8 to 18.
+|If this is not set on the command line, the default version is 8. If this is set on the command line *AND* a different version is set at the top of the grammar (using JDK_TARGET option), the version specified on the command line is used.
+|-n
+|Suppress the check for a newer version
+|The currently installed version of javacc-full.jar is used and may become stale over time.
+|-p
+|Define one or more comma-separated (no spaces) symbols to pass to the preprocessor.
+|For example:   -p debug,strict
+|-q
+|Normal processing messages are not displayed. Error messages will still be displayed.
+|JavaCC normally displays the name of each file as it is being generated. Using the -q option will suppress these messages, which can be useful when running JavaCC as part of a script.
+|-lang <language>
+|Specify the language to generate code in (the default is 'java')
+|Valid choices are currently 'java', 'python' and 'csharp'
+|===
+// NOTE: the -d ../../src/generated  option doesn't work right - it creates src directory 2 levels up and ALSO creates src/generated directory 1 level up and puts generated files in there.

@@ -1,0 +1,76 @@
+//A Fun Example of Code Injection at Work March 14, 2020
+=== Putting Code Injection to Work
+
+Programmatically generating code is a weird little world in itself, with its own little quirks and tricks. Consider the generation of the C-style switch-case with fall-through. You have your code generation that generates all your cases, and each case ends with a break. There is a problem, which is that the moment any of your case statements actually end by returning a value, you have a problem. For example:
+----
+ switch (foo) {
+   case bar:
+      blah blah 
+      return foobar;
+      break;
+   case baz:
+      blah blah
+      break;
+ }
+----
+
+Javac refuses to compile the above code because the break statement after a return is unreachable code. Well, true enough. The classic solution of JavaCC to this problem was to replace the above with:
+----
+   if  (true) return foobar;
+   break;
+----
+
+Voilà! You insert if (true) in front of the return and compiles! It's a funny little trick because the break statement is just as unreachable as before, except the compiler doesn't realize it! I find such a solution to be in rather bad taste because it is based on tricking the compiler. 
+
+But the other thing is that it just generates ugly code. Recently, I have been spending a lot of time eyeballing the code that JavaCC generates, and I just got so fed up with seeing this. So, finally, I decided to scratch the itch and implement a solution. This is where code injection comes into the story.
+
+(((Code Injection, Updating Generated Code)))
+What I do is that I simply use code injection to insert a little method to check for this case when the CaseStatement node is closed. (Note that the close() method is a little hook that is invoked by the tree building machinery when a Node is finalized.) The code looks like:
+----
+ INJECT(CaseStatement) :
+ {}
+ {
+    // If the case statement has an unreachable break statement at the
+    // end, we remove it. This allows us to get rid of this horrid 
+    // longstanding kludge
+    public void close() {
+        if (getChildCount() >= 2) {
+            Node last = this.getLastChild();
+            Node secondLast = this.getChild(getChildCount() -2);
+            if ((last instanceof BreakStatement) && 
+               (secondLast instanceof ReturnStatement)) {
+                  removeChild(last);
+            }
+        }
+    }
+ }
+----
+
+So now the code generated finally is:
+----
+ switch (foo) {
+   case bar:
+      blah blah 
+      return foobar;
+   case baz:
+      blah blah
+      break;
+ }
+----
+
+where before it was:
+----
+switch (foo) {
+   case bar:
+      blah blah 
+      if (true) return foobar;
+      break;
+   case baz:
+      blah blah
+      break;
+}
+----
+
+Granted, some people might say that this did not solve any real problem, since after all, functionally, both of the above snippets are the same. That is true, I guess. Even if the second snippet is ugly, it functions just as well.
+
+However, the above provides an example of one of advantage of the re-activated JavaCC 21 project: it has been refactored to such an extent that it is quite easy to resolve problems that are difficult (or impossible) to solve using the legacy tool.

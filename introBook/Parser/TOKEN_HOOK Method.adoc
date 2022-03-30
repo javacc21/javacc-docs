@@ -1,0 +1,148 @@
+:imagesdir: ../images
+//You Can't get there from here! - the Problem of 
+//Context-Sensitive Tokenization - 10-20=2020
+=== TOKEN_HOOK Example
+
+(((TOKEN_HOOK, Example)))
+The following example and discussion shows one possible way to use a TOKEN_HOOK method to handle an ambiguous token(s); ">>". The parser must distinguish between Java's right shift operator and a generic specification, such as List<Set<Foo>>, where the greater-than symbols represent two separate tokens. 
+----
+ INJECT PARSER_CLASS : {
+    private Token TOKEN_HOOK(Token tok) {
+      TokenType type = tok.getType();
+      if (type == RSIGNEDSHIFT || type == RUNSIGNEDSHIFT) {
+        if (isInProduction("TypeArguments", "TypeParameters")) {
+        // If we've entered the TypeParameters or TypeArguments production, we need to split
+      // a ">>" or ">>>" into 2 (or 3) GT tokens.
+        Token gt = Token.split(tok, 1, GT, GT);
+        if (type == RUNSIGNEDSHIFT) {
+          Token next = Token.split(gt.getNext(), 1, GT, GT);
+          gt.setNext(next);
+          gt.setNextToken(next);
+        }
+        return gt;
+      }
+   }
+   else if (type == GT) {
+       Token next = tok.getNextToken();
+       if (next != null && next.getType() == GT &&   !isInProduction("TypeArguments", "TypeParameters")) {
+  // In this case we do the reverse. We merge 2 (or 3) GT tokens into a right shift operator
+           Token nextNext = next.getNextToken();
+           Token merged = Token.merge(tok, next, RSIGNEDSHIFT);
+           if (nextNext != null && nextNext.getType() == GT) {
+              merged = Token.merge(merged, nextNext, RUNSIGNEDSHIFT);
+      } 
+      return merged;
+    }
+  }
+  return tok;
+  }
+ }
+----
+
+What the above token hook routine does is that it checks whether we are in a TypeParameters or TypeArguments construct. If YES, we are AND the next token in the stream is a ">>" or a ">>>", then it splits that token into two (or three) ">" separate tokens.
+
+It also must deal with the opposite case: if we are NOT in a TypeParameters or TypeArguments construct AND we have two (or three) adjacent ">" tokens, we merge them into a single ">>" (or ">>>") token.
+
+NOTE: The Token.split and Token.merge methods used in the above method were added to the Token.java boilerplate, since I anticipate them being generally useful to others.
+
+With the above TOKEN_HOOK method in place, the rest of the grammar that refers to these things can be written naturally. Thus, there is now no need for a separate lexical state as was required before. The RSIGNEDSHIFT and RUNSIGNEDSHIFT tokens are simply defined along with everything else in the default lexical state.
+
+There also is no need for a separate ShiftOperator grammatical production. Thus, the ShiftExpression production is now just written in a completely natural way, as follows:
+----
+ ShiftExpression :
+   AdditiveExpression
+   (
+      ("<<" | ">>" | ">>>")
+      AdditiveExpression
+   )*
+ ;
+----
+
+NOTE: The above production is written in the new streamlined syntax (see the Differences chapter for more details).
+
+==== The Devil is in the Details
+
+The current solution is still a bit crude and will probably be refined over the coming period by introducing certain much-needed constructs in JavaCC itself. At the moment, we are still dropping into Java code; ideally, the whole thing could be expressed in JavaCC itself.
+
+However, the current solution is solid and correct in a way that the previous hack was not. Moreover, this improved solution is simply not feasible in legacy JavaCC (and was not feasible in JavaCC 21 until very recently) for a couple of key reasons.
+
+* Due to the way it is implemented, the legacy CommonTokenAction hook cannot be used to handle the above case.
+
+* Legacy JavaCC offers no way to query whether we have entered a given grammatical production. That is what the isInProduction method in the above TOKEN_HOOK method does.
+
+The key to understanding the first point above is in the first line of the code injection:
+----
+ INJECT PARSER_CLASS {...}
+----
+
+This TOKEN_HOOK method is being injected into the XXXParser class, NOT the XXXLexer class!
+
+You see, the generated parser has a getNextToken method that looks something like:
+----
+ private Token getNextToken() {
+  Token result= tok.getNext();
+  if (result== null) {
+      result= token_source.getNextToken();
+      tok.setNext(result);
+  }
+  tok.setNext(result);
+  return result;
+ }
+----
+
+The real first-order impedance here is this: if the currentToken already has its next field set, the token_source.getNextToken() method is simply never called! So, you obviously can't solve this problem with a CommonTokenAction hook because it simply won't be invoked! At least, not reliably. You see, if a lookahead routine has already scanned ahead and tokenized ">>" as a single RSIGNEDSHIFT token, when it comes time for the parser machinery to pull the next token off the stream, as in the above method, it will return that token and your token hook method never gets the chance to do its thang: namely, to break it into two ">" tokens.
+
+This is the key reason (or actually one of two key reasons, it turns out) why legacy JavaCC simply cannot solve this problem in a clean way. You would always need something like the rather grotesque 3-part hack that I originally came up with, and is outlined above.
+
+This is a key concept, but also, properly understood, it could be considered to be part of a larger problem: there is simply no concept of rewinding the parsing/lexing machinery in legacy JavaCC.
+
+You see, once you have context-dependent tokens and an arbitrary amount of lookahead, if the lookahead fails, you would very frequently need to rewind the token stream or somehow revisit the cached tokens, as we do here. In this specific case of Java generics, if you had a lookahead that scanned ahead to see if what follows is a certain kind of expression, it could identify ">>" as a single token. If the lookahead fails and now we are going to parse the same input as if it was a type declaration, it needs to have the smarts to break the ">>" into two separate ">" tokens.
+
+But again, there is simply no point at which to do that! The token hook routine needs to be inserted in the appropriate place in the parser (NOT the lexer) code.
+
+This is fixed in JavaCC 21. In the above getNextToken routine, our TOKEN_HOOK routine (injected into the PARSER_CLASS!) gets invoked in the right spot. So it now looks like:
+----
+ final private Token nextToken(Token tok) {
+    Token result= tok.getNext();
+    if (result== null) {  
+        result= token_source.getNextToken();
+        tok.setNext(result);
+    }
+    result= tokenHook$Java_javacc_line_42(result);
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    tok.setNext(result);
+    return result;
+ }
+----
+
+In the general case, this is where the token hook method has to be inserted! At least if you want to use it to resolve this kind of problem.
+
+NOTE: JavaCC 21's TOKEN_HOOK feature is also significantly improved because you can define multiple TOKEN_HOOK methods and they will be inserted in the right place. The placeholder "TOKEN_HOOK" gets replaced with a unique method name. So you can define more than one! This is explained in more detail in TOKEN_HOOK and CommonTokenAction section.)
+
+However, being able to inject the token hook method in the right place is still not quite sufficient because... well... legacy JavaCC is simply too underpowered: it gives you no robust, standard way of knowing whether you are in a given production. That is what the call to isInProduction is about:
+----
+ if (isInProduction("TypeParameters", "TypeArguments"))
+----
+
+The isInProduction method is leveraging the same machinery that is used by JavaCC 21's lookbehind predicates. It works from within a regular parsing routine or a lookahead routine.
+
+There are some various other points to be made about this, but this post may be reaching (or have already reached!) a point of diminishing returns. So, I'll try to wind it down here.
+
+==== Concluding Remarks and Recap
+
+(((TOKEN_HOOK, Not as scary as it looks)))
+It occurs to me that the TOKEN_HOOK method that I post above may still look pretty hairy to most readers. However, once you understand its logic, it should not be so intimidating.
+
+The basic problem is that the input ">>" or ">>>" means something entirely different depending on the context in which it occurs. Once we have a syntactic lookahead routine that tries to scan this as the first case, we have a big problem if that routine returns false, because the way the code was structured (for the last 24 years or so) there was no way to inject a token hook (what was called CommonTokenAction in legacy JavaCC) to deal with the case. Or, in other words, the specific cases that CommonTokenAction should be able to handle could not possibly be handled that way!
+
+Like... dude.... you can't get there from here!
+
+The TOKEN_HOOK method above handles two basic cases: 
+
+* The parsing machinery has scanned ahead and identified the ">>" as a single token, but our token hook method needs to break it into two ">" tokens.
+
+* It scanned ahead and identified the ">>" as two separate ">" tokens but it now realizes we are in an arithmetic expression where ">>" (or ">>>") means a right shift operator, so it has to merge the adjacent ">" tokens into a single token.
+
+Of course, depending on the exact problem you are trying to solve, the solution could be something quite different. Actually, the more astute readers will realize already that the above discussion is not really specifically about solving this problem of the angle brackets in Java generics. That is simply one example of a much more general problem. 
+
+Even if, at first blush, your problem is quite different from this one, if you are running into a wall because you need input to be scanned differently based on context, your first step should be to carefully go over the above example and make sure you understand it. Admittedly, there are some details that I have glossed over here that I plan to clarify in the future with more examples of using TOKEN_HOOK.

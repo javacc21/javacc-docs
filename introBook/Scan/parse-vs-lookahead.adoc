@@ -1,0 +1,100 @@
+//From an email from Jon - this attachment MAY be a future blog
+//[[ ]] is an inline anchor to make arbitrary content referenceable 
+//[[[]]] triple brackets are bibliographic references
+[[parsing-vs-scanning]]
+= CongoCC
+Jonathan Revusky
+2021-04-01
+:jbake-type: post
+:jbake-tags: announcements, roadmap
+:jbake-status: published
+== SCAN and LOOKAHEAD
+=== Parsing vs. Scanning
+
+(((Parsing vs Scanning)))
+Consider the following JavaCC construct:
+----
+ ("foo" "bar" "baz")?
+----
+
+While the above three tokens, "foo", "bar", and "baz", are of equal weight and deserving of equal treatment, one of them is somehow different from the others.
+
+Well, the difference will be more apparent if we write the above construct in pseudo-code:
+----
+ scan ahead one token and if it is a "foo" : 
+    consume "foo"
+    consume "bar" 
+    consume "baz
+----
+
+When expressed in pseudo-code, we can now see which of the tokens is different. In the above pseudo-code, the "foo" token is mentioned twice and the other two are only mentioned once. One can see this without knowing anything about JavaCC or parsing or programming at all!
+
+Being first in the token list is what makes the "foo" token different. Unlike the other two, it is actually used twice -- the first time to _scan ahead_ and make a decision, and then, along with the other two tokens, assuming that the "foo" was found, it is _consumed_.
+
+Another key difference is that if we look at the three "consume" lines in the above, the first line, that consumes a "foo", is different from the other two. Here is why:
+
+_It cannot fail!_
+
+If, in the previous line, we scanned ahead and saw that the next token is a "foo", we cannot really fail to now _consume_ a "foo". We know that this is the next token coming off the stream, because we just checked! On the other hand, the two following lines could fail. Maybe the token after the "foo" is not a "bar", and even if it is, maybe the one after that is not a "baz".
+
+So the above also illustrates the most basic fact about how JavaCC works:
+
+_Unless it is somehow overridden, at any *choice point* a JavaCC parser decides by peeking ahead exactly *one* token._
+
+In fact, a more precise way of expressing the above point about "foo" being different from the other two tokens would be to say: 
+
+_What is different about "foo" is that it it is at a *choice point* and the other two tokens are not._
+
+(((Parser States, Consuming vs Scanning)))
+You see, developing a complete _conceptual model_ of JavaCC involves understanding this very basic distinction. A JavaCC-generated parser, at any given point, is in one of two states.
+
+* A "parsing" state in which it is _consuming_ input
+* A "scanning" state in which the parser is _scanning_ input without _consuming_ it.
+
+Note that the above distinction does not just apply to _consuming_ input as opposed to simply _scanning_ it. It is only in the parsing state that we build up the AST and execute whatever other user-defined actions; these don't happen when we are merely scanning ahead.
+
+However, I think that a lot of JavaCC users run into problems because they are continually tripping up over this sort of basic conceptual issue. This may not be so much because the core concept is so difficult, but more because regular parsing and scanahead actually interact in some rather complex, messy ways. 
+
+For example, consider the following grammar rule:
+----
+ FooOrBar :
+   Foo
+   |
+   Bar
+   |
+   {throw new ParseException("Expecting a foo or bar here.");}
+ ;
+----
+
+This seems like a pretty natural production. One noteworthy thing is that the above grammar production cannot work in a _syntactic lookahead_, such as the following.
+----
+ (LOOKAHEAD(FooOrBar()) Foobar Baz Bat)?
+----
+
+Here is why: _the lookahead always succeeds!_
+
+(((Java Code Block, Scanning Assumes it Succeeded)))
+You see, the third choice, after Foo and Bar is a Java code block and, in a _scanning_ step, any Java code action is automatically assumed to _succeed_. So during _parsing_, if the next token wasn't a Foo or a Bar, the exception would be thrown, leaving the user to wonder why it worked earlier.
+
+It could just as well be written: LOOKAHEAD({true})!
+
+FYI, this has been fixed in JavaCC 21 by introducing a new `FAIL` statement which works as expected in either a _scanning_ or _parsing_ state. So the above is preferably written:
+----
+ FooOrBar :
+    Foo
+    |
+    Bar
+    |
+    FAIL "Expecting a Foo or Bar here."
+ ;
+----
+
+(((FAIL Construct, Works When Parsing or Scanning )))
+The above construct does work in a scanning state because if what follows matches neither `Foo` nor `Bar` then it hits the `FAIL` statement which causes the lookahead routine to return `false`. So, the `FooOrBar` rule works as expected in either a _parsing_ or a _scanning_ state.
+
+What the above example actually illustrates is a more general concept:
+
+_Generally speaking, the key to writing *robust* grammars in JavaCC is to write grammar rules that work as expected in a *parsing* or a *scanning* state._
+
+Well, at least to the greatest extent possible. I guess the above is also a specific case of the
+https://en.wikipedia.org/wiki/Principle_of_least_astonishment[Principle of Least Surprise].

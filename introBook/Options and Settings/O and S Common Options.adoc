@@ -1,0 +1,54 @@
+=== Options and Settings Common to Legacy JavaCC and JavaCC 21
+This table lists the options available in both versions of JavaCC. The functionality of the common options will be essentially the same. In many cases the options were retained strictly to maintain backward compatibility with legacy JavaCC.
+
+.Options Available in Legacy JavaCC and JavaCC 21
+[cols="2,4,4"]
+|===
+|Option | Description | Comments
+
+|IGNORE_CASE
+|When set to true, the lexer is case-insensitive when matching token definitions. This option can be set at the top of the file or can be set locally. When set at the top of the file, all tokens are matched regardless of the case of the text. When set locally, case insensitivity only applies to the token definition(s) where it is located.
+|Example: TOKEN [IGNORE_CASE] : <FOOBAR : "foobar"> ;
+
+<FOOBAR> will be matched by any combination of uppercase and lowercase letters, such as fOObAR, FoObAr, foobaR, etc.
+|JAVA_UNICODE_ +
+ESCAPE
+|When true, it allows JavaCC to parse Java's unicode escape sequences. 
+|This setting is ignored if USER_TOKEN_MANAGER or USER_CHAR_STREAM is set to true. CHECK THIS!!
+|JDK_VERSION +
+(legacy) +
+JDK_TARGET +
+(JavaCC 21)
+|Generates code that is capable of parsing the language features for the version of Java specified. 
+|The default version is JDK 8; if a JDK version is not specified, JDK 8 will be the target version. Legacy JavaCC uses the option JDK_VERSION. JavaCC21 uses the option JDK_TARGET.
+|OUTPUT_DIRECTORY
+|When set, all generated code is written to the specified directory. 
+|If the directory does NOT exist, it will be created. If no path information is included, the output directory will be created as a subdirectory of the grammar file's directory. The BASE_SRC_DIR option can be used to set the location where the OUTPUT_DIRECTORY subdirectory will be created.
+|TOKEN_MANAGER_ +
+USES_PARSER (legacy) +
+LEXER_USES_ +
+PARSER (JavaCC 21)
+|When set to true, the Lexer can invoke a parser method(s).
+|Parser may have access to application specific configuration information that the Lexer can use.
+|NODE_CLASS
+|Sets the base class for a Node. All generated Nodes will be subclasses of this Node.
+|This was a JJTree option that has been incorporated into JavaCC 21 (JavaCC 21 builds an AST tree by default).
+|NODE_DEFAULT_ +
+VOID
+|Each non-terminal node can have a node descriptor associated with it. If you don't normally specify node descriptors, you may wish to set this option to true and have #void node descriptor automatically assigned to non-terminal nodes.
+|This was a JJTree option that has been incorporated into JavaCC 21 (JavaCC 21 builds an AST tree by default).
+|NODE_FACTORY
+|Allows Parser to create Nodes using Node Factory methods.
+|"When true, JJTree adds 2 new static factory methods ... Leftover from early days of JJTree; I wasn't able to find any grammars in the wild with this option enabled." This was a JJTree option that has been incorporated into JavaCC 21 (JavaCC 21 builds an AST tree by default).
+|NODE_PACKAGE
+|Sets the package name for Nodes. All generated Nodes will include this package name.
+|This was a JJTree option that has been incorporated into JavaCC 21 (JavaCC 21 builds an AST tree by default).
+|NODE_PREFIX
+|JJTree named all Nodes with the prefix "AST". JavaCC 21 no longer uses a prefix for Nodes but you can add any desired prefix to all Nodes.
+|For example, if you wish to mimic the Node naming convention of JJTree, you can set this option to NODE_PREFIX="AST";
+
+This was a JJTree option that has been incorporated into JavaCC 21 (JavaCC 21 builds an AST tree by default).
+|NODE_USES_PARSER
+|Used by JJTree to preserve user changes to generated Node files. JavaCC 21 generates Node files without requiring a separate JJTree grammar file. JavaCC 21 also actively discourages hand editing generated files.
+|Since JJTree is no longer required to generate Node files, this option remains available in JavaCC 21 for backward compatibility.
+|===

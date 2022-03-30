@@ -1,0 +1,39 @@
+:imagesdir: ../images
+== Annotations
+
+The following table includes all annotations used in JavaCC 21.
+
+.Annotations
+[cols="2,4"]
+|===
+|Annotation | Description and Comments
+|#_production name_
+|The return type for this production is the same as the production name
+|_production name_#
+|The node name in the AST is the same as the production name
+|ASSERT {condition}#
+|In assertions, the curly braces enclose Java code that is _not_ evaluated/executed during scanning/lookahead unless the hashtag annotation is added following the closing curly brace.
+|_production name_#scan
+|If _production name_ only occurs in a lookahead and is never used in actual parsing, you can annotate that production with #scan and no parsing code is generated for it, only lookahead code.
+|! (re-sync point) (FAULT-TOLERANT=true required)
+|If a fault is detected that cannot be fixed locally, parser will scan forward to the re-sync point before beginning parsing again. If the faulty portion was supposed to build a node in the tree, it will be built but will be marked dirty.
+|@property String name
+|Used inside INJECTed code to automatically generate a private variable declaration, and public getter and setter methods for the String variable "name".
+|@MinJDKxx
+|The JDK_TARGET=xx must be set at top of grammar. Inside the INJECTed code, add this property to any methods which use Java features that weren't available until the xx version. 
+|@MaxJDKxx
+|The JDK_TARGET=xx must be set at top of grammar. Inside the INJECTed code, add this property to any methods which use Java features that were removed in the xx version.
+|SCAN {someCode()}# +
+LOOKAHEAD ({someCode()}#)
+|The # in a semantic lookahead indicates that the predicate applies globally and will be performed both in a lookahead and in a regular parsing routine.
+|_prod-name_ #_node-name_
+|A new _node-name_ node will *always* be created. Default behavior will only put a new _node-name_ on the tree building stack if the production created more than one subnode.
+|_prod-name_ #void
+|The _prod-name_ production will *never* instantiate a new node. Any subnodes stay on the stack.
+|_prod-name_ #abstract
+|The _prod-name_ production does not instantiate a node. Instead the code for an abstract _prod-name_ class is generated.
+|_prod-name_ #interface
+|The _prod-name_ production does not instantiate a node. Instead the code for a _prod-name_ interface is generated.
+|ASSERT {javacode}#
+|Specifies that the assertion is evaluated both when scanning or when parsing. Assertions are normally only evaluated during parsing.
+|===

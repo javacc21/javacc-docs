@@ -1,0 +1,120 @@
+:imagesdir: ../images
+//Token Hooks (CommonTokenAction) Revisited 10/16/2020
+=== Token Hooks and CommonTokenAction
+
+Legacy JavaCC had (and still has) a means of applying whatever adjustments (a.k.a. kludges) to a Token just before it is handed off to the parser machinery. You could define a method called ((CommonTokenAction)) in your Lexer TokenManager class and this method is invoked when you get another Token off the stream. The method would look like:
+----
+ void CommonTokenAction(Token t) {
+     if (t.kind == IDENTIFIER) {
+         ... do some kludgy thing here ...
+     }
+ }
+----
+You would define such a method in your XXXTokenManager class and then you needed to put the option:
+----
+ COMMON_TOKEN_ACTION=true;
+----
+up top in your options block.
+
+Well, JavaCC21 still supports this usage pattern except that you don't need any configuration option since JavaCC 21 simply sets this based on checking whether there is a method called CommonTokenAction in your code and uses it if is there. (Duh...)
+
+This disposition is still supported, but it is has some self-evident flaws and JavaCC 21 offers a somewhat better solution. (And this has been around since back in the FreeCC days, c. 2008.) You just define a method called ((tokenHook)) in your XXXLexer code with the signature of:
+----
+ Token tokenHook(Token t) {....}
+----
+
+The key difference is that tokenHook has a return value, thus giving you the option of instantiating a new Token object, possibly of a different subclass, and using that to replace the Token object passed in. This is optional, of course, since the method could just do some manipulation on the object passed in and simply return that. 
+
+So, in short, you can use tokenHook to do anything that you could do with CommonTokenAction and also some tricks that were not possible with the older disposition. So, the CommonTokenAction is really deprecated.
+
+==== Problems with tokenHook
+
+(((tokenHook, problems with)))
+While the tokenHook disposition addresses some of the problems of CommonTokenAction by allowing a return value, it still suffers from some design problems, in particular in conjunction with the INCLUDE directive. (Admittedly, legacy JavaCC has never had an INCLUDE directive.)
+
+The main problem with tokenHook is that you are only allowed to have one of them! If one grammar includes a grammar that already has a tokenHook method defined, the including grammar now cannot define a tokenHook method of its own!
+
+This is really a first order problem and I have to admit that this had never occurred to me in all these years. It finally became obvious to me when I wanted to have a tokenHook in both the JavaCC grammar, JavaCC.javacc, and in the java grammar, Java.javacc, that gets INCLUDEd into JavaCC.javacc. It just doesn't work! Well, the code generator generates the code all right, but with two tokenHook methods defined with the exact same signature, the Java compiler complains!
+
+What we really need is for it to be possible to define more than one tokenHook method. Here is the solution (and it is already implemented):
+
+When you want to define a token hook method, you use the special name ((TOKEN_HOOK)), like so:
+----
+ INJECT LEXER_CLASS : {
+      Token TOKEN_HOOK(Token t) {
+           if (t.getType() == IDENTIFIER) {
+                ... do something, maybe a bit kludgy...
+           } 
+           return t;
+      }
+ }
+----
+
+What happens, of course, is that the TOKEN_HOOK name is a holder that later gets turned into a unique method name of the form tokenHook$XXX. This way, you can define more than one of them! Actually, to be precise, it generates a unique method name using the location where the method was specified, like this: (((TOKEN_HOOK, Unique Method Name)))
+----
+ tokenHook$Java_javacc_line_48(Token tok) {
+    ....
+ }
+----
+
+That the method name incorporates the location info allows you to jump pretty easily to where the code is defined when you realize the method needs to be tweaked.
+
+Transparently generating unique tokenHook names also allows any grammar that has defined one or more tokenHook methods to INCLUDE any subgrammar (which could have defined its own tokenHook methods) without worrying about duplicate method names and signatures. It all just happens automatically, a big usability improvement.
+
+Another aspect of all this is that the ability to have multiple tokenHook methods is a two-fold usability improvement: 
+
+*    You can define the method very near to where it is actually used, so its actions can be viewed in the context where the actions will be performed. 
+
+*    You can simplify your coding. With only one tokenHook method, you must test for all conditions and then perform the necessary actions for each possible condition, making for a big rats nest of code. With multiple tokenHook methods, each one can test for its specific condition. +
++
+For example, suppose you have a bit of munging you want to do when the token is an identifier and another when the token is a delimiter, like parentheses or semicolon. If you can only have only one tokenHook method, you have to write`
+----
+ INJECT LEXER_CLASS : {
+  Token tokenHook(Token t) {
+       if (t.getType() == IDENTIFIER) {
+            ...some code...
+       } else if (t.getImage().equals("(")) {
+            ... some other code... 
+       } 
+       ...etc...
+       return t;
+  }
+ }
+----
+
+Once you can have multiple tokenHook methods the above can be specified in multiple code injections:
+----
+ INJECT LEXER_CLASS {
+     Token TOKEN_HOOK(Token t) {
+          if (t.getType() == IDENTIFIER) {
+               ... some code...
+          }
+          return t;
+     }
+ }
+
+ INJECT LEXER_CLASS {
+     int parenthesisNesting;
+     Token TOKEN_HOOK(Token t) {
+          String img = t.getImage();
+          if (t.equals("(")) {
+               ++parenthesisNesting;
+          } 
+          else if (img.equals(")") {
+               --parenthesisNesting;
+          }
+          return t;
+     }
+ }
+----
+
+(((tokenHook, deprecated in JavaCC 21))) (((CommonTokenAction, deprecated in JavaCC 21)))
+So use TOKEN_HOOK. The plain tokenHook and CommonTokenAction methods are deprecated.
+
+==== TOKEN_HOOK Recap
+
+To recap, the TOKEN_HOOK methods defined in the above injections will generate different methods with unique names, but also a key usability aspect of this is that the above code injections can be placed very near related places in the grammar file. This is actually a general improvement that JavaCC21 offers over the legacy tool.
+
+Legacy JavaCC allows you to inject code into the generated Parser and TokenManager classes via the PARSER_BEGIN...PARSER_END... and TOKEN_MGR_DECLS sections. However, you can only have one of each! And they must be up top in the grammar. JavaCC21 allows the analogous code injections to be placed very near the related places where they are used in the grammar. 
+
+For example, if your parser needs that parenthesisNesting member variable to keep track of the nesting level, then this code injection can be placed very close to where the variables (or methods or whatever...) are actually used in the grammar. So if certain methods defined in an injection are mostly used after line 2000 of your grammar, you can place the INJECT block that defined those methods very near where they are used, so you don't have to be continually scrolling up and down thousands of lines to make sense of your code!

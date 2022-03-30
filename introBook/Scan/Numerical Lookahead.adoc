@@ -1,0 +1,48 @@
+:imagesdir: ../images
+// From Wiki, end of Choice Points and Lookaheads
+=== Numerical Lookahead
+
+(((LOOKAHEAD, Numerical)))
+Suppose we have a choice construct like:
+----
+ "foo" "bar" ...
+ |
+ "foo" "baz" ...
+ |
+ "bar" "bat" ...
+----
+
+the second choice is unreachable with the default LOOKAHEAD of only scanning one token ahead (LL(1)) because the second choice begins with "foo", just like the first choice. If "foo" succeeds, the first choice will always be selected and not the second. But if "foo" fails in the first choice, then "foo" will fail in the second choice.
+
+In the case given above, where we have that unreachable second expansion, the simplest solution would simply be to specify that we should scan ahead two tokens on the first expansion. So we could write the above choice as:
+----
+ SCAN 2 "foo" "bar" ...
+ |
+ "foo" "baz" ...
+ |
+ "bar" "bat" ...
+----
+
+NOTE: The newer SCAN statement is used in the above example (See the Section on the New SCAN statement later in this chapter). In _legacy JavaCC_ this would be the more verbose: LOOKAHEAD(2) “foo” “bar” etc. +
+ +
+JavaCC 21 doesn't support setting a global LOOKAHEAD value in the Options block at the top of the file. All SCAN/LOOKAHEAD values must be set in each location where a lookahead greater than 1 is required.
+
+Regardless, once we specify two tokens of lookahead on the first choice, we only enter it if the next two tokens are “foo” followed by “bar”, so if the next two tokens happen to be “foo” followed by something other than “bar” we enter the second choice.
+
+Now, here is an interesting point: if the next two tokens are “foo” and “bat”, say, then the second choice is incorrect as well, but since we did not specify any lookahead there, we enter the second expansion based on it matching the first token. (Again: _that's all we check_ *_by default._*) Of course, we have a problem when we _consume_ the “foo” and the next token is not what we want -- a “bat” instead of a “bar”.
+
+BUT... here is an important conceptual issue in terms of understanding the logic of a parser generator like this:
+
+_In terms of the topic of this page, choice points and lookaheads, this is simply not an issue!_
+
+_(Huh?)_
+
+It's really quite simple, you see. The second token, “baz”, in the second expansion choice is _not a choice point!_ So, yes, the generated parser at this point is expecting a “baz” but instead encountered a “bat”. So yes, it will complain! (_Okay, when I say “complain”, that is an anthropomorphic way of saying that an exception will be thrown._)
+
+But that is all right and proper. Look at it this way... the above grammar snippet says that we look ahead 2 tokens to decide whether to enter the first expansion. Since we didn't specify anything for the second expansion, it now just looks ahead one token, and if an error occurs after that, then so be it. The parser is doing what it is supposed to do, right? 
+
+In this case, none of the three given choices can match the “foo” “bat” sequence anyway! So, end result: it throws an exception, *which is what it should do.* But the point is that we can have “foo” “bar” here or “foo” “baz” and the generated parser will handle both cases. Our first go at this, without the lookahead specified, it would spuriously reject a “foo” “bar”, *even though it is valid input!* If it rejects “foo” “bat” that is not really an issue _in terms of the problem we have set ourselves_ here because *that is not valid input anyway!*
+
+==== More than one way to skin a cat...
+
+The _definite numerical lookahead_ of two tokens worked okay in the above example, but generally speaking, it is a rather crude disposition. The legacy JavaCC tool provides two other ways to specify how we resolve a choice - when the default resolution is not good enough. In the original, somewhat inaccurate terminology, they are called syntactic and semantic lookahead (See the next two sections for more information). JavaCC 21, meanwhile, provides two other tools, contextual_predicates (ref Contextual preds doc) and up to here (refer to the sections on Up-To-Here and Up-To-Here-Plus later in this chapter for more information).

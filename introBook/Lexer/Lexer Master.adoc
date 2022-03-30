@@ -1,0 +1,19 @@
+== The Lexer
+
+This chapter brings together information about the Lexer, the component that converts a input source into a sequence of tokens and literals based on its grammar file. JavaCC uses the "rules" in the grammar file to generate Java source code that can be compiled into a class file. That lexer class file can tokenize input source that conforms to the rules in the grammar file that the Parser can process. 
+
+The Lexer is responsible for the low-level details of how to process the input source. Most input sources are text files and _not_ binary files. The text files are usually read in as a byte stream that is converted into characters (Java char) that are in turn matched as tokens or identified as literal values.
+
+This chapter is not meant to be a tutorial or complete description of lexical processing/tokenizing. There are already many documents available that completely describe lexical processing and tokenizing. Instead, this chapter tries to capture any differences or unique capabilities available in JavaCC 21.
+
+include::Lexical Details.adoc[]
+
+include::Lexer Completely Rewritten.adoc[]
+
+include::Evolving Tokens.adoc[]
+
+include::Defining Token Subclasses.adoc[]
+
+include::Include and Lexical State.adoc[]
+
+include::first set.adoc[]

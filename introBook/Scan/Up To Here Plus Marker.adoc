@@ -1,0 +1,70 @@
+:imagesdir: ../images
+//From Wiki "Up-To-Here" Marker
+=== Introducing the "Up-To-Here-Plus" Marker
+
+(((Up-To-Here-Plus Marker, Introduced))) (((SCAN, Up-To-Here-Plis Marker))) (((LOOKAHEAD, Up-To-Here-Plus Marker))) (((=>|+n, Up-To-Here-Plus Introduced)))
+The _Up-To-Here_ marker ⇒|| and the _Up-To-Here-Plus_ marker ⇒|+n (where n is an integer) were introduced to be able to express lookahead in a more succinct and less error-prone manner than using the legacy LOOKAHEAD or even the more terse SCAN statement.
+
+The _Up-To-Here_ marker was described in the previous section of this chapter. Turn to that section for more information on it.
+
+==== "Up-To-Here-Plus" Marker Use Case
+
+(((Up-To-Here-Plus Marker, Use Case))) (((=>|+n, Up-To-Here-Plus Use Case)))
+Not long after implementing the above _Up-To-Here_ syntax, I realized that there was a common problem that it did not address. Frequently, you want to scan up to a given point and then an extra token (or two... or three...)
+
+For example, suppose you have a production that represents the declaration of a function in some C-ish sort of language.
+----
+FunctionDeclaration : [ReturnType] <IDENTIFIER> Args Block ;
+----
+
+Suppose that you determine that to decide that something is indeed a function declaration, you need to scan to the end of the Args and _then one more token_ which would be the opening curly brace of the Block, “{”.
+
+Regardless, what we certainly don't want to do is scan all the way to the end of the Block: that could be very, very long and costly. We reason that it is enough to hit the “{” that starts the Block. So, using the _Up-To-Here-Plus_ marker, we could write:
+----
+ FunctionDeclaration : [ReturnType] <IDENTIFIER> Args =>|+1 Block ;
+----
+
+The ⇒|+1 is the _Up-To-Here-Plus_ marker and means that once we scan past Args, we set a numerical limit of 1 more token. In this case, that would mean that we scan up to and including the initial “{” of the Block production.
+
+Then, for example, if the FunctionDeclaration was used at some choice point in your grammar:
+----
+ ( FunctionDeclaration | VariableDeclaration | StructDeclaration | EnumDeclaration )
+----
+
+without the ability to put the _Up-To-Here_ (or in this case, _Up-To-Here-Plus_ marker in FunctionDeclaration we would have to write something like this, as in legacy JavaCC:
+----
+ ( LOOKAHEAD (ReturnType() <IDENTIFIER> Args() "{" ) FunctionDeclaration
+     | VariableDeclaration | StructDeclaration | EnumDeclaration )
+----
+
+Of course, most likely, the other productions, such as VariableDeclaration etcetera would also requires some complicated (complicated looking) syntactic lookahead and the whole thing would end up looking very hairy indeed!
+
+In most cases, where you want to scan past a production and then somewhat more into the next one, it is exactly one token. You will typically have something like:
+----
+ MethodDeclaration : [ Modifiers ] ReturnType <IDENTIFIER> =>||+1 Args Block ;
+----
+
+We anticipate that the vast majority of _Up-To-Here-Plus_ markers will be used in cases like that shown above, in which case it will probably indicate one extra token. 
+
+You can specify other values than 1, for example:
+----
+     Foo Bar =>|+3 Baz
+----
+
+would scan past Foo and Bar and then at that point, limit the remaining lookahead to at most 3 more tokens. Probably in most cases, the use of this is with productions where the final non-terminal is arbitrarily long and you really don't want to scan through it all.
+
+As of the current implementation, you can only have a single digit after the plus sign, so the most further you could specify is 9 more tokens. That limit is artificial and =>|+ could be enhanced to allow two digits after the plus sign. However, I wonder if there is a real-world use case for more than 9 tokens.
+
+At the other end of the allowable range, it is currently acceptable to write:
+----
+  Foo Bar Baz =>|+0
+----
+
+which is exactly the same as:
+----
+  Foo Bar Baz =>||
+----
+
+Disallowing the +0 option shown above and allowing only the values of 1-9 after the plus sign was considered. However, it was decided to allow people write the +0 if they wanted to. 
+
+It does seem likely that most of the uses of =>|+n will probably be with a +1. 

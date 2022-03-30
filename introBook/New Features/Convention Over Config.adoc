@@ -1,0 +1,37 @@
+=== Convention over Configuration
+
+(((Convention over Configuration)))
+It is our considered view that a tool having a plethora of configuration options can make it far less usable. Or, at the very least, if there are a lot of configuration options, the neophyte user should be able to ignore them for the most part. One key aspect of this is having sensible defaults that correspond to the typical usage scenarios. Another aspect is simply having naming conventions so that the tool can infer the names of files and their locations, etcetera.
+
+==== Naming and Source Code Organization Conventions in JavaCC 21
+
+(((File Naming Conventions))) (((Source Code Organization Conventions))) 
+Consider a project to develop a parser for a fictitious programming language called Foo. Assume further that the grammar file is called Foo.javacc Here are the default out-of-the-box conventions if you do not override them with any configuration options:
+
+*  The name of the generated parser class will be FooParser. (((Options and Settings, PARSER_CLASS)))The naming is automatic, simply based on the name of the input file, Foo.javacc. If you wish to override this, you can use the PARSER_CLASS configuration option to use a different parser class name. However, it is hard to see much value in doing so.
+
+*  The generated lexer (a.k.a. *tokenizer*) class will be named FooLexer. (((Options and Settings, LEXER_CLASS)))Again, this can be overridden, in this case, via the LEXER_CLASS configuration option. Overriding the lexer's default name will also change the NfaData filename to match the lexer's new name. +
++
+However, there is little practical value in changing the lexer's name. The most likely reason for people overriding the default lexer name would be for legacy JavaCC users to keep the same class names they used before. So, in the Foo case, they could specify at the top of the grammar file:
+----
+ LEXER_CLASS="FooParserTokenManager";
+ ...
+----
+
+*  The generated constants interface will be called FooConstants. (((Options and Settings, CONSTANTS_CLASS)))This can be overridden by using the CONSTANTS_CLASS option. To keep the name that would be generated in JavaCC, FooParserConstants, you can specify CONSTANTS_CLASS=“FooParserConstants” in your options. But again, there is little reason to change this.
+
+*   To change the generated names for the Parser, Lexer, Constants and NfaData files to the same custom filename prefix (one that doesn't use the grammar's name), use the BASE_NAME option.(((Options and Settings, BASE_NAME))) For example, if the grammer's name was reallyLongAndConvolutedName.javacc, use BASE_NAME=Brief and the generated filenames would be BriefParser, BriefLexer, BriefConstants, and BriefNfaData.
+
+*  If not specified otherwise, all classes will be generated with no package (the default package) in the same directory as the grammar file. However, in this instance, it is strongly recommended that, at least for non-trivial projects, you should specify a package using the PARSER_PACKAGE option(((Options and Settings, PARSER_PACKAGE))) and also a base source directory using the new BASE_SRC_DIR option. 
++
+As a concrete example, let us suppose the Foo project keeps the Foo.javacc file in the directory src/parser (relative to the project root) and that (as per very common conventions) your java source code is located in the src/main/java directory. In that case, you would specify BASE_SRC_DIR="../main/java"; in your grammar file. (Obviously using a relative directory for BASE_SRC_DIR (((Options and Settings, BASE_SRC_DIR)))will tend to be more robust than an absolute directory.) 
++
+Now, supposing that you want your Foo language parser code to reside in the package org.foolang.parser you would have the option PARSER_PACKAGE="org.foolang.parser"; in your grammar file. Thus, the source files would be generated in the directory src/main/java/org/foolang/parser.
+
+==== Putting AST Nodes in Their Own Package
+
+If you have tree building enabled, you may wish to specify a separate directory in which to put the classes used to represent the nodes in your parse tree. You can do this using the BASE_NODE_PACKAGE option.(((Options and Settings, BASE_NODE_PACKAGE))) Like PARSER_PACKAGE, this option is taken to be relative to the base source directory specified via BASE_SRC_DIR.
+
+Note that the default name for the base node class has been changed from SimpleNode to BaseNode. If you wish to use a different name, for example, to keep using SimpleNode, you can use the BASE_NODE_CLASS option to specify a different name, i.e. BASE_NODE_CLASS="SimpleNode". Again, the main reason to do this would be if one is migrating from the legacy tool. If you never used JavaCC previously, then there is little reason to change the name.
+
+Because of the above changes, there are various configuration options in legacy JavaCC that are no longer meaningful in JavaCC 21. Refer to Appendix B for Legacy Options and Settings Removed from JavaCC 21.

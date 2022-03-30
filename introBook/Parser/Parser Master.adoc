@@ -1,0 +1,22 @@
+:imagesdir: ../images
+== The Parser
+
+This chapter brings together information about the Parser, the component that processes the Tokens and literals identified by the Lexer. JavaCC uses the grammar file you specify to generate the Java code that you compile with javac which in turn is used to perform the production rules specified in the grammar file. The production rules are normally defined below the lexical rules that are normally defined at the top of the grammar.
+
+include::Parsing Theory is Bullshit.adoc[]
+
+include::Parsing and Choice Points.adoc[]
+
+include::Assertions in JavaCC 21.adoc[]
+
+include::Code Injection at Work.adoc[]
+
+include::Token Chaining.adoc[]
+
+include::TOKEN_HOOK and CommonTokenAction.adoc[]
+
+include::TOKEN_HOOK Method.adoc[]
+
+include::JAVACODE Productions and Inject.adoc[]
+
+include::Fault-tolerant parsing.adoc[]

@@ -1,0 +1,113 @@
+:imagesdir: ../images
+//from wiki titled Choice Points and Lookahead
+=== Syntactic Lookahead
+
+(((LOOKAHEAD, Syntactic))) (((SCAN, Syntactic)))
+A _Syntactic_ lookahead allows you to specify a _lookahead expansion_ which is checked as a condition at the choice point. So instead of specifying the number of tokens ahead to evaluate (for example, SCAN 2 or LOOKAHEAD(2)), we could write:
+----
+ SCAN "foo" "bar" => "foo" bar" ....
+ |
+ "foo" "baz"
+ |
+ "bar" "bat"
+----
+
+In the above example, we scan ahead to see if the input matches the expansion “foo” “bar”, and if so, we enter the first choice. This is effectively the same as what was done before, since matching “foo” “bar” is the same as scanning ahead and matching the first two tokens. 
+
+In the general case, however, syntactic lookahead is much more powerful because the lookahead expansion can be of variable length, and also it can match input of indefinite length. For example, consider:
+----
+ ( SCAN ( "foo" )+ "bar" => Foobar )?
+----
+
+The above SCAN statement is a _zero or one_ choice and inside that we scan ahead to check whether the coming input is _one or more_ “foo”s followed by a “bar”. There is no precise amount of numerical lookahead that would handle this case if we really are going to accept any number of “foo”s followed by a bar! 
+
+The above generates a scan routine that scans forward past all the “foo” tokens and then checks if the very next token is a “bar” and only then, enters the Foobar production. So, if the input is “foo” “bar”, then that matches. If the input is “foo” “foo” “foo” “foo” “bar”, then that matches too. But if the input is “foo” “foo” ... and a thousand more “foos” followed by a “baz”, then that doesn't match. In which case the _zero or one_ SCAN case is matched and parsing continues.
+
+In short, the above _syntactic_ lookahead generates code that scans as far forward as necessary. That might just be two tokens, but it could be 2000 tokens! (In practice that is probably rare, but at least in theory...)
+
+NOTE: Sometimes, it is easier to express a condition by _what it is not_ than by what it is. So, in JavaCC 21, you can put a tilde “~” in front of the _lookahead expansion_ to indicate that you only match if it does not match (*negative* _syntactic lookahead_). For example: 
+----
+ SCAN ~Foobar => Moobaz
+----
+
+If Foobar is matched then the SCAN fails. However, if the next production is *not* Foobar then the Moobaz production is evaluated.
+
+==== Nested Syntactic Lookahead Issue Fixed
+//from Fixed a Longstanding Bug Known Issue in JavaCC: Nested Syntax....
+
+There is a long standing bug in legacy JavaC, which is that syntactic lookaheads do not nest, so you cannot have a syntactic LOOKAHEAD in a production that is evaluated as part of a syntactic LOOKAHEAD. 
+
+The following code example is a simplified example from question 4.8 of the JavaCC FAQ by Theodore Norvell, which is probably some of the best free documentation for legacy JavaCC.
+----
+PARSER_BEGIN(TestParser)
+    import java.io.*;
+    public class TestParser {
+        static public void main(String[] args) throws Exception {
+        TestParser parser = new TestParser(new StringReader("wxy"));
+        parser.start();
+    }
+}
+PARSER_END(TestParser)
+
+void start( ) : { } 
+{
+    LOOKAHEAD ( a() )
+    a() {System.out.println("Nested lookahead successful!");}
+    < EOF >
+    |
+    "w"
+    <EOF>
+}
+
+void a( ) : { } 
+{
+    (
+        LOOKAHEAD ( "w" "y" ) "w"
+        |
+       "w" "x"
+    )
+    "y"
+}
+----
+
+Since the above example uses entirely legacy syntax, it builds with either legacy JavaCC or JavaCC 21. Just drop the file (Test.jj or whatever you want to call it) in an empty directory and (assuming that you are configured to run legacy JavaCC) execute the following commands:
+----
+ javacc Test.jj
+ javac *.java
+ java TestParser
+----
+
+Using legacy JavaCC, it fails just as described in the FAQ, producing the following results: 
+----
+Exception in thread "main" ParseException: Encountered " "x" "x "" at line 1, column 2.
+Was expecting:
+    <EOF>
+        at TestParser.generateParseException(TestParser.java:377)
+        at TestParser.jj_consume_token(TestParser.java:243)
+        at TestParser.start(TestParser.java:19)
+        at TestParser.main(TestParser.java:7)
+----
+
+The JavaCC FAQ, in describing nested syntactic lookaheads, includes this statement, "However, during syntactic lookahead this inner syntactic lookahead is ignored."
+
+If you do the equivalent steps with the latest version of JavaCC 21, it produces this output:
+----
+ Nested lookahead successful!
+----
+
+Which demonstrates that JavaCC 21 will successfully evaluate nested syntactic lookahead and works pretty much as expected! So the answer to question 4.8 should change from:
+----
+ No.
+----
+
+to
+----
+If you are using legacy JavaCC, no, nested  
+syntactic lookaheads are not evaluated. However 
+if you are using the updated version, JavaCC 21,
+nested syntactic lookaheads are evaluated. 
+----
+
+The JavaCC FAQ describes several ways that your grammar can be modified to avoid nested syntactic lookahead failures. JavaCC 21 takes the simpler approach and just makes nested syntactic lookaheads work.
+
+And making nested syntactic lookaheads work is not only a simpler and more general solution, it also positions JavaCC 21 to help solve 21st century problems. The improved SCAN capabilities are discussed in the remainder of this chapter, many of which would be impossible without the ability to nest lookaheads.

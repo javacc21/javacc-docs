@@ -1,0 +1,7 @@
+== Using FreeMarker in JavaCC
+
+It is unknown how much information to include about FreeMarker so the existing doc is included just because it's already existing.
+
+include::Freemarker Parsing Templates.adoc[]
+
+include::Freemarker Lexing Templates.adoc[]

@@ -1,0 +1,204 @@
+:imagesdir: ./images
+//Moving Towards a Maximally Correct Reference Java Grammar, March 1, 2021
+== Final Thoughts on JavaCC
+
+If you've made it this far, you can see that JavaCC 21 has made significant changes and improvements on a number of fronts: 
+
+*   Bug fixes
+*   Usability enhancements
+*   Functionality enhancements, such as fault-tolerant parsing and the preprocessor
+
+The question is where to go from here. The following section describe some of the possible future directions of JavaCC 21.
+
+=== Moving Towards a Maximally Correct Reference Java Grammar
+
+(((JavaCC 21, Maximally Correct Reference Java Grammar))) (((Maximally Correct Java Grammar)))
+Now that the ability to generate fault-tolerant parsers is coming along so well, I have been thinking about what to do with the Java grammar included in JavaCC 21. I decided that the best thing to do was to do the incremental work to make it maximally correct. Ideally, it will serve as a reference implementation that other projects can easily incorporate for their own use.
+
+I think that the current version is pretty much an absolutely faithful implementation of the latest Java Language Specification for Java 15. You don't have to take my word for it. You can try it for yourself:
+----
+  git clone https://github.com/javacc21/javacc21.git
+  cd javacc21/examples/java
+  ant test
+----
+At this point, you can run:
+----
+ java JParse
+----
+which is the test harness for the latest version of this Java grammar. You can give it a single file to show you the AST or you can give it multiple files or a whole directory to parse. If you run it with the -t parameter, it runs in fault-tolerant mode. In particular that is interesting because it shows you the AST that is built for various erroneous constructs -- assuming you feed it some invalid java source file. It's pretty fast. If I unzip the src.zip from the JDK15 somewhere, I can run it over the whole thing like so:
+----
+ java JParse <java src root>
+----
+
+and on reasonably current hardware, it parses the whole thing, 17,619 java source files, in about half a minute. You can try on your own machine and tell me the result. That's probably fast enough.
+
+So, I really do encourage people to play with this, both in fault-tolerant and fault-intolerant mode and report back to me if they notice anything that seems amiss.
+
+That would be useful but also it's kind of a fun little toy to play with. I think we should all try to have a bit of fun before they finally make it illegal. The history of that Java grammar file is also kind of fun, so I lay it out below, for those who are interested.
+
+=== That's a File with a History!
+
+(((JavaCC Grammar File History)))
+A while back, I put together (to the best of my knowledge) a complete history of the overall JavaCC project. It now occurs to me that the Java grammar included with JavaCC 21 has its own fascinating history. 
+
+That file was not written by me from scratch. It is a forward evolution (not the only one, by the way, one of several) of the Java grammar that was included in the legacy Java distro back in the stone ages. (1997 or so...) I suppose it was originally just a grammar of the very early Java spec (Java 1.1?) but at some point in the following years some work was actually done to keep it up to date with Java's ongoing evolution. At some point even that activity ceased so that Java grammar became increasingly out of date.
+
+Obviously, JavaCC is not the only project that needs a Java grammar. Surely lots of people out there need one for their own use. So, what happened is that various projects (actually, I know of two, but I think there are probably more that I don't know about) created and maintained their own fork of this sample Java grammar and maintain it separately, keeping it up to date with respect to Java releases as suits their purposes.
+
+Now, to be perfectly clear, there is nothing wrong with somebody doing that. In a sense, that is what open source is about. Well, except that, in this case, it does give one an uneasy feeling. It really doesn't make sense that somebody has to fork off this sample Java grammar and separately maintain it every time a new project is started. 
+
+It really seems to me that the most minimal requirement of any JavaCC sort of project should be to ensure that their own Java grammar was up-to-date with the current Java spec. But why should the task of maintaining this Java grammar have to be maintained by each separate project producing their own separate version of this very same grammar with their own unique changes? Especially since it was originally the same file.
+
+You see, this brings us to a more general point: the whole idea that all of these separate projects need to maintain their own separate Java grammar, which is probably about the same on the 98% level, just seems like something from a much earlier stage of computing. 
+
+In the old days (I'm thinking late 20th century mostly) developers would frequently have their own implementation of Hashtable or a growable array (like java.util.ArrayList) that they use and maintain separately. Just part of their toolkit, like Clint Eastwood's six-shooter, say. But nowadays there is the understanding that any modern language would have a standard class library and you just use that. So a Java developer just uses java.util.HashMap or java.util.ArrayList. 
+
+This basic idea of standardized tools did not originate with Java, of course, but the understanding of this idea becoming widespread probably does largely coincide in time with the appearance of Java and its rise as the most popular OOP language.
+
+My own position is that anybody who uses a JavaCC type of tool or otherwise is in need of a Java grammar should have access to a standard Java grammar. It doesn't really make sense for each project having to maintain their own Java grammar any more than a situation in which Java itself is widely used (which it is) and everybody is maintaining their own hash table implementation (which they aren't!)
+
+=== Observations on the Java Grammar
+
+For some reason, I thought it worthwhile to explain some of the pedigree of that Java grammar file. However, practically speaking, the more important point is really just how sloppy it is. It emerges from the original round of work on JavaCC, which incorporates some quite good ideas, but was implemented in a very sloppy, cowboy-ish kind of way. It just was. And that sample Java grammar is very much in that vein. At various points in the grammar, there are comments to the effect that: "Well, this isn't really correct but to do it the correct way would entail some performance loss so..."
+
+The strange thing about that, though, is that surely, a first-pass "proof of concept" Java grammar, included in a very early version of the JavaCC tool, should be maximally correct and any cutting of corners to make it run a bit faster should occur in a separate stage. Or really, just separately. 
+
+It really seems to me that the JavaCC project should provide a reference that is as close to the spec as humanly possible (or practical) and if anybody needs something more optimized for speed or space or whatever, that is their problem. Or, at the very least, it is something that should be addressed (if it proves necessary) later.
+
+So, as things stand, that grammar and all the versions that descended from it (including the one maintained by me until recently) was really quite outrageously loose. I never addressed this before, because all of my previous iterations of work on the thing were just to make sure it could parse all the main constructs up to JDK 15. Or in other words, I was focused on accepting that which was valid, not on rejecting that which was invalid. 
+
+=== Addressing Language Issues
+
+(((JavaCC 21, Java Grammar Language Issues)))
+So, just in the last week or so, I turned to that problem and now, at least as far as I can see, the Java grammar included in JavaCC 21 really does correctly implement the language specification. So, here are some of the various issues that I addressed:
+
+==== Modifiers
+
+*   That legacy grammar did not make the slightest attempt to handle the question of which modifiers can be used in which contexts. 
+**  You could put any modifier keyword practically anywhere, so you could declare a local variable as public or private when, in fact, the only valid modifier in front of a local variable declaration is final. 
+**  You could declare a variable (or a class or interface) to be synchronized. (Only a method can be synchronized. Though the keyword synchronized can also be used in a synchronized block.)
+*   You could even repeat modifiers, writing things like public static public... or have sets of modifiers that are incompatible, like private public... or abstract final....
+
+==== Assignments
+
+*   Only certain kinds of expressions can be on the left-hand-side of an assignment. You can't write: this=7; or foo()=bar(); since the expression on the left-hand-side of an assignment must be a variable that you can assign to.
+
+* Only certain kinds of expressions can have prefix and postfix increment/decrement expressions, such as x--. The x has to be a variable you can assign to. That old grammar was written in a way that accepted things like (x+7)++ and so on.
+
+==== Only Certain Expressions Can Stand on Their Own as Statements.
+
+(((Java, Valid Statements))) 
+By the way, I have to admit that I only know about all this stuff in such detail because I finally broke down and consulted the JLS, the Java language Specification. An expression can stand alone as as statement if it is one of the following:
+
+*   a method call
+*   an assignment
+*   an object instantiation
+
+Thus
+
+----
+ 2+2;
+----
+
+is not a valid statement. Nor is:
+----
+ x;
+----
+
+There are some strange wrinkles in all of this. For example, you can write:
+----
+ (n)++;
+----
+
+or
+----
+ (x) = y;
+----
+
+The compiler would interpret the above as being the same as n++; and x=y; respectively. That kinda makes sense, but the opposite would also make sense; for example, if the compiler did not allow you to write these things. I was actually surprised that these were permissible.
+
+Strangely, though, you cannot write:
+----
+ (x());
+----
+
+even though, by a similar logic, this should be interpreted as meaning the same thing as just x();. It very much seems to me that if you permit the preceding statements with superfluous parentheses, you ought to accept this last one as well. Not because it's useful or anything. It's just a question of consistency.
+
+Of course, I suppose it's not written anywhere that the designers of a programming language have to be _consistent_. Life doesn't have to be fair either even if we would like that also.
+
+Anyway, the Java parser in legacy JavaCC accepts all of the above constructs with no complaint. Now it could make sense to do your parsing in a very loose manner and then do a post-parse tree walk that catches these problems and reports them to the user. (It appears that some projects have validator classes that do walk over the tree and catch these things, but I think that to have a parser that just catches these things straightaway is a better idea.)
+
+My thinking about this recently has been that, since JavaCC 21 generated parsers will now have the ability to parse in a fault-tolerant mode, if you are in the fault-intolerant mode, the grammar provided for Java (or any other major programming language) should be _maximally correct_. 
+
+If you want it to be forgiving of errors, then just turn fault-tolerant parsing on. That's what it's there for! So, over the last few days, I put in a bit of work to make the built-in Java grammar work according to spec. In fact, as best I can tell, it works exactly according to the spec. I even decided just to implement the spec quite precisely for now, even when it's a tad dubious.
+
+For example, in the JLS (the latest, great version, for JDK15) the specification of ThrowStatement is:
+----
+ ThrowStatement:
+     'throw' Expression ';'
+----
+
+There is no further specification that says that the Expression in question cannot be an arithmetic expression. So, just by the "letter of the law" the above specification permits:
+----
+ throw 2;
+----
+or 
+----
+throw n->n+7;
+----
+
+Clearly there are a bunch of things that cannot be thrown. Granted, in the following:
+----
+ int x=2;
+ throw x;
+----
+
+it is fairly obvious to the naked eye that this is invalid code. However, it is not really _syntactically_ invalid because, based on the bounded analysis of the statement itself (in the second line above), x could be an exception instance. We know it's not because we see the line before it, but look at it this way: both lines stand on their own _syntactically_. Or, to put it another way, a parser is not expected to do any extra analysis to try to figure out whether x in the above really is an exception that can be thrown. That's the compiler's problem.
+
+As for throw 2;, well, the expression to the right of throw is an integer literal and it can be seen with no extra analysis that the statement is invalid. However, the java language spec says that a valid ThrowStatement is of the form:
+----
+ ThrowStatement:
+    'throw' Expression ';'
+----
+
+so throw 2; is "valid" by the letter of the law. It is certainly invalid semantically, but again, that's the compiler's problem.
+
+I'm of two minds about this, to tell the truth. I might well patch the grammar later on to disallow things like this that are obviously FUBAR. But, you see, at this stage, I decided to implement the java language specification _exactly_ -- even in cases where improvements or fixes seem obvious.
+
+And I think that what is now there in the repository is just that, a faithful implementation of the Java 15 language spec. If the spec is loose at certain points, I'll be equivalently loose, but I'll be exactly as strict as the spec is. That's my current position.
+
+=== Transcending the Basic Multilingual Plane
+
+(((Java, Unicode, Beyond Plane 0)))
+When Java was first created, it was quite an advance because it was (as far as I know, anyway) the first major programming language specified to work with full Unicode. So you could write:
+----
+ String país = "Canadá";
+----
+
+or
+----
+  Город город = new Город("Москва");
+----
+
+// or even:  //these didn't print in PDF & I don't have time to figure out
+// ----
+//  城市 北京 = new 城市("北京");
+// ----
+
+The full range of Unicode characters could be used in the names of variables, methods, types... Also in string literals.
+
+It was a very noble idea to treat non-English speakers as first class citizens. Not at all typical of existing computing culture. Or anglo-saxon culture generally, come to think of it...
+
+So, early Java (and JavaCC which dates back to the early days of Java) automatically supported full Unicode, all the 50,000 or so characters in the then current Unicode spec.
+
+Well, the problem is that the now current Unicode spec has far more characters than that. The characters that can be represented internally in 2 bytes comprise Unicode's _plane 0_, a.k.a. the basic multilingual plane. JavaCC was never updated to handle the supplementary characters, such as plane 1, which is the _supplementary multilingual plane_ or plane 2, which is the _supplementary ideographic plane_. And, in fact, many of these supplementary characters are considered permissible in Java identifiers.
+
+JavaCC 21 has been enhanced to correctly handle any characters outside of plane 0, which are the ones that require 4 bytes of internal storage. Or another way of putting this is that the assumption that a character is 2 bytes is no longer hard-coded into the the JavaCC 21 grammar. See the section on JavaCC 21 Supporting Unicode in the New Features chapter for more Unicode information.
+
+==== Final Thoughts
+
+As far as I know, the Java grammar that is included in JavaCC 21, and is freely usable separately, is an exact implementation of the Java 15 language spec,  including support for extended Unicode, i.e. characters beyond the basic multilingual plane. Or, another way of expressing all this is that the Java grammar in JavaCC 21 is now as correct as it can possibly be.
+
+Interestingly, the extended Unicode characters include emojis. And we really can't live without emojis, can we now? Well, I guess we _could_ live without emojis, but it would be in very gray, depressing kind of world -- kind of like Dorothy in the black-and-white world of Kansas before she goes to the bright multi-colored land of Oz.
+
+So, enjoy the maximally correct JavaCC 21 grammar. Emojis, here we come!

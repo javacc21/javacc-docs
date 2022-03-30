@@ -1,0 +1,32 @@
+=== The INCLUDE Statement and Lexical State
+
+JavaCC 21 allows you to compose your grammar file from multiple physical files using the INCLUDE statement. For example, in the grammar file you're working on, you could add a statement like the following: 
+----
+ INCLUDE "IncludedGrammar.javacc"
+----
+
+to have the contents of the included file inserted into your grammar.
+
+[NOTE]
+_The INCLUDE feature is not available in legacy JavaCC._
+
+(((INCLUDE, Allows Grammar Reuse)))
+The INCLUDE feature allows you to reuse a base grammar or any generally useful fragment in various files and thereby avoid the copy-paste-modify _antipattern_ that would otherwise be required. 
+
+Still, as they say, the devil is in the details, and there are some various wrinkles that need to be covered here.
+
+==== The DEFAULT_LEXICAL_STATE setting
+
+(((Options and Settings, DEFAULT_LEXICAL_STATE))) (((INCLUDE, DEFAULT_LEXICAL_STATE)))
+In legacy JavaCC, any lexical definitions that didn't specify a lexical state automatically belonged to a lexical state called "DEFAULT". Now, obviously, this could be a problem when using the INCLUDE feature because both the including and included grammar are likely to have a "DEFAULT" lexical state which could easily contain duplicate lexical elements which would clobber one another.
+
+To deal with that situation, JavaCC 21 has introduced a setting called *DEFAULT_LEXICAL_STATE*. When defined, any lexical definitions where the lexical state is unspecified will be in that lexical state. For example, a JSON grammar would likely have something like this at the top:
+----
+DEFAULT_LEXICAL_STATE="JSON";
+----
+
+and any lexical elements in that grammar would automatically belong to the JSON lexical state. 
+
+Any grammar could then be enhanced to handle JSON data by including the JSON grammar. That way, even if the enhanced (including) grammar (with its own "default" lexical state) and the included grammar both contain a lexical element, such as <NUMBER> or <VALUE>, there won't be a conflict because they will belong to different lexical states. When the _including_ grammar wants to handle JSON data, it would have to make an explicit switch to the JSON lexical state to use those JSON lexical elements.
+
+At the moment, *DEFAULT_LEXICAL_STATE* is the only setting you can put in an **INCLUDE**d grammar that has any effect. All of the other options are simply ignored, since they are presumably set in the top-level _including_ grammar. 

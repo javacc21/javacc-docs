@@ -1,0 +1,33 @@
+=== Lexical Specifications Can Omit Curly Braces
+
+(((Streamlined Syntax, Lexical Specifications))) (((Lexical Specifications, Streamlined Syntax)))
+In this case, they are written with no opening { and the list is ended with a semicolon. Thus, instead of writing:
+----
+ TOKEN #Delimiter :
+ {
+    <LPAREN : "(">
+    |
+    <RPAREN> : ")">
+    |
+    <LBRACE> : "{">
+    |
+    <RBRACE> : "}">
+ }
+----
+
+the newer, preferable syntax is:
+----
+ TOKEN #Delimiter :
+  <LPAREN: "(" > 
+  | 
+  <RPAREN: ")" >
+  | 
+  <LBRACE: "{" > 
+  |
+  <RBRACE: "}" > 
+ ;
+----
+
+IMPORTANT: If you omit the curly braces surrounding tokens, you _must_ use a semicolon to mark the end of each lexical specification (token production).
+
+This format style is considered preferable, not because it saves much space (it doesn't!) but because one aspect of the newer syntax is that the {...} are reserved for elements that are really embedded Java actions. As you can see, in the newer syntax for BNF productions, the only use of {...} is for actual Java code.

@@ -1,0 +1,86 @@
+=== The INCLUDE Statement
+
+(((INCLUDE, Introduction)))
+JavaCC 21's INCLUDE statement allows you to break up your grammar file into multiple physical files. It would look like this typically:
+----
+INCLUDE "IncludedGrammar.javacc"
+----
+
+_This feature is not present in legacy JavaCC._
+
+The motivation behind *INCLUDE* should be obvious. By allowing you to reuse a base grammar or any generally useful fragment in various files, you can avoid the copy-paste-modify _antipattern_ that would have been necessary when using legacy JavaCC. Generally speaking, being able to to organize a large grammar into multiple physical files can be a big win in terms of maintainability.
+
+Still, as they say, the devil is in the details, and there are some various wrinkles that need to be covered here.
+
+==== The DEFAULT_LEXICAL_STATE Setting
+
+(((Options and Settings, DEFAULT_LEXICAL_STATE)))
+In legacy JavaCC, if you defined a token production without specifying a lexical state, any lexical definitions belonged to a lexical state called "DEFAULT". Now, obviously, this is a problem once you have an INCLUDE disposition, because the including and included grammar are liable to have a "DEFAULT" lexical state and, typically, we don't want the respective definitions to clobber one another.
+
+Thus, JavaCC 21 introduces a setting called *DEFAULT_LEXICAL_STATE*. That means that any lexical specifications where the lexical state is unspecified are in that state. Thus, a JSON grammar would likely have something like this at the top:
+----
+DEFAULT_LEXICAL_STATE="JSON";
+----
+
+In that case, any grammar for a language that wants to handle embedded JSON data would presumably define its own "default" lexical state, and when it wants to handle embedded JSON data, would have to make an explicit switch to that JSON lexical state that is the _default_ in the included grammar.
+
+Actually, at the moment, *DEFAULT_LEXICAL_STATE* is the only setting you can put in an **INCLUDE**d grammar that has any effect. All of the other options are simply ignored, since they are presumably set in the top-level _including_ grammar. 
+
+In legacy JavaCC, if you defined a token production without specifying a lexical state, those patterns are matched in a lexical state called "DEFAULT" by default, obviously. This is a problem in terms of its interaction with the INCLUDE directive, since both grammars are liable to have a "DEFAULT" lexical state. 
+
+So, you see, the solution is that the _default_ lexical state (the one you are using if none is explicitly specified) should be different in the _including_ grammar from the _included_ one.
+
+==== Code Injection
+
+(((Code Injection, Introduction)))
+JavaCC still supports the legacy JavaCC constructs of *PARSER_BEGIN...PARSER_END* and *TOKEN_MGR_DECLS*. (For how much longer, I am not making any promises...). However, those constructs are ignored within an **INCLUDE**d grammar.
+
+You can still _inject_ code into the generated parser or lexer class, from within an included grammar, but you need to write something like:
+----
+ INJECT PARSER_CLASS : 
+ {
+   ...
+ }
+----
+
+or
+
+----
+ INJECT LEXER_CLASS : 
+ {
+   ...
+ }
+----
+
+JavaCC 21 will replace the *PARSER_CLASS* and *LEXER_CLASS* aliases with the appropriate names -- i.e. the actual class names of the XXXParser or XXXLexer being generated. So, if you have a Foo language in which you want to embed JSON expressions, so you include a JSON grammar, if that JSON grammar is to include some code within the generated parser, it cannot be:
+----
+ INJECT JSONParser :
+ {
+   ...
+ }
+----
+
+because the parser class we are generating is not JSONParser, it is FOOParser! However, the person writing a a generally useful JSON grammar that can be embedded in other grammars does not know the classname of Parser (or Lexer) that is being generated. So, he needs to use the alias *PARSER_CLASS* or possibly *LEXER_CLASS* for the injected code to be included.
+
+So, do not be surprised when the code within PARSER_BEGIN...PARSER_END is ignored if it is within an INCLUDEd grammar. You need to write INJECT(PARSER_CLASS) to achieve the desired result.
+
+In fact, the aliases *PARSER_CLASS, LEXER_CLASS, CONSTANTS_CLASS*, and *PARSER_PACKAGE* can be used in code injections and java actions to make an included grammar (or grammar fragment) more generally useful.
+
+To see a concrete example of *INCLUDE* in use, you can take a look at [[GitHub Code Ref]]. Specifically, you can see that the JavaCC.javacc grammar INCLUDEs the Java.javacc. Another point is that this Java.javacc grammar file is, on its own quite generally usable. And useful!
+
+==== INCLUDE with Java Source Files
+
+(((INCLUDE, Java Source Files)))
+Note also that if the name of the INCLUDEd file ends in .java or in .jav, then the the file is assumed to only contain Java source code. Thus, writing:
+----
+ INCLUDE "SomeJavaCode.java"
+----
+
+is exactly the same as if you wrote:
+----
+ INJECT : {
+     (contents of the SomeJavaCode.java file here)
+ }
+----
+
+In other words, it is equivalent to an INJECT block with no type specified (second sort of code injection described here (REF DOC).

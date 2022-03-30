@@ -1,0 +1,54 @@
+=== Rewriting the Lexer
+
+(((Lexer Rewritten)))
+Over the last couple of months, I went into full-blown obsessive mode and managed to rewrite the remaining part of JavaCC that had been resisting my refactoring efforts -- specifically the lexer/scanner generation part.
+
+With this piece of work, not only have I completed a full rewrite of the legacy JavaCC codebase, but this was the most challenging part. (I guess I was saving the best for last!) 
+
+The entire file (over 3000 lines) is light on comments and structure. Generally speaking, I have never made any bones about the fact that I do not consider the legacy JavaCC codebase to be of very high quality. But I feel I have to make a certain point clear: I do not say that to denigrate the original authors. The fact is that the original JavaCC codebase was written in the very early days of Java, against JDK 1.0.x, at a point in time when many of the core API's we take for granted (like logging, security and collections classes) did not exist. 
+
+==== Templates and Templating Tools
+
+(((Templates, Code Generation)))
+I would also add that, even at this point, in 2021, the best practices for writing code like this, code that generates code, may still not be widely understood. It is my view that any such app (of which JavaCC is just one example) should use templates for code generation.  
+
+*   Legacy JavaCC v7.x uses a form of templates that resemble preprocessor directives (#if/#else/#fi) to include or exclude lines of code, mostly based on options enabled or disabled. They do state that they may consider using a 3rd party template engine if required
+*   ANTLR uses its StringTemplate template engine to generate code
+*   JavaCC 21 uses FreeMarker,(((Templates, FreeMarker))) one of the most popular Java template engines that can generate text output such as HTML web pages, e-mails, configuration files, source code and more
+
+Now, let us consider the main FreeMarker template (Lexer.java.ftl) used by JavaCC21 to generate the XXXLexer class. That template file is currently less than 800 lines, but taking into account comments and whitespace, a true count is more like 600 lines.
+
+In fact, the real heart of it is in this nextToken() method.(((nextToken method)))
+
+
+That is the main loop of the nondeterministic finite automaton algorithm (NFA) (((NFA))) (((Templates, nondeterministic finite automaton)))that is at the heart of the tokenization machinery. The real guts of the NFA code is now separated out into another file, NfaData.java.ftl, which is a holder for the various NFA-related data. The template that generates that is on the order of 250 lines. Well, in short, the core of the lexical scanner machinery is generated in less than 1000 lines. Maybe about 300 lines of FreeMarker and another 600 lines of Java.
+
+Of course, legacy JavaCC could not express this nearly so tersely and elegantly, just for starters, because the rewritten version makes use of some of the functional interface API that was introduced in JDK 8. (Around 2014.) 
+
+Basically, the template generates a table of function pointers, actually instances of the NfaFunction interface that I define, and that collectively represent the NFA state machine that corresponds to a given lexical state. All the FTL (FreeMarker template language) code that generates this is expressed mostly in this relatively short template.
+
+The code on the Java side is in the package com.javacc.core which is now about 2000 lines in its entirety, but the real code for generating the NFA, principally in NfaBuilder.java and NfaState.java, isn't that many lines of code at all.
+
+==== Taking Stock of Things
+
+I really feel that cleaning up all the NFA generation code and getting it down below 1000 lines total is really a very major milestone in JavaCC 21 development. As I say above, JavaCC 21 is now, to all intents and purposes, a 100% rewrite. By the way, if you're wondering how I got from the starting point to this endpoint, here is an executive summary:
+
+(((JavaCC 21, Rewrite Procedure)))
+What I did finally was that I tried to get rid of everything in the original code that was not purely necessary. There were all kinds of tricky bits of code that really only existed for optimization. I figured that if I got rid of every single optimization in the code, it would run a bit slower, but I reasoned that if it was within a binary order of magnitude, and in return, I had the thing rewritten in a readable, maintainable manner, that was a good tradeoff.
+
+Also, I undertook the aforementioned code simplification in large part so that I could finally acquire a conceptual grasp of what it really did.
+
+But...
+
+It turned out that once I had the thing reduced down to its minimal expression algorithmically, the resulting generated code was dramatically slower. Probably 10x or even 15x slower. That was more than I considered acceptable or that I considered that an end-user could (or should) accept.
+
+==== Optimizing the Lexer Code
+
+(((Lexer, Optimizing the Rewrite)))
+I put in some of my own optimizations (rather naive, bloody-minded ones in retrospect...) and got the code down to about 4x slower than legacy, which I thought was still too much of a slowdown. I then did more investigation of the question and saw that there is actually a whole literature about optimizing NFA state machines. I had run across this stuff before, but never really read through it because I had found it all very inaccessible. 
+
+So, I had managed such a massive cleanup of the code but now needed to re-optimize since the speed difference was unacceptable. (My code simplification had gone too far, I guess!) It turned out that after applying one well-known optimization and another separate optimization I came up with, I got the code within a binary order of magnitude of the legacy code. I was going to leave it at that, because there were various other matters requiring my attention (not just in JavaCC!). At that point, depending on your exact use case (one's mileage always varies) the newer lexical scanning code was about 30 to 40% slower than legacy. 
+
+However, in the following days I got the thing back to around par. At least, tokenizing Java code (which is my main benchmark) is now about the same speed as what it was before. Actually, I still think there is a bit of optimization left on the table, so I now believe I can get this a shade faster than the legacy code was.
+
+And the overall lexical generation code is still about 1500 lines, less than half the size of the legacy code base.

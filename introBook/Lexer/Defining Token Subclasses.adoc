@@ -1,0 +1,45 @@
+=== Enhancing Token Subclasses
+
+(((Tokens, Subclasses))) (((Subclasses of Token)))
+The traditional way of defining tokens was to associate:
+
+* one token name with one literal (<FOO : "foo">)
+* one token name with a regular expression (<BAR : "bar" | "BAR" | "Bar">)
+* private tokens (<AREA_CODE : <DIGIT><DIGIT><DIGIT> > | <#DIGIT : ["0" - "9"]> ).
+
+Using the above Token definitions, after running JavaCC, the output directory will have token files for FOO, BAR, and AREA_CODE but not for DIGIT, the private token. These token files all extend the type Token and can be used in production rules. However, DIGIT can only be used as an element of a lexical production and _not_ in production rules.
+
+(((Token Subclasses, how to define)))
+JavaCC 21 has enhanced how you can define Token subclasses. For example, consider the following specification that has inserted #Operator between TOKEN and the ":"
+----
+ TOKEN #Operator : 
+ {
+   <PLUS : "+">
+   |
+   <MINUS : "-">
+   |
+   <TIMES : "*">
+   |
+   <DIVIDE : "/"> 
+ }
+----
+
+After running, JavaCC 21 will have defined a Token subclass called Operator and created a token file in the output directory with that name. The Tokens for “+”, “-”, “*”, and “/” will be instantiated as instances of Operator but they will not have their own token file. You can use <PLUS>, <MINUS>, etc. in the production rules but you can't use <Operator> to stand in for any of the four operators.
+
+There is also the possibility of defining further subclasses by adding the # followed by the name of its subclass to each element's definition, as shown in the following:
+----
+ TOKEN #Operator : 
+ {
+    <PLUS : "+"> #Plus
+    |
+    <MINUS : "-"> #Minus
+    |
+    <TIMES : "*"> #Times
+    |
+    <DIVIDE : "/"> #Divide
+ }
+----
+
+Here, as before, the Operator class is defined as a subclass of Token and the classes Plus, Minus, Times, and Divide are created as subclasses of Operator (_not Token_). After running JavaCC 21, the output folder will have a file for Operator as a subclass of Token and Plus, Minus, Times, and Divide will all have their own files as subclasses of Operator. 
+
+This subclassing would allow a common method, such as checkForZero(), to be inserted into the Operator code and then be inherited by its subclasses. This disposition, in many cases, will allow one to write code using much more natural object-oriented programming idioms than was possible with legacy JavaCC.

@@ -1,0 +1,111 @@
+:imagesdir: ../images
+//A Couple of Nice-to-Have Features, January 8, 2021
+=== Nice to Have Features
+
+(((Annotations, Introduced)))
+I recently introduced a couple of "pseudo-annotations" (I'll explain the pseudo part later) that can be used in code injections to express things in a much more succinct manner.
+
+Here is an example:
+----
+ INJECT Foo : 
+ {
+
+   @property String name;
+  ...
+ }
+----
+
+(((@Property, Generate Getters and Setters)))
+and the code generated in Foo.java corresponding to that line will be:
+----
+  private String name;
+
+  public String getName() {return name;}
+
+  public void setName(String name) {this.name = name;}
+----
+
+In the generated code, voilà, the field is encapsulated with get/set methods.
+
+This feature follows a pattern already set with other little details of this nature. This feature was implemented because it would be generally useful to JavaCC users as well as useful for internal work on JavaCC. For example, internally are the following pseudo-annotations:
+----
+@Property Expression LHS;
+@Property Expansion expansion, nestedExpansion;
+@Property boolean negated, semanticLookaheadNested;
+@Property Expression semanticLookahead;
+----
+
+And this saves the bother of writing 12 different (but repetitive) getter/setter methods! Another interesting aspect of this is that it removes the need to write a regression test for the feature because if the feature stops working, it won't be possible to re-bootstrap the build!
+
+Well, that's all for the @Property pseudo-annotation. 
+
+==== Possible Refinements to @Property
+
+The @Property pseudo-annotation will likely get refined on an as-needed basis. For example, indexed properties would be fairly easy. We could have:
+----
+ @IndexedProperty Expression[] expressions;
+----
+
+and this could generate:
+----
+private Expression[] expressions;
+
+public getExpression(i) {return expressions[i];}
+
+public setExpression(i, Expression expression) {expressions[i] = expression;}
+----
+
+And that could also work with List<Expression>, also generating the indexed getter/setter methods to encapsulate the field. But that is not working at the moment.
+
+Adding pseudo-annotations could be interpreted as a kind of a re-invention of the wheel because there are other tools that do these things (and much more). However this feature provides a kind of internal workout for the Java code manipulation capabilities that already exist inside of JavaCC 21. 
+
+The @Property pseudo-annotation is implemented in about 60 lines of code in JavaCodeUtils.java, available on github/javacc21. If you are interested in being able to manipulate Java source code programmatically like this, that code is probably quite worthy of study. You see, all of this ability to manipulate the AST of a java source file and insert and remove elements and so on is already inside of JavaCC 21 and can be freely used! So, really, if you need that kind of functionality in your work, take look. You'll probably be doing yourself a favor!
+
+==== The @MinJDK and @MaxJDK pseudo-annotations
+
+(((@MinJDK, Minimum JDK and JDK_TARGET))) (((@MaxJDK, Maximum JDK and JDK_TARGET)))
+Two more pseudo-annotations have been added that allow you to inject code conditionally on which JDK version is being targeted. Of course, that also means there is a way of indicating which JDK version we are targeting, which is the JDK_TARGET option. So, in short, if you had set the option:
+----
+JDK_TARGET=11;
+----
+
+at the top of your grammar file. And, in some code injection somewhere, you have:
+
+----
+@MinJDK13 void newFangledMethod() {....}
+----
+
+Then this means that the newFangledMethod will simply not be injected. Why? Because we said up top that we are targeting JDK 11, but this method needs a minimum JDK version of 13. So we just eliminate it. 
+
+The @MinJDKxx method also has a counterpart, @MaxJDKxx that allows you to specify the maximum (or highest) Java version that would support your code. For example: 
+----
+@MaxJDK12 void newFangledMethod() {throw new UnsupportedOperationException("This method is not available on JDK >=13");}
+----
+
+NOTE: If you don't specify the JDK_TARGET setting, it defaults to 8. 
+
+==== Why Are these Pseudo-Annotations?
+
+(((Annotations Are Pseudo-annotations)))
+Now, getting back to these being pseudo-annotations, i.e. not real annotations... this is because the Java compiler and runtime know absolutely nothing about the aforementioned annotations. This is because all of these pseudo-annotations are removed from the AST before generating the final source code that is handed off to the compiler.
+
+Arguably, I maybe should have used some other syntax that I could put inside of comments. But finally, just reusing the annotation syntax seems simpler.
+
+Note also that this target JDK stuff can be used internally in semantic lookahead. For example, here, we only enter the blah blah blah expansion if our target JDK is 13 or higher.
+----
+ [ SCAN {grammar.getTargetJdk() >= 13} => blah blah blah ]
+----
+
+Well, as a closing note about all this, I would emphasize that JavaCC 21 has no real notion internally of what language features and API's are available in the respective Java versions. Basically, Min/MaxJDK are just a mechanism to specify that you are targeting whatever level of JDK, and you can conditionally generate your code on that. So, for example, if you specify that the above newFangledMethod is only injected if we are targeting JDK 13 or higher, but it actually contains code that requires JDK 15, well, JavaCC 21 makes no attempt to check any of that.
+
+Well, why would it? That's the job of the compiler!
+
+If you don't specify the JDK_TARGET option, it currently defaults to 8. And the valid range of values if you do specify it is from 8 to 17 inclusive. Actually, you can annotate something with @MinJDK25 and it won't be an error, despite the fact that there is no JDK 25. What will happen is that the method or field or whatever is simply never injected, because the highest TARGET_JDK option allowed is 15, so it will always be less than 25, so the element is simply always removed. 
+
+Specifying a non-existent JDK version, it just occurs to me, could provide a way of commenting out certain things in a code injection. Of course, unlike an actual comment, the element that is getting commented out this way has to be syntactically valid Java code.
+
+For those who are curious, I would point out that this min/maxJDK feature is implemented in two dozen lines of code.
+
+==== Closing Comment on Pseudo-Annotations
+
+The new features described in this post are not really necessary, strictly speaking. I think they do make life a bit more pleasant for a developer, but I would grant that one can live without them. That said, I would point out that these nice little things are bound to have an accumulative or incremental effect. While each one is marginal, once you have 10 or 20 such things, the cumulative effect is finally bound to be enormous.

@@ -1,0 +1,188 @@
+:imagesdir: ../images
+=== Fault-tolerant Parsing
+(((Fault-tolerant Parsing)))
+In order to structure the discussion, let us start with some actual code. Consider the following code snippet:
+----
+ void invalidMethod() {
+    int x = y+1;
+    Voulez-vous coucher avec moi ce soir?
+    if (condition() doThis()
+ }
+----
+
+Now, I suppose that the more discerning readers have already noticed that the above method has some little problems. For example, if you look closely at the third line of invalidMethod, you see there are some imbalanced parentheses. The condition after the if is missing the closing parenthesis. That line is also missing a semicolon at the end.
+
+But if we could insert those two missing tokens, that line would then be syntactically valid. Now, whether it compiles or not is another matter, but that is not our problem. Surely we can agree that complex systems are built on layers. On this layer, if we can apply some fix-ups and still construct a syntax tree from this code -- even when the original source code contains errors -- we have done our job, no?
+
+Well, we also do need to provide the means for other parts of the system that use this parsing component, client code, to find where we made these adjustments. So, any larger system using this parser must be able to traverse the tree and find where tokens were inserted or possibly deleted. In any case, there is the question of defining what precise problem we are trying to solve and, by the same token, what problems we are not trying to solve.
+
+Now, if we consider the second line of invalidMethod above, I think that most people would have the strong intuition that this is a completely different category of problem from the third line. And I think the reason is pretty obvious:
+
+_There is no imaginable *automatic algorithm* (fix-ups like inserting or deleting single tokens) that will turn that line into a valid statement in the Java language!_
+
+(Well, at least, nothing that makes any sense...)
+
+In terms of dealing with the second line in the method above, surely the best that a fault-tolerant parser could ever do with that is simply to skip over it and resume parsing on the next line as if that line wasn't there. Granted, the line following it is erroneous, but there is the means to fix it up and have something we can work with.
+
+Now here is a simple little point to consider:
+
+From the point of view of a non-fault-tolerant parser, there is NO difference between the second and the third lines of the invalidMethod above. Without a concept of error recovery, when the parser hits an error, any error, it fails. And that's it.
+
+However, for a _fault-tolerant parser_, the two lines are fundamentally different. In one case, the error recovery strategy involves some automatic algorithm of inserting/deleting tokens, and so, the problem is dealt with locally, or at the token level. In the other case, our recovery strategy will be to scan ahead to find some point at which we can resume parsing. In any case, we will build a syntax tree, but there must be a way for client code to find the problematic points, such as regions of text that were skipped, or where tokens were inserted.
+
+==== Localized Fix-up vs. Re-sync Faults
+
+(((Fault-tolerant Parsing, Localized Fixes vs Re-sync Fixes)))
+So, as we see, the overall problem can be partitioned into two sub-problems: 
+*   one involves small localized fixes, typically the insertion/deletion of a single token. 
+*   The other general solution is what other people in the space have called a re-sync. Basically, we give up on finding any localized solution and we scan forward to find a point at which we can resume parsing.
+
+Now, first of all, in terms of token-level fix-ups, a major issue was resolved long ago. You see, legacy JavaCC has no concept of an invalid token. If it reads a sequence of characters from the input stream that it has no way to tokenize, it just throws a TokenMgrError. In earlier versions of JavaCC, TokenMgrError(((TokenMgrError, Legacy JavaCC))) was a subclass of java.lang.Error -- a condition that is not really meant to be caught by application-level code. Now, apparently, it is a subclass of RuntimeException but regardless, by design, it is not even going to try to handle the characters it couldn't tokenize.
+
+It was surely not far into my initial attempt to attack the fault-tolerant problem that I realized that using a TokenMgrError would be a major obstacle. So JavaCC 21 did away with the whole concept of a separate exception type for lexical errors. JavaCC 21 simply defines an extra token type called INVALID (((INVALID token type))) and if the lexical machinery hits characters that it cannot tokenize, it creates a token anyway, but of type INVALID.
+
+Now, of course, the parsing machinery when it hits an invalid token, will end up throwing an exception, but it is a ParseException. Or, in other words, an InvalidToken is dealt with the same way as any other unexpected token type is handled. However, with FAULT_TOLERANT=true set in the options, an InvalidToken can simply be treated the same way as input that is unparsed. In legacy JavaCC, the terminology was specialToken, a token that is created but does not participate in parsing. (In practice, this is almost invariably used for comments.)
+
+So, if we encounter text like \\### in the middle of some Java code that cannot even be tokenized, then it gets turned into an InvalidToken, and in fault-tolerant mode, such a token can simply be set aside and parsing can continue.
+
+As an interesting aside, it is not clear to me whether this might also provide the best way of dealing with certain issues, like mismatched parentheses. In the example I gave above, the problem was that we were missing a closing parenthesis. Of course, the problem could equally well be that we have an extra one at the end, so we could have had:
+----
+ if (condition())) doSomething()
+----
+
+Here, the solution is to throw away the extra ) and continue. (And this is what the current implementation does.) However, unlike the \\### text that is invalid _lexically_, the closing ) is valid in the sense that it corresponds to a token type, such as RPAREN. 
+
+But in another sense, the RPAREN token is still invalid, since you cannot (in code in Java or similar languages anyway) have a closing parenthesis if there is no matching opening parenthesis. It might make sense to just use some bloody-minded approach and just track whether certain tokens are permissible in a context and mark them as invalid if they are not, and treat them the same way that the InvalidToken is. However, this is not currently implemented anywhere, but it strikes me as being definitely a possibility in certain spots. You could use a token hook method to mark certain tokens as invalid based on this kind of simple logic.
+
+However, the machinery currently in place uses a different logic, that is already described and implemented elsewhere. In fact, this (as well as just throwing away tokens that are lexically invalid) is basically the only localized fix-up strategy that is currently implemented.
+
+The algorithm is simply as follows:
+
+(((Fault-tolerant Parsing, Localized Fix-up Strategy)))
+If, at a given juncture, we expect a certain token type, but the next token is something else, we:
+
+*   Look ahead one more token and check if that is of the expected type, and if it is, we skip ahead to that one.
+*   If the previous trick did not work because the token after the next one is still of the wrong type, we check whether the next token is in the _follow set_ of the token we want. +
++
+For example, if we have something like if (foo {....}, where the closing parenthesis after foo is missing, we look at the next token, the { and if that is in the set of tokens that could _follow_ the ), we insert a _virtual_ ) token where it needs to be in between the foo and the {. +
++
+Note that we do not scan beyond that point. We don't try to check whether the code after that { is a valid Java block.
+
+Now, the above two tricks will work some of the time, but other times, they don't work. But that is not such a big deal, because we have some other tricks up our sleeve, namely...
+
+==== Re-sync
+
+(((Fault-tolerant Parsing, Re-sync Strategies)))
+The other main way of handling errors is _re-sync_ (which is, obviously, short for re-synchronization). This means we scan forward and try to find a point at which we can resume parsing. There are really two kinds of _re-sync_:
+
+*   General re-sync
+*   Repeat re-sync
+
+The above is not my terminology. It is used by the author (or authors) of Chevrotain, a tool for building parsers in Javascript. In any case, it's easier to explain this with code than in words. The fault-tolerant features in JavaCC 21 introduce a new operator, the ! which specifies _re-sync_. So, if you have:
+----
+ A B ! C 
+----
+
+(((Fault-tolerant Parsing, ! operator))) (((! operator, Re-sync Point, Fault-tolerant Parsing)))
+We parse an A, followed by a B, followed by a C, except that we have this ! which indicates a _re-sync_ point. If we encounter an error trying to match grammar rule B, we will try to scan forward to a point where we can match whatever followed, in this case the C. And, by the way, if B is supposed to build a node in the tree, we will build the node, but it will be marked as dirty so that it is clear, when traversing the tree, that we hit an error inside of B. So, basically, we get as far as we can get with B and if we fail, we kind of pretend we parsed a B and then scan forward looking for a C.
+
+Now, a _repeat re-sync_ is similar, but for a loop. Suppose you have:
+----
+ (A B)*! C
+----
+
+What the extra ! at the end of the loop construct means is that we do a _repeat re-sync_. If we hit an error at any point in the loop, we scan forward and try to find a point where we can either repeat the loop, or go past it. So, here this means we will be looking for the start of an A or a C.
+
+Now the plot thickens. Consider:
+----
+ (A B! C)*! D
+----
+
+We have the _repeat re-sync_ so if we hit an error inside the loop, we try to find a point to start an A, i.e. re-iterate the loop, or move past the loop to a D. BUT there is another _re-sync_ specified inside the loop, after the B, so if we hit an error in B, we try to _re-sync_ to C. But if we hit an error in A or C, we just try to find another point to start an A or a D.
+
+Another way of looking at this is that, if you are inside B and there is an error, there are two _re-sync_ points, but it is the more localized one that applies, which means that we scan forward to find a C. If you are inside the loop, but not in B, it is the outer _re-sync_ point that applies, which means that our recovery routine will scan forward looking for an A or a D.
+
+In essence, that's really about it. One final point. The exclamation point has a somewhat different meaning when it is right after a regular expression, i.e. just applies to a single terminal token type.
+----
+ "foo" "bar"! "baz"
+----
+
+This means that if "bar" is not present, we will definitely insert one. In this spot, the default single-token fix-up will insert a "bar" if the next token is "baz", otherwise throws an exception.
+
+==== How to Use Fault Tolerance and Re-Sync
+
+Well, here is the 2-part answer:
+
+*   Set FAULT_TOLERANT=true; up at the top of your grammar file.
+*   Insert some of these ! markers at key points in your grammar to indicate the _re-sync_ points.
+
+The first point is obvious enough, but the second point is less obvious: where should these ! markers be inserted?
+
+Well, the fact of the matter is that there are typically just a few key repeat _re-sync_ points in the grammar of most typical languages. Let's go back to the example that we started with. It occurs inside a method declaration. In the Java grammar, a MethodDeclaration is defined as follows:
+----
+ #MethodDeclaration :
+   Modifiers
+   [ TypeParameters ]
+   ReturnType
+   <IDENTIFIER> 
+   =>|+1 FormalParameters ( "[" "]" )*
+   [ ThrowsList ]
+   ( Block | ";" )
+   {return CURRENT_NODE;}
+ ;
+----
+
+But, more specifically, the erroneous code in the example up top occurs when we are parsing the Block part. What does a Block look like? Well, it is written in a single line further down as:
+----
+Block #CodeBlock : "{" (BlockStatement)*! "}" ;
+----
+
+That is the definition of a block of code in the Java grammar. As you can see, a Block is simply a left brace followed by zero or more BlockStatements followed by a right brace. And there you see the extra ! here which means that this is a _repeat re-sync_ point. 
+
+If we hit an error inside a BlockStatement (one that could not be handled with our default one-token fix-up tricks) then we are just going to try to _re-sync_ to find a new BlockStatement to start or possibly just match the terminating right brace.
+
+Now, one point to make about this whole thing is that it is highly recursive. For example, a BlockStatement is a big choice of various kinds of statements. One such statement is the IfStatement:
+----
+ IfStatement : 
+   "if" 
+   "(" Expression ")" Statement 
+   [ "else" Statement ] 
+ ;
+----
+
+The Statement nodes are very likely to be a nested IfStatement (i.e. if ... else if ...) or a Block. The point is that if an error occurs inside a Block, the relevant _re-sync_ point will be the most local, or innermost block.
+
+Now, the MethodDeclaration rule is part of the specification of a higher-level construct, which is the declaration of a class or interface. Here is the current BNF production for that:
+----
+ ClassOrInterfaceBody : 
+    "{" 
+    (ClassOrInterfaceBodyDeclaration)*! 
+    "}" 
+ ;
+----
+
+Again, we see that this repeated ClassOrInterfaceBodyDeclaration loop is marked as a repeat _re-sync_ point. The ClassOrInterfaceBodyDeclaration is a set of choices, one of which is the MethodDeclaration, and also you have field declarations, constructors, static initializers, and so forth. 
+
+If we have an error inside a MethodDeclaration, say, if there isn't some more localized _re-sync point_, the machinery will just _re-sync_ to the above loop, i.e. scan forward to find the next thing it can match -- maybe another MethodDeclaration, or a FieldDeclaration or the declaration of an inner class... or, quite possibly, just matching the } that immediately follows the loop
+
+So, the answer to the question above, about how you turn your fault-intolerant grammar into a fault-tolerant one should be clearer now. Somewhat clearer anyway. You mark your grammar as FAULT_TOLERANT and you indicate with a ! some points in the grammar that are natural _repeat re-sync_ points.
+
+It may well be that you figure out by trial and error that there are some other key points that you can mark as general _re-sync_ points that will improve things somewhat.
+
+==== Concluding Remarks on Fault-Tolerant Parsing
+
+Everything described above is now implemented in code. However, it is still very much in a beta state. Ideally, people interested in this sort of functionality will step up and do some testing and provide some feedback. (Is that too much to expect?)
+
+*Key Design Goals:*
+
+*   When fed syntactically valid input, a fault-tolerant parser should be just about as performant as a fault-intolerant one. When I say "just about", I guess I mean within 10% or 20% at worst. The fault-tolerant parser is maintaining a bit more information than the fault-intolerant one, but the overhead seems to be quite small. (I haven't done any serious profiling admittedly, but this seems to be the case.)
+*   Any parser generated as fault-tolerant can be run in fault-intolerant mode via setParserTolerant(false).
+*   Any grammar written to be fault-tolerant also serves equally well for generating a regular fault-intolerant parser, since the extra ! annotations are just ignored.
+
+I think the current implementation meets all the above goals. In retrospect, the reason that it took me so long to get to this point with this is that I think I became too obsessed with localized fix-ups -- single token insertion/deletion. Finally, it dawned on me that really, the key issue was _re-sync_, in particular loop or _repeat re-sync_.
+
+*Remaining Issues and Future Directions*
+
+There are some remaining items to take care of. Currently, the API for client code to find the problematic points is not well defined. It has occurred to me recently that one possibility would be to have a sort of listener API where, objects can "listen" for these key events, like inserting a token to do a localized fix-up or scanning past code segments to do a "re-sync". Or possibly, just having a separate data structure that is built up that contains all the error-related data.
+
+I anticipate that, as things move forward, the fault-tolerant machinery will be more customizable. For example, some people will legitimately want to write their own localized fix-up algorithms. It is not hard to permit this, just a question of letting people inject their own substitute handleUnexpectedToken method. I have already put in a way of injecting your own custom error recovery code that would get precedence over what is generated automatically. But that will be described in a different article.

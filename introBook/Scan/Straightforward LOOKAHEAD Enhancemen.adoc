@@ -1,0 +1,64 @@
+:imagesdir: ../images
+// Straightforward LOOKAHEAD Enhancements April 23, 2020
+=== Enhanced LOOKAHEAD Statements
+
+==== Simplified Syntactic LOOKAHEADs
+
+(((LOOKAHEAD, Simplified Syntax))) (((SCAN, Simplified Syntax)))
+Legacy JavaCC grammars are typically full of statements like:
+----
+ LOOKAHEAD(Foo()) Foo()
+----
+
+and even:
+----
+ LOOKAHEAD(Foo() [Bar()] Baz()) Foo() [Bar()] Baz()
+----
+
+In the first example, we scan ahead to see whether a Foo() production would succeed and then, assuming that it succeeded, we parse Foo(). In the second example, we scan ahead to see whether a Foo() production, followed by an optional Bar() production, followed by a Baz() production will succeed and if they succeeded, then they are parsed.
+
+In JavaCC 21 the first example above can be written simply as:
+----
+ LOOKAHEAD Foo()
+----
+
+and the second example can be written as: 
+----
+ LOOKAHEAD Foo() [Bar()] Baz()
+----
+
+In fact, a shorter synonym is available, which is SCAN, so you can just write the first example as:
+----
+ SCAN Foo()
+----
+
+and the internal machinery deduces that it should put a lookahead routine to check whether the expansion in Foo() succeeds.
+
+==== Negative LOOKAHEAD
+
+(((LOOKAHEAD, ~ Negative Condition))) (((SCAN, ~ Negative Condition)))
+Now, another enhancement is the capability to perform a negative LOOKAHEAD. This enhancement came about because there are occasions where it is easier to describe something by what it is *_not_* than what it is. Thus, the following construct is now available:
+----
+ LOOKAHEAD(~Foo()) Bar()
+----
+
+This means that we can scan ahead for a Foo() production but if it is not there, then we assume that we have to parse a Bar(). This can be used with any expansion you could place in a LOOKAHEAD.
+
+So we can now write the following line:
+----
+ LOOKAHEAD(~(<BIT_OR>|<COMMA>|<RPAREN>|<RBRACE>|<RBRACKET>))
+----
+
+whereas before we had to write something like:
+----
+ LOOKAHEAD(0, {notTailOfExpansionUnit()})
+----
+
+where notTailOfExpansionUnit() is a Java method defined elsewhere in the file. 
+
+The first code is much better for a couple of reasons: 
+
+*   Anybody reading this can see exactly what the LOOKAHEAD does without having to go off to some other place to see where the method is defined.
+*   It does not resort to Java code, so it is compatible with generating code for other languages (Python, C#) 
+
+While these are relatively minor enhancements to LOOKAHEAD, they were so tempting to use that they were incorporated into the JavaCC build so that this feature could be used for internal development. And replacing those verbose repetitive constructs in a dozen different places in the included Java grammar and negative LOOKAHEADs is a clear win in readability and maintainability.

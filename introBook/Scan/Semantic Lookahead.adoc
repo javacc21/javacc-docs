@@ -1,0 +1,46 @@
+:imagesdir: ../images
+//Turning to Semantic Lookahead, July 16, 2020
+=== Semantic Lookahead
+
+(((LOOKAHEAD, Semantic)))
+_Semantic_ lookahead is actually a misnomer. It just means that the SCAN condition is expressed with arbitrary Java code. So, it might look ahead or it might do something else entirely. It's just Java code that is injected in this spot to resolve the choice at a choice point. It looks like:
+----
+ SCAN {someCondition()} => Foo Bar Baz
+----
+
+In the above snippet, someCondition() must return true or false and based on that, the parsing machinery decides whether to enter the Foo() production.  In short, from the point of view of the JavaCC machinery, the Java code is just a black box that outputs a yes/no or true/false based on whatever inscrutable criteria.
+
+NOTE: the term semantic lookahead is really something of a misnomer, particularly the “lookahead” part. The Java code does not necessarily look ahead. It might or might not, or it might look behind or look somewhere else, or check whether we are currently in the Year of the Dragon...
+
+The deeper problem is that, as you parse code, there are presumably semantic actions being executed, which would frequently build up some data, as the parsing proceeds. It will be very typical that your “semantic lookahead”, i.e. your Java code that decides whether to enter a production or not, is based on your being at a specific point in the parsing. 
+
+However, when you are scanning ahead, possibly visiting deeply nested expansions, you are not currently at that point in the parsing. Or, to put it another way, in a scanahead routine, the code is not executing any of the Java code actions associated with the actual parsing of the constructs you are scanning.
+
+I gave this quite a bit of thought over the last few days. It's actually quite a conundrum. I came to the following conclusions:
+
+Typically, as a default, you do not want to check semantic lookahead in a nested syntactic lookahead.
+
+BUT...
+
+The problem is that sometimes you do!
+
+Well, the solution that I implemented is as follows:
+
+If you really want a semantic lookahead to be checked in a nested lookahead, then you indicate that as follows:
+
+LOOKAHEAD ( {checkSomeCondition()}# ) FooBar()
+
+The # after the semantic lookahead means that it is used in nested lookahead, or in other words, we could say that it is global. If you do not specify that, it will only be used locally and routines generated for nested syntactic lookahead will ignore this check.
+
+==== Closing Notes on Semantic Lookahead
+
+In general, there has been a need for more powerful ways of expressing LOOKAHEADs (predicates really) in JavaCC. And when these more powerful ways are available, there would be less and less need for "semantic" lookahead, using Java to express a predicate (condition).
+
+One step in this direction that has already been implemented is the ability to make a LOOKAHEAD expansion negative. So, you can write:
+----
+ LOOKAHEAD(~Foo()) Bar()
+----
+
+This gives us a way of expressing the rather commonplace idea that, if what follows is not a Foo, then we assume it is a Bar.
+
+Predicates have also been implemented so that you can express more sophisticated conditions without the use of Semantic lookaheads and blackbox Java code. The rest of this chapter will give examples of using predicates as the more advanced features of SCAN are discussed.

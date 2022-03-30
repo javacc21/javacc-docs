@@ -1,0 +1,196 @@
+:imagesdir: ../images
+//New Feature: The =>|| delimiter stands for “scan up to here”, July 31, 2020
+=== The Up-To-Here Marker
+
+Not so long ago, I had a sort of _eureka moment_ when I realized that the legacy LOOKAHEAD construct was fundamentally half-baked or broken. And as I thought about it, I started narrowing in on how to definitely address the issue.
+
+==== LOOKAHEAD Background
+
+(((LOOKAHEAD, Background Information)))
+Well, let's get concrete. Suppose we have a production that looks like this:
+----
+ FooBar : <KEYWORD1> [<KEYWORD2>] "foo" Bar <STATEMENT_END>;
+----
+
+So, expressing things in English, our FooBar production above starts with the KEYWORD1 token, is followed _optionally_ by a KEYWORD2, and then we have concretely a "foo" followed by the rest of the production.
+
+Suppose, further, that we know that if we have a FooBar production, and we get to the "foo" above, we can _commit_ to being in a FooBar. Here is how the literature on legacy JavaCC would tell you to deal with such a situation:
+----
+ LOOKAHEAD (3) FooBar()
+----
+
+If it's a question of scanning up to and including the "foo", we can set a maximum lookahead of 3 tokens. This is already somewhat error-prone because anything that requires a human to calculate something is bound to allow mistakes to creep in (lack of sleep, distractions, deadline looming...). 
+
+But further, suppose our language evolves and another optional keyword is introduced in the above. So the production is now:
+----
+ FooBar : <KEYWORD1> [<KEYWORD2>] [<KEYWORD3>] "foo" Bar <STATEMENT_END>;
+----
+
+If we want to generate a lookahead routine that is guaranteed to scan right up to and including "foo" then we need to rewrite the earlier line as:
+----
+ LOOKAHEAD (4) FooBar()
+----
+
+Well, suppose this line occurs in more than one place. I guess it's no big problem. We just have to change the 3 to a 4 in all those places where we wrote that LOOKAHEAD. Well, we can imagine situations that are far from optimal. Suppose you needed to change this in 6 places but you only did it in 5 of them.
+
+You can see what the problem is: requiring the programmer to manually specify a specific number like 3 or 4 or whatever, to say the maximum number of tokens to look ahead, is really likely to produce errors not very robust with respect to ongoing evolution of the grammar.
+
+So, that outlines the problem. Here is the proposed solution. Using the new _Up-To-Here_ marker, we could write:
+----
+ FooBar : <KEYWORD1> [<KEYWORD2>] "foo" =>|| Bar <STATEMENT_END>;
+----
+
+==== Introducing the Up-To-Here Marker (=>||)
+
+(((Up-To-Here Marker, Introduced))) (((SCAN, Up-To-Here Marker))) (((LOOKAHEAD, Up-To-Here Marker))) (((=>||, Up-To-Here Introduced)))
+What the new delimiter means is that any generated scan routine scans up to and including the "foo" token and then reports success. It doesn't need to go into the Bar, or generally speaking, scan the production right to the very end. My current terminology for the =>|| delimiter is the _Up-To-Here_ marker.
+
+So, let us consider the scenarios outlined above. The first was that we introduced a new optional keyword, KEYWORD3, so the maximum number of tokens that you need to scan ahead goes from 3 to 4. In the new, improved solution that uses the _Up-To-Here_ marker, you simply insert the optional KEYWORD3 in the production:
+----
+ FooBar : <KEYWORD1> [<KEYWORD2>] [<KEYWORD3>] "foo" =>|| Bar <STATEMENT_END>;
+----
+
+and scanning up to the Bar token continues to be performed without requiring any other changes.
+
+==== Streamlined Scanning
+
+Moreover, there is no need to specify any LOOKAHEAD (or SCAN) at all when referencing this FooBar production because the information is already included in its specification. Thus, you can write:
+----
+ FooBar
+ |
+ Alternative1
+ |
+ Alternative2
+----
+
+And because FooBar already contains the _Up-To-Here_ marker, the code generator will generate the same code that it would have generated if you had written:
+----
+ LOOKAHEAD (<KeyWord1> [<KEYWORD2>] [<KEYWORD3>] "foo") FooBar()
+ |
+ Alternative1()
+ |
+ Alternative2()
+----
+
+So, some might say that using syntactic lookahead above instead of a concrete number of tokens is a better solution. But it is also quite error-prone as well as much more verbose! Regardless, you have the same problem. If you introduce another optional keyword into your FooBar production, you have to change all these LOOKAHEAD specifications everywhere they occurred. Again, quite error-prone.
+
+Another use of the _Up-To-Here_ marker is when you directly write a production in a choice construct. Thus, the older:
+----
+ LOOKAHEAD(Foo()) Foo() Bar() Baz()
+----
+
+which can now be written using the SCAN marker syntax as:
+----
+ SCAN Foo => Foo Bar Baz
+----
+
+and can now be written more succinctly using the _Up-To-Here marker as: 
+----
+ Foo =>|| Bar Baz
+----
+
+(((Up-To-Here Marker, Visual Appearance))) (((=>||, Visual Appearance))) 
+The _Up-To-Here_ marker is meant to visually symbolize that we scan up to here, but then it hits an explicit block. It's like the arrow up to a wall. I thought to make the "wall" two of these | symbols rather than just one because I thought the thing looked a bit more balanced that way.
+
+One funny wrinkle to this is that the abbreviated SCAN syntax of:
+----
+ => Foo Bar Baz
+----
+
+is now kind of superfluous. The super-abbreviated syntax above is actually not necessary, because we could express the same idea with:
+----
+ Foo Bar Baz =>||
+----
+
+That is not shorter, actually, it's two characters longer, but the point is that it is unified with the other ways of expressing it. Thus:
+----
+ Foo Bar =>|| Baz
+----
+
+would mean we scan ahead for Foo followed by Bar. And if that succeeds, then we parse the whole thing -- Foo Bar Baz in this case. 
+
+Note, by the way, that in this case, the production could still blow up, but presumably it does so when parsing the Baz, not the Foo or the Bar. 
+
+However, if you have any Java code actions in your production it could still fail because the scanahead routine does not execute any of the Java code actions. The Java code actions are only executed when the expression is actually being parsed, not in a lookahead routine unless the code block is annotated by a trailing #. So, in those cases, it could actually fail on Foo or Bar without hitting Baz.
+
+==== Concluding Remarks on LOOKAHEAD
+
+(((Up-To-Here Marker, Natural Model)))
+In the above, I outlined the problems with the existing LOOKAHEAD construct and the way that this new syntax remedies the situation. In a way, I was skirting around the really central issue here, which is that this whole notion of writing something like LOOKAHEAD (3), is a fundamentally flawed concept. And here is why:
+
+*This simply does not correspond to how a human being thinks!!!*
+
+For example, consider a class declaration in Java. I put it to you:
+
+Does a human programmer think to himself something like: _"What is the number N of tokens I have to scan ahead to identify something as a a class declaration?"_
+
+I think not. The person's conceptual model is something more like this:
+----
+ (various stuff...) "class" (TARGET IDENTIFIED, STOP SCANNING HERE) "{ (various more stuff...) "}"
+----
+
+In short, once you hit the "class" keyword, that's it. You don't have to continue scanning because you know that this is a class declaration. So, with this new feature, the way that the Java grammar in JavaCC works now corresponds much more to a human being's conceptual model of things. Like so:
+----
+ ClassDeclaration
+ Modifiers
+ "class" =>||
+ <IDENTIFIER>
+ [ TypeParameters ]
+ [ ExtendsList(false) ]
+ [ ImplementsList(false) ]
+ ClassOrInterfaceBody(false)
+ ;
+----
+
+Again, this reflects the way a human being considers the situation. Once we hit that "class" keyword, we know we are in a class declaration! So we can abort any scan routine for checking if what follows is a class declaration. Similarly, here is how the current Java grammar defines a Lambda expression:
+----
+ LambdaExpression :
+ LambdaLHS
+ "->" =>||
+ (Expression | Block)
+ ;
+----
+
+Once we hit the -> token, we know we are in a Lambda since this token does not occur anywhere in a Java grammar except within a Lambda. 
+
+NOTE: _This is no longer true as of JDK 14, where the -> is used for a different purpose inside switch expressions._
+
+In any case, when I first implemented the Lambdas in the Java grammar in earlier versions of the Java grammar, I wrote:
+----
+ LOOKAHEAD(LambdaLHS() "->") LambdaExpression()
+----
+
+and now, in the same spot, I just write:
+----
+ LambdaExpression
+----
+
+Inside the definition of the Lambda expression, I simply put a _Up-To-Here_ marker after the arrow token, so the code generation machinery will generate a scan routine that scans up to that point. And this formulation of things should be pretty robust with regards to future evolution and refinements.
+
+==== Up-To-Here Marker Usage Details
+
+(((Up-To-Here Marker, Ignored in Certain Situations)))
+The _Up-To-Here_ marker is ignored in certain situations. If you have a production FooBar that contains an _Up-To-Here_ marker and then you write:
+----
+ => FooBar MooBaz
+----
+
+the scanning machinery will ignore the _Up-To-Here_ marker that is inside of FooBar, because it must go to the very end of the FooBar production to then scan for the FooBaz that follows! If, however, you had:
+----
+ => MooBaz FooBar
+----
+
+then, yes, it would stop scanning after the =>|| inside of FooBar. It can do that because it is at the very end of the expansion to be scanned. Or, similarly, if you were building on top of the Java grammar, and you had:
+----
+ => MethodDeclaration ClassDeclaration
+----
+
+It would scan to the end of the MethodDeclaration (regardless of any _Up-To-Here_ markers inside of it) but it would stop after "class" when it got to the ClassDeclaration. Since the ClassDeclaration is last, there is no need to scan any further at that point. 
+
+It is important to understand these points because, even though we have much more powerful computing resources than ever before, unneeded scanning could start getting computationally expensive and make your parser noticeably sluggish!
+
+So there are some niggling details here and there on using the _Up-To-Here_ marker (see the section on Niggling Details later in this chapter) but I would encourage people to use this new feature. Even though it is a new feature, the _Up-To-Here_ marker will result in much more robust and readable grammars. So it is well worth learning and using. 
+
+NOTE: Please report any bugs you come across (or anything you think is a bug). There may be some untested corner cases that are not being handled correctly.
+
+I am quite excited about this new feature because I think it will largely supersede the legacy LOOKAHEAD specification, particularly in cases where specific limits, like 3 or 4, were set. Also, the versatility of the _Up-To-Here marker_ makes it seem quite possible that explicit syntactic lookaheads will also become unnecessary. Likewise, the new LookBehind feature (See the section on LookBehind later in this chapter) should serve to make the majority of semantic lookaheads unnecessary.

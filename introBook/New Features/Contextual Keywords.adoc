@@ -1,0 +1,49 @@
+=== Contextual Keywords
+
+(((Keywords, Contextual/Soft/Restricted)))
+It turns out that, from a language support perspective, the only new stable feature in JDK 17 is the concept of _sealed classes_. This involves the introduction of three new _soft_ or _contextual keywords_: sealed, non-sealed, and permits -- in principle much like the soft keywords record, var, and yield introduced in the last few Java release cycles. Now, by some sort of serendipity, the big novelty in Python 3.10 (moving from Python 3.09) is the introduction of a new pattern matching sublanguage and this involved introducing two new contextual keywords: match and case.
+
+To handle these sorts of _contextual keywords_ more cleanly, various refactoring and cleanup turned out to be necessary. Actually, this work was done initially to support the new features in Python. In so doing, I happened on what I think is a cleaner approach to handling contextual keywords and decided to refactor the Java grammar to use the same approach. Here is how it works:
+
+The new soft keywords are defined in the lexical part of the grammar just the same as any other regular token types. However, via a new setting, they are turned off by default. Thus, we see that, at the top of the Java grammar, we have the line:
+----
+ DEACTIVATE_TOKENS=RECORD, VAR, YIELD, SEALED, NON_SEALED, PERMITS;
+----
+This means that these token types are _deactivated_ by default. However, they are _activated_ at key moments when needed. For an illustration, here is how the new _permits clause_ is implemented:
+----
+ PermitsList :
+   SCAN 0 {getToken(1).getImage().equals("permits")}
+   =>
+   ACTIVATE_TOKENS PERMITS ("permits")
+   ObjectType
+   ("," ObjectType)*
+ ;
+----
+
+There are a couple of tricky things going on in the above that are well worth making the effort to understand. Let us compare the above rule to how the ImplementsList (for either a class or interface definition) is expressed:
+----
+ImplementsList :
+     "implements" 
+     ObjectType
+     (  "," ObjectType)*
+;
+----
+
+Since "implements" is just a regular "hard" keyword, this rule can be expressed in a very terse, natural way as compared to what is basically the same construct using the soft keyword "permits". Now, recall that the default resolution rule when deciding whether to enter a production or not is simply to look ahead one token and see if it is compatible with that grammar rule. If it is, we enter the rule. If not, don't enter it. 
+
+In the above ImplementsList production, this corresponds to peeking ahead one token and seeing if it is of the IMPLEMENTS type. BUT... this cannot work unmodified for the PermitsList production because, at the moment that you would peek ahead, the PERMITS token type is not activated. So, if the next token is "permits", it will be scanned as an IDENTIFIER type. It's actually kind of a catch-22 or bootstrap problem: to decide whether to enter the PermitsList production and thus activate the PERMITS token type, we want to look ahead one token, but since that token type is not yet activated...
+
+So, the solution applied above is that we override the default resolution mechanism by writing a SCAN construct which, rather than checking the token type, simply matches on the basis of the token's string image. And if that is the case, we activate the PERMITS token type so that we can process the input properly. Note also that we looked ahead one token and found an identifier with the string image "permits", but we need to throw that away and backtrack and now match that input as a PERMITS token type. The ACTIVATE_TOKENS instruction actually does that transparently. It resets the token input stream to just before the prior scan-ahead, and thus re-tokenizes the input and the next token is now of the right token type, PERMITS.
+
+Here is another little detail. The explicit SCAN directive above is, strictly speaking, not necessary. We could also write the rule as:
+----
+ PermitsList :
+    ACTIVATE_TOKENS PERMITS ("permits") =>|| 
+     ObjectType
+     ("," ObjectType)*
+ ;
+----
+
+(((Scanning, Up-To-Here Marker))) The _up-to-here marker_ (=>||) means that we scan ahead in the rule until we reach that point, and if we are successful at that, we enter the rule. If we explicitly scan ahead inside the rule as it were, the lookahead routine hits the ACTIVATE_TOKENS instruction which turns on the "permits" token type when checking the initial part of the rule. And this will successfully match the PERMITS token type. 
+
+Though this version of the grammar rule is more terse and elegant, it unfortunately generates code that is less computationally efficient, because it involves activating/deactivating the token type and resetting the input stream every time. However, this is really only necessary when the next token actually is "permits", but well over 99% of the time, it is not! So it is significantly more efficient to use the semantic predicate of checking whether the next token string image is "permits". So that's the way it's written.

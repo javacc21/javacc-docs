@@ -1,0 +1,23 @@
+:imagesdir: ../images
+//
+=== Annotating a Scan-Only Production
+
+(((Annotations, Scan-Only Production))) (((Scanning, Scan-Only Production, Annotation)))
+There is now a tree-building annotation #scan that indicates that a grammar production is used exclusively in lookahead. What this means is that if you have:
+----
+ SomeStatement : 
+    SCAN SomeStatementLookahead =>
+    .... 
+ ;
+----
+
+so there is another production called SomeStatementLookahead that only occurs in a lookahead, but is never used in actual parsing, you can annotate that production with #scan and no parsing code is generated for it, only lookahead.
+----
+ SomeStatementLookahead#scan :
+    ....
+ ;
+----
+
+Another little point about about productions annotated with #scan is that there is no need to append a # after a semantic condition to indicate that it applies in a lookahead. Any Java code snippet in such a production automatically applies in a lookahead.
+
+Also, no Node subclass is generated, which is the same as #void, but also no parsing production is generated.

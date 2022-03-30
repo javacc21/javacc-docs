@@ -1,0 +1,87 @@
+:imagesdir: ../images
+//JDK 14 Now Fully Supported! New Switch Syntax. October 25, 2020
+=== New Switch Syntax
+
+(((Switch Statement, New Java syntax)))
+In JDK 14, the only new language feature marked as stable is the new syntax for the Switch statement. JDK 14 also allows a Switch statement to be used as an expression.
+
+==== The Yield Statement and Context Sensitive Parsing 
+
+(((Switch Statement, Yield Statement))) (((Yield Statement, New Java Switch Syntax))) (((Context Sensitive Parsing, Yield Statement)))
+The main way that the new Switch syntax allows a Switch construct to return a value is by means of a new yield statement. The syntax of the yield statement is dead simple. In BNF notation, it is simply:
+----
+ "yield" Expression ";"
+----
+There is a novel twist though because "yield" is not actually a new keyword introduced into Java. In most contexts, "yield" is still just a regular Java identifier, so you can write:
+----
+ int yield = 4;
+----
+where yield is used as a identifier. An interesting twist on this is that:
+----
+ yield yield;
+----
+is actually a valid statement -- at least, assuming you are at the right spot in a switch expression. The first "yield" is the "yield" instruction and the second one is just a plain identifier!
+
+To be absolutely honest, I'm not a great fan of this new language feature, but it is part of the standard Java language, and I feel I have to support it. _(It was not theirs to question why...)_
+
+(((Switch Statement, Context-sensitive Parsing)))
+But the other aspect of this kind of context-sensitive parsing problem ("yield" being a keyword, kinda, sorta, some of the time, but actually being a regular identifier most of the time) is actually a pretty nice showcase for some of the new features in JavaCC 21. It turns out that the whole thing can actually be expressed quite elegantly. Here is the previous definition of the yield statement (((Switch Statement, JavaCC 21, YieldStatement)))in the Java grammar used now internally:
+----
+ YieldStatement :
+    <IDENTIFIER>
+    [
+       SCAN {!getToken(0).getImage().equals("yield")}#
+             ~\...\SwitchExpression
+       => FAIL 
+    ]
+    Expression
+    =>||
+    ";" 
+ ;
+----
+
+Interestingly enough, given the above definition, the YieldStatement production can just be used like all the other various XXXStatement productions without being qualified by any lookahead specification. 
+
+There are a few key points to understand here: 
+
+*  the up-to-here marker on the second-last line says that when this YieldStatement occurs at a choice point we scan ahead to this point to decide whether to enter the production.
+*  if we hit the FAIL statement in a lookahead routine, this is interpreted as a failure (duh!) and means effectively that if the current token (the one that lexically matched IDENTIFIER) is not the string "yield", then the lookahead has failed. 
+*  if we are not in a SwitchExpression, the lookahead fails. 
+*  the # after the semantic lookahead indicates that the predicate applies globally, i.e. both in a lookahead and in a regular parsing routine.)
+
+In short, some of these recently introduced features fall together such that we can express certain things in a fairly clean and robust way.
+
+As for the rest of the new switch statement syntax, I implemented it in a rather straightforward, even bloody minded way. One rather annoying thing I ran into was that in the following sort of construct, the way I had written the grammar, a construct like :
+----
+ case FOO, BAR -> {...}
+----
+
+the machinery wanted to interpret BAR->... as a Lambda. However, simply adding a lookbehind predicate at a key point solved the problem. The production UnaryExpressionNotPlusMinus is now:
+----
+ UnaryExpressionNotPlusMinus :
+   ( "~" | "!" ) UnaryExpression
+   |
+   SCAN ~\...\NewSwitchLabel
+   => LambdaExpression 
+   |
+   => CastExpression
+   |
+   PostfixExpression
+   |
+   SwitchExpression
+ ;
+----
+
+Of course, there is an extra choice added at the end, but also the SCAN ~\...\NewSwitchLabel lookbehind predicate was prefixed to the LambdaExpression choice, i.e. if we are in the new-style switch label, we do not parse Foo->... as a lambda! And that little tweak seems to have solved that problem. Once I had that, the Java grammar could parse all the JDK 14 and 15 source code. Hurrah!
+
+==== Updated YieldStatement
+
+(((Switch Statement, JavaCC 21, YieldStatement Updated)))
+The definition of YieldStatement has been updated and streamlined (see the section titled JDK 16 is out for more details). This new and improved YieldStatement is shown below: 
+----
+ YieldStatement : 
+   SCAN {getToken(1).getImage().equals("yield") 
+         && isInProduction("SwitchExpression")}#
+   => <IDENTIFIER> Expression ";"
+ ;
+----

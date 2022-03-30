@@ -1,0 +1,18 @@
+:imagesdir: ../images
+=== Tree Building Annotations
+
+Most of the annotations used in JJTree have been brought forward to JavaCC 21. Additionally, new and more streamlined tree building annotations have been added to JavaCC 21. These are all described in the preceding sections of this chapter and are summarized in the following table.
+
+NOTE: This table may *not* be built if it is decided that it will be less confusing to users to have only 1 table for annotations (Appendix A) instead of having separate Tree Building Annotations listed in this chapter and any other annotations listed in Appendix A.
+
+.Tree Building Annotations
+[cols="1,4"]
+|===
+|Annotation | Description and Comments
+|
+|
+|
+|
+|
+|
+|===

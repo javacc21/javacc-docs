@@ -1,0 +1,11 @@
+extends: default
+page:
+  size: letter
+  margin: [0.65in, 0.8in, 0.67in, 0.8in]
+base:
+  font-color: #000000
+  font-size: 12
+  line-height-length: 17
+table:
+  font-size: 9.5
+  #font-color: #00ff00 just to verify this theme is working

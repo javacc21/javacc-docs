@@ -1,0 +1,67 @@
+=== Some Backward-Incompatible API Changes
+
+In conjunction with New Year 2021 (a landmark year for JavaCC 21 for sure!) some changes were introduced, even at the expense of producing some (minor) backward incompatibilities.
+
+==== Limited Command Line Options
+
+(((Command Line Options))) (((Options and Settings, Command Line)))
+There was a longstanding setup in legacy JavaCC (carried forward in FreeCC and JavaCC 21) that any option could be set on the command line or in an options block at the top of the grammar file. So, you could put:
+----
+ OPTIONS {
+    IGNORE_CASE=true;
+ }
+----
+
+at the top of your grammar. Or you could invoke javacc with:
+----
+ javacc -IGNORE_CASE=true Foo.jj
+----
+
+As a general rule, there is not much reason to want to specify things like this on the command-line. So, as of 2021, the only way to specify the above is at the top of the grammar file. Of course, in the new streamlined syntax of JavaCC 21 there is no need for the OPTIONS {..} part. You just write:
+----
+ IGNORE_CASE=true;
+----
+
+at the top of your grammar.
+
+So, as of New Year 2021, the only options available from the command-line are the following:
+
+*   Specifying that you don't want the tool to generate as much information, i.e. to be quiet. This is the -q option. (This can only be set on the command line.)
+*   Suppressing the check for a newer version. This is the -n option. (This can also only be set on the command line.)
+*   Specifying where to generate the files. By default, the files are written to where the grammar file is. Using the -d option allows you to write the generated file to a different directory (and will create the directory(s) if they don't exist). +
++
+You can also put BASE_SRC_DIR=location in the grammar file. If it is set in both places, the command-line option will be used.
+*   Specifying the target JDK version by using the -jdkN option. N is a number from 8 to 18. If not specified, JDK8 will be the target version. +
++
+This can also be specified in the grammar file using the JDK_TARGET option. If set in both places, the command line option will be used.
+*   Specifying any preprocessor directives using the -p option. The directives must be separated by commas but with no spaces between them. For example: -p debug,strict
+*   Specify the language to generate code in (the default is 'java') using the -lang option. Valid choices are currently 'java', 'python' and 'csharp'.
+
+A few other options, based on user feedback will probably be introduced over time, but the goal here is to make usage of the tool extremely simple. As for the various things to set at the top of a grammar, with sane defaults, there is fairly little reason to change any of them. See the section on Convention Over Configuration for more information.
+
+Still, I mention all this, because anybody who was relying on the fact that you could specify these things on the command-line must now make certain adjustments.
+
+==== The Nodes Class is Gone
+(((Nodes Class Removed)))
+From back in the FreeCC days (circa 2008) the tool generated a Node.java and a Nodes.java. The reason for this was hyper-technical really. Prior to Java 8 (released in 2014) there was no such as thing as a default or static method in an interface. So, for an interface like Node, one would typically need an accompanying class as a holder for various static methods that operated on Node objects. (Thus the Nodes class.) There is no real reason for a separate Nodes object, so if you were using any of that, you need to make certain adjustments in your code. So, for example, there was a convenience method:
+----
+ public List Nodes.getAllTokens(node);
+----
+
+that would get all of a Node object's Token descendants. That is now just a default method in the Node interface itself:
+----
+ default List getAllToken() {...}
+----
+
+Generally, the API is cleaner now, but if you were using that Nodes API, you need to make certain adjustments in your code. Also, if you had any code injection, like:
+----
+ INJECT Nodes : {
+    //add your own static utility methods here 
+ }
+----
+
+That won't work because the Nodes class no longer exists. You could inject the same static routines into Node though and you should be fine.
+
+Well, in closing, I don't think the above backward incompatible changes will require adjustments in any existing projects that set you back more than ten or fifteen minutes. If this is a big deal, sorry. JavaCC 21 does come with a double money back guarantee!
+
+Happy New Year!

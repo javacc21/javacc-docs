@@ -1,0 +1,206 @@
+:imagesdir: ../images
+//Tastes just like home-made! (Some more tree building enhancements), January 12, 2021
+=== More Tree Building Enhancements
+
+Before getting into what the minor enhancements to tree building are, I guess I should write a quick synopsis of the current state of affairs.
+
+==== Current Tree Building Features in JavaCC 21
+
+(((JavaCC 21, Tree Building, Nodes and Subnodes)))
+When you have TREE_BUILDING_ENABLED set to true (this is the default in JavaCC 21),the tree building machinery will build a Node if the production results in the creation of more than one subnode. Specifically, if you have something like:
+----
+ AdditiveExpression : 
+    MultiplicativeExpression 
+     (("+"|"-") MultiplicativeExpression)*;
+ ;
+----
+An AdditiveExpression node will be created (and pushed onto the tree building stack) if the production created more than one MultiplicativeExpression subnodes. Otherwise, it just leaves the single MultiplicativeExpression node on the stack. 
+
+This is the default behavior, which is what is referred to by the option SMART_NODE_CREATION which defaults to true. If that option is set to false, the production always creates a Node. In the following, I just assume that you are using all default settings, which I tend to think is what correspond to what most people want -- most of the time...
+
+If you want to override the default behavior (creating a new node if there are two or more subnodes on the stack) then you have various options. In the following production:
+----
+ Foobar #Foobar : Foo Bar ;
+----
+
+we simply state that we create a new Foobar node unconditionally. This could be considered a shorthand for:
+----
+ Foobar #Foobar(true) : Foo Bar ;
+----
+
+Any condition expressed in Java code can be put in the parentheses in the tree-building annotation. So you can write:
+----
+ Foobar #Foobar(currentNodeScope.size() >2) : 
+    "foo" "bar" ["baz"] 
+ ;
+----
+
+(The above production will generate a Foobar node if the optional "baz" is present, otherwise, it just leaves the "foo" and "bar" on the stack.)
+
+Note that the currentNodeScope is actually the stack of pending subnodes and, if you absolutely have to, you can reference it in code actions and semantic lookahead. (Though you should probably be wary of doing so!). You don't have to explicitly reference it in this instance because the above can be written more succinctly as:
+----
+ Foobar #Foobar(>2) : "foo" "bar" ["baz"] ;
+----
+
+Now, if you want the production to never instantiate a new node, you can write:
+----
+ Foobar #void : Foo Bar;
+----
+
+This means we don't create a Foobar instance. We just leave the Foo and Bar subnodes on the stack.
+
+Now here is a little hyper-technical note. The above is not exactly the same as:
+----
+  Foobar #Foobar(false) : Foo Bar;
+----
+
+_What is the difference?_
+
+The difference is that if you use #void no Foobar class is generated. In the second case, since the code generation machinery has no awareness that the expression inside the parentheses is always false (any Java code inside a JavaCC grammar specification is basically treated as a black box) it still generates the Foobar subclass, i.e.
+----
+ public class Foobar extends BaseNode {}
+----
+
+Now here is where things get a bit interesting. The construct above #Foobar(false) is actually quite useful, because it can be useful to generate the class even if you are never going to instantiate it. Effectively, it is an abstract class, even though it is not marked as such.
+
+_Why is it useful?_
+
+For the same reason any abstract class can be useful. You can subclass it and refer to the various subclasses by abstract superclass, and this allows you to hide implementation details.
+
+Consider:
+----
+ Foobarbaz #Foobarbaz(false) : Foo | Bar | Baz ;
+----
+
+We can then write:
+----
+ INJECT Foo : extends Foobarbaz;
+ INJECT Bar : extends Foobarbaz;
+ INJECT Baz : extends Foobarbaz;
+----
+
+So we generate a Foobarbaz class that is a superclass of Foo, Bar, and Baz respectively.
+
+If you need client code to be able to parse a Foo, Bar, or Baz in a terse manner, you could write the production as:
+----
+ Foobarbaz Foobarbaz(false) :
+    ( Foo | Bar | Baz )
+    {
+        return (Foobarbaz) peekNode();
+    }
+ ;
+----
+
+This way, the Java method that the production generates has a return value, of the common superclass type FooBarBaz that Foo, Bar, and Baz all share.
+
+==== The New #abstract Tree Building Annotation
+
+(((JavaCC 21, #abstract annotation))) (((Abstract class generation))) (((Annotations, #abstract class)))
+So this finally brings me to the first little enhancement that I introduced recently. In the above pattern, it is now preferable to write:
+----
+ Foobarbaz #abstract : Foo | Bar | Baz ;
+----
+
+This specifically tells the tree building and code generation machinery that:
+
+*   The Foobarbaz production does not instantiate a node. (Just the same as if we wrote #void instead of #abstract)
+*   The Foobarbaz production does result in a Foobarbaz class being generated (_unlike_ writing #void)
+
+Moreover, the generated Foobarbaz class actually is abstract, so it generates:
+----
+ abstract public class Foobarbaz extends BaseNode {}
+----
+
+Granted, that makes little practical difference, but it makes the generated API clearer. We specifically generated this Foobarbaz class to be an _abstract base class_ for Foo, Bar, and Baz. We can _inject_ methods into that abstract base class that provide common functionality for any concrete subclass.
+
+The astute reader will realize that there is a fairly obvious follow-on feature now....
+
+==== The New #interface Tree Building Annotation
+
+(((JavaCC 21, #interface annotation))) (((Interface code generation))) (((Annotations, #interface code generation)))
+You can also write the above as:
+----
+  Foobarbaz #interface : Foo | Bar | Baz ;
+----
+
+This is the same as #abstract with the following differences:
+
+The generated Foobarbaz.java file specifies an interface, not an abstract class, i.e.
+----
+ public interface Foobarbaz extends Node {}
+----
+
+Also, the injections above would have to be:
+----
+ INJECT Foo : implements Foobarbaz ;
+ INJECT Bar : implements Foobarbaz ;
+ INJECT Baz : implements Foobarbaz ;
+----
+
+==== A Hyper-technical Note About Tokens vs. BaseNodes
+
+(((Interface Annotation, Subclasses Implement a Common Interface)))
+Aside from rounding out the whole disposition aesthetically and conceptually, the '#interface' annotation addresses a real problem, which is that Tokens cannot inherit from a common base class with other (non-Token) node types. You see, any Token subclass is a subclass of Token (which implements Node), while the other Node types are subclasses of BaseNode. However, they can implement a common interface!
+
+So suppose we had:
+----
+ Foobar #interface : "foo" | Bar ;
+----
+
+Since we cannot have the token "foo" and the non-terminal type Bar extend a common superclass, we use the #interface annotation to achieve that.
+----
+ INJECT Bar : implements Foobar ;
+----
+
+And we can define the FOO token like:
+----
+ TOKEN :
+    <FOO : "foo" > #Foo
+ ;
+----
+
+Note that the above defines a specific Token class we instantiate to represent the FOO tokenType and now we can have:
+----
+ INJECT Foo : implements Foobar ;
+----
+
+==== Concluding Remarks About Tree Building Enhancements
+
+(((Abstract class generation, Examples and Usage)))
+The above disposition rounds out the code injection and allows us to generate a nice API with minimum fuss. Consider something like:
+----
+ TypeDeclaration #abstract : ClassDeclaration | InterfaceDeclaration ;
+
+ INJECT ClassDeclaration : extends TypeDeclaration;
+ INJECT InterfaceDeclaration : extends TypeDecaration;
+----
+
+Again, we can have the above production return the appropriate type:
+----
+ TypeDeclaration TypeDeclaration #abstract : 
+    (ClassDeclaration | InterfaceDeclaration) 
+    {return (TypeDeclaration) peekNode();}
+ ;
+----
+
+This is so that client code can simply call:
+----
+ TypeDeclaration type = parser.TypeDeclaration();
+----
+
+Increasingly, I think that the generated API should be _idiomatic_ Java code. If the above code, at some point needs to do something based on the type returned above being a ClassDeclaration or InterfaceDeclaration we can have:
+----
+ if (type instanceof ClassDeclaration) {
+     ClassDeclaration cd = (ClassDeclaration) type;
+     blah blah...
+ } else {
+     InterfaceDeclaration id = (InterfaceDeclaration) type;
+     other blah blah;
+ }
+----
+
+And, of course, if the client code, in that specific spot, does not need to "know" whether the type is actually a class or interface declaration, then it just accesses the object via the abstract TypeDeclaration type.
+
+These ongoing tree-building enhancements in JavaCC 21 should allow you to generate (with utterly minimal fuss) an API that any experienced Java developer will find natural and intuitive to work with. And, of course, that person does not need to know anything about JavaCC. 
+
+In fact, ideally, if the person using the resulting tree API does not even realize that it was _generated_, as opposed to hand-written, then we have accomplished one of the JavaCC 21 goals. And with the new tree-building enhancements, we really can generate a fairly elaborate java API in a handful of lines of JavaCC 21 code that looks like it is coded by hand!

@@ -1,0 +1,95 @@
+=== Options and Settings Added in JavaCC 21
+This table lists the options that were added to JavaCC 21. These options can only be inserted at the top of your grammar file and cannot be used as command line options.
+
+//These options come from https://doku.javacc.com/doku.php?id=new_settings_in_javacc_21.
+//This version of this table includes cross-checking info that will be removed before publication.
+.New Options Available in JavaCC 21
+[cols="2,4,4"]
+|===
+|Option | Description | Comments
+
+|BASE_SRC_DIR 
+|This supersedes the older OUTPUT_DIRECTORY setting. Files are generated relative to the BASE_SRC_DIR, i.e. taking into account the package naming. If this is unset, BASE_SRC_DIR is assumed to be the directory where the grammar is.
+|Refer to https://javacc.com/2021/01/02/happy-new-year-some-backward-incompatible-api-changes/[Happy New Year blog] or https://doku.javacc.com/doku.php?id=convention_over_configuration[Convention over Configuration] for more information about this option.
+|DEACTIVATE_ +
+TOKENS + 
+or +
+TURN_OFF_TOKENS + 
+(use either one)
+|Set this option (either spelling) at the top of your grammar to turn off the listed Tokens when you instantiate the parser. See the ACTIVATE_TOKENS setting for information about activating the Tokens at the appropriate points in your grammar.
+|For Example: DEACTIVATE_TOKENS=OPEN_PAREN,CLOSE_PAREN; would mean that "(" and ")" would not be matched as Tokens when the parser is instantiated. Refer to this blog about https://javacc.com/2021/06/13/activating-de-activating-tokens/[Context-Sensitive Tokenization] for more details of this option.
+|ACTIVATE_TOKENS
+|ACTIVATE_TOKENS [token1, token2, ...] is inserted into your grammar at the points where you want the listed tokens to be activated and matched as Tokens instead of as text. Note that the equals sign is not used between ACTIVATE_TOKENS and the comma-separated list of Tokens to activate.
+|For example: ACTIVATE_TOKENS RECORD ("record")  Refer to this blog about https://javacc.com/2021/06/13/activating-de-activating-tokens/[Context-Sensitive Tokenization] for details of this option.
+|ENSURE_FINAL_EOL
+|Default is false. When set to true, the generated parser ensures that the input file ends with a newline character and adds one if it is missing. This is a nitpicking detail but it is surprisingly difficult to write certain grammars (ones that are very line-oriented) if you cannot be sure that every line (including the last one!) ends with a newline.
+|For example: ENSURE_FINAL_EOL=true;   will verify that the last line of the file being parsed ends with a newline character and will add one if missing.
+|EXTRA_TOKENS
+|This setting allows you to specify in a comma-separated list some additional token types that are not defined with regular expressions in the lexical grammar. 
+|This can be useful particularly in token hook routines.
+|FAULT_TOLERANT
+|Default is false. Setting this option to true turns on the experimental support for fault tolerant parsing. Fault tolerant parsing allows parsing to continue parsing its input files instead of exiting the parsing process when the first error is detected.
+|Ref https://javacc.com/2021/02/18/the-promised-land-fault-tolerant-parsing/[A Glimpse of the Promised Land] and https://javacc.com/2020/04/23/fault-tolerant-parsing-progress/[Fault-tolerant Processing] for more information about this option.
+|PRESERVE_LINE_ +
+ENDINGS
+|This is now off by default. That means that all Windows/DOS style line endings (\r\n) are converted to UNIX/MacOS style (\n) internally _when the file is read in_ (it doesn't modify the source file). Note that converting line endings to \n can make your grammar's lexical specification a bit simpler, as well as making your code a bit simpler because it can just assume that any line endings are a simple \n independently of what platform the generated code is running on.
+|The TABS_TO_SPACES option similarly can make your grammar's lexical specification a bit simpler. Refer to the TABS_TO_SPACES (below) for more information about that option.
+|SMART_NODE_ +
+CREATION
+|This option is true by default. If no JJTree-style tree-building annotation is used, then a new Node will be created if there is _more than one child Node_ on the stack.  If there is only one child Node on the stack, then a new Node _will NOT_ be created and the production will just leave the child on the stack. Set this option to false if you want every child to become a Node.
+|For example, by default, a production like A (B)* will create a new Node if there are one or more B's after the A. Refer to https://javacc.com/2021/01/12/just-like-home-made/[Some Tree Building Enhancements] or link:https://doku.javacc.com/doku.php?id=tree_building[Tree Building Enhancements] for more details of this option.
+|SPECIAL_TOKENS_ +
+ARE_NODES + 
+or +
+UNPARSED_TOKENS +
+_ARE_NODES
+|Default is false. When this option (either spelling) is set to true, “special tokens” are treated as terminal nodes and are added to the Abstract Syntax Tree (AST) as _preceding siblings_ to the regular Token they are associated with.
+|Note that this option and TOKENS_ARE_NODES are meaningless if TREE_BUILDING_ENABLED is set to false. Refer to https://doku.javacc.com/doku.php?id=tree_building[Tree Building Enhancements] for more information on this option.
+|TABS_TO_SPACES
+|Default value is 8 but is typically an integer from 1 to 8. This option defines how many spaces to use to represent a tab stop. This option converts all TAB characters (\t) to the specified number of spaces _when the file is read in_ (it doesn't modify the source file). Note that, if you turn this off (PRESERVE_TAB=true; or TABS_TO_SPACES=0; ), all reported error locations simply treat a tab character as one horizontal offset.
+|Until very recently, the default was that this option was off and tab characters were treated as one horizontal offset. Ref to the PRESERVE_LINE_ENDINGS entry (above) for more information about how this option can simplify your grammars and coding.
+|TOKENS_ARE_ +
+NODES
+|Default is true; This option sets whether we add Tokens as (terminal) nodes to the AST. All Tokens generated by JavaCC 21 will contain extra methods that implements the Node interface 
+|Refer to https://javacc.com/2021/01/12/just-like-home-made/[Tree Building Enhancements] for details.
+|TREE_BUILDING_ +
+DEFAULT
+|Default is true. A parser built by JavaCC 21 builds a tree by default. If you set this option to false, the tree building code is present but must be toggled in you code, such as parser.setBuildTree(true);
+|Refer to https://javacc.com/2021/01/12/just-like-home-made/[Tree Building Enhancements] for details.
+|TREE_BUILDING_ +
+ENABLED
+|Default is true. Parsers generated by JavacC 21 will build a tree by default. If you don't want a tree or want to build a tree in your own code actions, TREE_BUILDING_ENABLED=false; When set to false, no tree building code is inserted into your parser.
+|Refer to https://javacc.com/2021/01/12/just-like-home-made/[Tree Building Enhancements] for details.
+|FREEMARKER_ +
+NODES
+|This option means that extra code is added so that your Node objects implement core FreeMarker API's, in particular freemarker.template.TemplateScalarModel and freemarker.template.TemplateNodeModel. This means that if you expose the tree you build to a FreeMarker template, you can walk the tree using a very natural syntax. 
+|Note that using the FREEMARKER_NODES option creates a runtime dependency on freemarker.jar. Ref Doc xxx for details
+|USE_PREPROCESSOR
+|JavaCC 21 now has a preprocessor that is basically identical to the preprocessor in Microsoft's C# programming language. It only implements the #define/#undef and #if/#elif/#else/#endif constructs that are used to conditionally turn on and off ranges of lines in the grammar file.
+|Refer to (https://javacc.com/2021/02/01/javacc-21-has-a-preprocessor/)[JavaCC blog on the Preprocessor] for details
+|MINIMAL_TOKEN
+|Default is not set (false) which adds two fields to Tokens that are used in token chaining. If token chaining is _not_ required, define this option to skip adding these two additional fields. 
+|Refer to https://javacc.com/2021/12/06/token-chaining-javaccs-dark-underbelly/[JavaCC blog on Token Chaining] for more information.
+|PARSER_PACKAGE
+|By default, all classes are generated with no package (default package). When this option is defined, all generated classes will have the specified package inserted at the top of the files. This option improves the organization of source code in large non-trivial projects.
+|For example, PARSER_PACKAGE="org.foo.parser"; will include the "package org.foo.parser;" at the top of the generated files. Additionally, the generated files will go into the appropriate subdirectory tree based on the package name specified, creating the subdirectories as required. See https://doku.javacc.com/doku.php?id=convention_over_configuration[Convention over Configuration] for more information.
+|BASE_NAME
+|This option allows you to set the name of the parser, lexer, constants and NfaData files all at once instead of setting them individually using the three following options. If the BASE_NAME is set to an empty string then no prefix will be added to the parser, lexer, constants, and NfaData file names.
+|For example, BASE_NAME="Foo"; will generate the names FooParser, FooLexer, FooConstants, and FooNfaData.
+|PARSER_CLASS
+|When defined, this option allows you to replace the default name for the parser with one of your choosing. By convention, JavaCC uses the name of the grammar file to generate the parser name (Foo.javacc generates FooParser.java).
+|For example, PARSER_CLASS="FooZooParser"; will name the generated parser FooZooParser.java. See https://doku.javacc.com/doku.php?id=convention_over_configuration[Convention over Configuration] for more information.
+|LEXER_CLASS
+|When defined, this option allows you to replace the default name for the lexer with one of your choosing. By convention, JavaCC uses the name of the grammar file to generate the lexer name (Foo.javacc generates FooLexer.java). If you use this option to set the lexer name, it will also change the NfaData filename to use the same name prefix.
+|For example, LEXER_CLASS="FooBooLexer"; will name the generated lexer FooBooLexer.java.It will also name the generated NFA data file to FooBooNfaData.java. See https://doku.javacc.com/doku.php?id=convention_over_configuration[Convention over Configuration] for more information.
+|CONSTANTS_CLASS
+|When defined, this option allows you to replace the default name for the constants class with one of your choosing. By convention, JavaCC uses the name of the grammar file to generate the constants name (Foo.javacc generates FooConstants.java).
+|For example, CONSTANTS_CLASS="FooMooConstants"; will name the generated constants class FooMooConstants.java. See https://doku.javacc.com/doku.php?id=convention_over_configuration[Convention over Configuration] for more information.
+|BASE_NODE_CLASS
+|When defined, this option allows you to change the default name for the base concrete class from BaseNode to one of your choosing. By convention, JavaCC uses BaseNode as the base class that implements the Node interface and is extended by the production classes generated by JavaCC.
+|For example, BASE_NODE_CLASS="SimpletonNode"; will cause SimpletonNode to appear everywhere in the generated code where BaseNode would have normally appeared. See https://doku.javacc.com/doku.php?id=convention_over_configuration[Convention over Configuration] for more information.
+|DEFAULT_LEXICAL_ +
+STATE
+|In Legacy JavaCC, any lexical definitions that didn't specify a lexical state belonged to the DEFAULT lexical state. JavaCC 21 added the INCLUDE statement that allows grammars to be composed of other grammars by including those other grammars. This capability also introduces the probability of conflicting or duplicated token production names. This option allows each grammar to specify its own default lexical state and thereby prevent accidental duplication of token productions.
+|Refer to https://doku.javacc.com/doku.php?id=include[DEFAULT_LEXICAL_STATE setting section] for more information.
+|===

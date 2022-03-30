@@ -1,0 +1,61 @@
+=== Context-Sensitive Tokenization
+
+(((Context-Sensitive Tokenization)))
+Sometimes, when you complete a major code cleanup, features that were previously pie in the sky become low-hanging fruit to pluck. The new feature that I describe here, the ability to activate and deactivate tokens is such a case. It resulted from my rewriting of the lexical code generation described in the Lexer chapter in the section titled _Rewriting the Lexer_.
+
+Java parsing has always had a rather pesky little problem, as shown in the following example:
+----
+ List<Set<Foo>> listOfFooSets;
+----
+In this example, we need to parse >> as two consecutive > tokens, while, in other contexts, the >> needs to be identified a single token, the Right shift operator. At first sight, it does not seem like this should be so hard to deal with, but it is surprisingly difficult to find a palatable solution.
+
+==== Activating and Deactivating Tokens
+
+(((Tokens, Activating and Deactivating)))
+Now that tokens can be activated and deactivated on an as-needed basis, there is a far more elegant solution than the generally accepted multi-step solutions.
+
+Well, the easiest way to explain this is with an actual code example. Here is how the ShiftExpression construct is implemented in the current Java grammar:
+----
+ ShiftExpression :
+    AdditiveExpression
+    ACTIVATE_TOKENS RSIGNEDSHIFT,RUNSIGNEDSHIFT 
+   (
+      ( "<<" | ">>" | ">>>")
+      AdditiveExpression
+   )*
+ ;
+----
+
+The use of the ACTIVATE_TOKENS is fairly straightforward. What it means is that in the following expansion, delimited by parentheses, these two tokens are _activated_. They are activated at the beginning of the expansion that follows and at the end, _the set of active tokens is reset to what it was before_.
+
+At the very top of the grammar file, we have set the DEACTIVATE_TOKENS option:
+----
+ DEACTIVATE_TOKENS=RSIGNEDSHIFT, RUNSIGNEDSHIFT, RECORD;
+----
+
+These token types are turned off in the grammar file by default and are only turned on at key moments when needed. 
+
+So, the RecordDeclaration, a new stable feature in JDK 16, is defined as follows:
+----
+ RecordDeclaration :
+    Modifiers(EnumSet.of(PUBLIC, PROTECTED, PRIVATE, ABSTRACT, FINAL, STATIC, STRICTFP))
+    ACTIVATE_TOKENS RECORD ("record")
+    =>||
+   
+   [TypeParameters]
+   RecordHeader
+   [ImplementsList]
+   RecordBody
+ ;
+----
+
+The token for the "soft keyword" _record_ is activated at the key point where we need it and everywhere else, the word "record" is simply tokenized as an identifier.
+
+Well, that's it. Of course, I'm pretty sure that this disposition is quite generally useful, not just for this specific problem of parsing Java generics -- even if that is the example I keep coming back to when discussing this overall problem of context-sensitive tokenization.
+
+==== Reduced Need for Separate Lexical States
+
+(((Lexical States, Reduced Need)))
+I anticipate that this disposition will significantly reduce the need to define separate lexical states since, in many cases, all we really want is to turn on or off a single token in a given spot. Defining a separate lexical state for that is a rather heavy, inefficient solution. 
+
+Well, sometimes, a separate lexical state is the natural solution, like if we are embedding JavaScript inside HTML, but it never seemed right to me to have separate lexical states that only differ by a single token or two...

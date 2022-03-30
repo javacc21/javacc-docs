@@ -1,0 +1,143 @@
+=== Overview of the Newer Streamlined Syntax
+
+(((Syntax, Streamlined)))
+The following is a summary of the newer streamlined syntax available in JavaCC 21. For the most part, there is no need to convert _all_ of an existing grammar file to the more streamlined syntax because (almost) all of the legacy syntax continues to work. Because the two syntaxes can co-exist perfectly well in the same file, you only have to change to the new syntax for incompatible legacy code.
+
+==== Non-terminals
+
+(((Non-terminals, Streamlined Syntax))) 
+There is no need to write empty parentheses after a non-terminal for a production that takes no parameters. Thus:
+----
+ Foo() Bar() Baz()
+----
+
+can now be written as:
+----
+ Foo Bar Baz
+----
+
+==== BNF Productions
+
+(((BNF Productions, Streamlined Syntax)))
+*   There is no need to write void in front of productions with no return value.
+
+*   A production which takes no parameters no longer needs empty parentheses.
+
+*   There is no need for an empty code block, i.e. {} as the first thing in your production's definition. (_I mean, assuming that you don't actually need to put some code at the top of your production._)
+
+*   Rather than put the definition of your production inside braces (like Java actions), they are preferably listed (with no opening delimiter) and then terminated with a semicolon.
+
+The above four points (along with the earlier point about no-args non-terminals not needing parentheses) combine such that, where you would previously write:
+----
+ void Foobar() :
+ {}
+ {
+    Foo() Bar() 
+ }
+----
+
+you can now write:
+----
+ Foobar : Foo Bar;
+----
+
+==== Lexical Specifications (a.k.a. Token Productions) Can Omit Curly Braces
+
+(((Lexical Specifications, Streamlined Syntax))) (((Token Productions, Streamlined Syntax)))
+In this case, they are written with no opening { and the list is ended with a semicolon. Thus, instead of writing:
+----
+ TOKEN #Delimiter :
+ {
+    <LPAREN : "(">
+    |
+    <RPAREN> : ")">
+    |
+    <LBRACE> : "{">
+    |
+    <RBRACE> : "}">
+ }
+----
+
+the newer, preferable syntax is:
+----
+ TOKEN #Delimiter :
+  <LPAREN: "(" > 
+  | 
+  <RPAREN: ")" >
+  | 
+  <LBRACE: "{" > 
+  |
+  <RBRACE: "}" > 
+ ;
+----
+
+This format style is considered preferable, not because it saves much space (it doesn't!) but because one aspect of the newer syntax is that the {...} are reserved for elements that really are embedded Java actions. As you can see, in the newer syntax for BNF productions, the only use of {...} is for actual Java code.
+
+==== Options Set at Top of File - No Block Required
+
+(((Options and Settings, Streamlined Syntax)))
+Since the options, like TREE_BUILDING_ENABLED=false can only occur at the very top of a file anyway, there is no need for them to be in any sort of block. In legacy JavaCC, the special construct Options {...} was required. Thus, where you would previously have been required to enter:
+----
+ options {
+    BASE_SRC_DIR="..";
+    PARSER_PACKAGE="com.acme.foolang";
+ }
+----
+
+You can now simply put:
+----
+ BASE_SRC_DIR="..";
+ PARSER_PACKAGE="com.acme.foolang";
+----
+
+at the top of your file.
+
+==== Streamlined Syntax for INJECT
+
+(((INJECT, Streamlined Syntax)))
+NOTE: _This, of course, is not a change from legacy JavaCC, since legacy JavaCC never had an INJECT statement!_
+
+You can (optionally) dispense with the parentheses in: INJECT(ClassDeclaration) :
+
+Also, the first block after the colon does not need braces around it. 
+
+Either part of the injection can be left out. Thus, if the only point is to indicate that a Node extends a class (or implements an interface or you want to use an Annotation), where you previously had to write:
+----
+ INJECT(MyNode) :
+ {
+     extends AbstractBaseNode
+ }
+ {}
+----
+
+(Actually, the final empty block {} has been optional for some time in these spots, but I don't believe I ever documented that! But now it is much more streamlined.)
+
+You can now write:
+----
+ INJECT MyNode : extends AbstractBaseNode
+----
+
+A more complex INJECTION that does insert some code might now look something like:
+----
+ INJECT MyNode :
+     import java.util.List;
+     extends AbstractBaseNode
+     implements Nullable
+ {
+    private List<Foo> foos;
+
+    public List<Foo> getFoos() {return foos;}
+    
+    public void setFoos(List<Foo> foos) {this.foos = foos;}
+ }
+----
+
+Note that, in the statements immediately following the colon (and immediately preceding the opening brace) the first ends with a semicolon and the other two do not. Well, the extends and implements elements in Java do not end in with a semicolon, while an import statement does. However, if the above looks funny to you, you can (optionally) end the other two lines with a semicolon and the parser will not complain!
+
+==== New SCAN Construct Replaces LOOKAHEAD
+(((Streamlined Syntax, SCAN is superset of LOOKAHEAD)))
+The new SCAN instruction has a superset of features compared to the legacy LOOKAHEAD. However, the legacy LOOKAHEAD command is still available. See the section on The new SCAN statement in Chapter 5 for more information.
+
+==== New "up to here" Syntax
+
+The up to here syntax provides a way to specify lookahead in a much cleaner and more intuitive way. (See the sections on the _up-to-here_ marker and the _up-to-here-plus_ marker in Chapter 5 for more information) 

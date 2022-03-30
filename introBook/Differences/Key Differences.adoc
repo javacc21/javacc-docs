@@ -1,0 +1,49 @@
+=== Key Differences between JavaCC 21 and Legacy JavaCC
+
+==== INCLUDE Statement
+
+From the end user's point of view, the most important difference is that JavaCC 21 has undergone quite a bit of re-design to make it much more usable “out of the box” than the legacy JavaCC. One of the most basic (and obvious) things that JavaCC 21 provides is the INCLUDE statement (see Section 2.2 for more details). With legacy JavaCC, the only way to reuse commonly used constructs across different grammars was via the classic copy-paste _antipattern_.
+
+==== Convention over Configuration
+
+There has been an effort to clean up the set of configuration options. In general, the philosophy of JavaCC 21 is to make configuration options largely unnecessary, at least for typical usage, since the defaults are set sensibly and, in the absence of configuration settings, the tool simply infers naming via conventions. See Section 2.1 for more information.
+
+It seems quite clear that building an AST Abstract Syntax Tree (NEED REF DOC) is the most typical use case for this sort of tool. So, there has been a heavy focus on making JavaCC 21 on the whole much simpler. In legacy JavaCC, generating a parser that builds an AST is actually a rather baroque build process. You write a grammar with special “tree-buildling annotations” that you process with the legacy JJTree tool, which is really a pre-processor that in turn generates a JavaCC grammar. Then you run JavaCC on that to generate your Java source code.
+
+With JavaCC 21, the JJTree functionality has been merged into the JavaCC tool and, even in the absence of special tree-building annotations, the generated parser simply builds an AST by default, following some common-sense conventions. The most useful legacy JJTree annotations are still available. Refer to Appendix A for a table of available annotations.
+
+NOTE: You can still generate a parser that does not automatically build an AST, but you need to specify that via TREE_BUILDING_ENABLED=false in the settings. Refer to Appendix B for tables that list Options and Settings.
+
+==== Tree Building Enhancements
+
+Aside from being the out-of-the-box default, tree building has been enhanced considerably compared to what JJTree offers. In particular, the generated *Token* class now implements the *Node* interface. So, optionally, Tokens (both regular tokens and special tokens) may be added to the generated parse tree. (Regular tokens are added to the AST by default, while “Special tokens” (which usually represent comments in source code) are not included. They can be included via the SPECIAL_TOKENS_ARE_NODES setting, which is false by default. Regular tokens are added to the AST as nodes by default, but this can be turned off by setting the TOKENS_ARE_NODES setting to false. See Chapter 6 for Tree Building information in JavaCC 21.
+
+==== Code Injection
+
+JavaCC 21 introduces a new statement called INJECT that allows you to “inject” code into the files that the tool generates. This can help you to avoid the error-prone anti-pattern of generating code and editing it afterwards. See Section 2.3 for more information on Code Injection in JavaCC 21.
+
+==== Streamlined Syntax
+
+JavaCC 21 incorporates an alternative streamlined syntax (See Sections 1.2 and 1.3 for more information) that should be quite a bit more pleasant to write and easier to read.
+
+The difference is frequently dramatic. Where the legacy tool required you to write things like:
+----
+ LOOKAHEAD (Foo() Bar()) Foo() Bar() Baz()
+----
+
+in JavaCC 21 you could express the above as:
+----
+ Foo Bar =>|| Baz
+----
+
+==== More Powerful Lookahead
+
+Perhaps most importantly, the longstanding bug of nested syntactic lookahead not working correctly has finally been squashed! This bug has been around for so long that it is no longer considered a bug but instead considered just the way it works.
+
+The SCAN construct (designed to supersede the legacy LOOKAHEAD) offers a superset of the legacy LOOKAHEAD functionality (See Section 5.4). Predicates allow you to define conditions at choice points based on scanning backwards in the parse/lookahead stack (See section 5.7). Contextual predicates (See Section 2.5) also works in arbitrarily nested scanahead.
+
+The new up to here (See Section 5.5) construct should eliminate the need to write more verbose and error-prone numerical and syntactic lookahead constructs.
+
+==== JavaCC 21 is Being Actively Developed
+
+JavaCC 21 now supports the full Java language up through Java 15. Since the Java grammar (REF GitHub) is embedded in JavaCC grammar (REF GitHub) using the INCLUDE (REF DOC) mechanism, that Java grammar is usable on its own. Note that this grammar successfully parses all the Java source code in the OpenJDK 15, as well as all the Java source code in JRuby, Jython, and FreeMarker. So, if anybody needs a Java code parser for use in their own projects, this is quite usable!

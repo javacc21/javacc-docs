@@ -1,0 +1,109 @@
+=== The Dreaded “Code too large” Problem
+
+(((Code Too Large Problem, Introduced)))
+Legacy JavaCC has had a longstanding problem: if you write a very big, complex lexical grammar, the generated XXXTokenManager would fail to compile, with the compiler reporting the error: "Code too large".
+
+Well, this has now been fixed. You know, it is actually quite shocking how trivial a problem this really is. First of all, this is something that is probably very typical of _generated_ code and one just about never runs into this in regular hand-written code. This whole thing originates in the fact that a single method in Java can be at most 64K -- in bytecode, presumably.
+
+This happens in generated code with some frequency because, if you have a number of static initializations in your code, they are all compiled into a single initialization method.
+
+So, let's say you have a series of initializations, like:
+----
+ static int[] foo = {1, 8, 9,... and a thousand more ints}
+ static int[] bar = {...another thousand ints...}
+ static int[] baz = {... some more data...}
+ ... some more such initializations ...
+----
+
+A class that acts largely as a holder for data like this will easily run into the 64K limit because all of the above initialization gets compiled into a single method. The solution, of course, is the same as it would be if you really did write by hand some enormous method that hit this limit.
+
+_The answer is that it needs to be broken into multiple pieces._
+
+(((Code Too Large Problem, Rewritten)))
+Thus, the above needs to be written something like:
+----
+ static int[] foo, bar, baz;
+
+ static private void populate_foo() {
+     foo = new int[FOO_SIZE];
+     foo[0] = 1;
+     foo[1] = 8;
+     foo[2] = 9;
+     ... etc...
+ }
+
+ static private void populate_bar() {
+     bar = new int[BAR_SIZE];
+     bar[0] =...
+     ....etc...
+ }
+
+ static private void populate_baz() {
+     ...etc...
+ }
+----
+
+And then elsewhere you have:
+----
+ static {
+     populate_foo();
+     populate_bar();
+     populate_baz();
+     .... etc...
+ }
+----
+
+(((Code Too Large Problem, FreeMarker Solution)))
+And the truth of the matter is that it is not much harder generate the above code than the other code. JavaCC21 uses FreeMarker templates to generate the Java code and you could have a macro that looks like:
+----
+ [#macro DeclareArray name, data]
+   int[] ${name};
+   static private void ${name}_populate() {
+     int[] ${name} = new int[${data?size}];
+     [#list data as element]
+       name[${element_index}] = ${element};
+     [/#list]
+   }
+  [/#macro]
+----
+
+The above macro generates code that declares the variable and then it defines a separate method to populate it with the initialization data.
+
+And elsewhere, assuming you had a hash of the variable names to the array data, you would have:
+----
+ [#list map?keys as key]
+     [@DeclareArray key, map[key]/]
+ [/#list]
+
+ static {
+  [#list map?keys as key]
+      ${key}_populate();
+  [/#list]
+ } 
+----
+
+Granted, the above is particularly clean because of the use of a templating tool to generate the code, but even if the codebase used out.println statements all over the place, it is surely not so very hard to generate the code that avoids the "Code too large" problem.
+
+As a final point, the above example assumes that no individual array is so big as to hit the "Code too large" limitation on its own. And that does seem to be the case, in practice, with JavaCC. Fairly obviously, if any single array was big enough, on its own, to hit this limitation, you would need multiple XXX_populate() methods. So, if your foo[] array had, let's say 20,000 elements, you could generate:
+----
+  static private void foo_populate1() {...}
+  static private void foo_populate2() {...}
+  ...
+  static private void foo_populate20() {...}
+----
+
+I haven't (yet) dealt with that possibility in the JavaCC21 codebase, since I don't think it ever is necessary. But if it turns out to be necessary to handle this case, a single array that is so big that it needs multiple initializers, then I'll handle that quite quickly, of course. For the moment, I decided to apply the principle of YNGNI _(You're not gonna need it!)_
+
+==== Concluding Comments on Code Too Large
+
+(((JavaCC, Legacy, All Persistent Issues Addressed)))
+It occurs to me that this fix to this dreaded "Code too large" problem, along with the support for full 32-bit Unicode, surely constitutes a major milestone in JavaCC21 development. You see, I believe that, with these last two fixes:
+
+_Every longstanding issue in the legacy JavaCC tool has now been addressed._
+
+I do not mean to say by that, that development is now complete. It does mean, however, that, from this point onwards, any major development is oriented towards adding new functionality -- not towards addressing issues that were inherited from the legacy codebase, since those have now been addressed.
+
+The two main directions of development will be:
+
+*   rounding out and polishing the fault-tolerant parsing machinery
+*   moving towards supporting the generation of parsers in other programming languages

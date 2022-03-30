@@ -1,0 +1,148 @@
+=== Evolving Tokens, Then and Now
+
+(((Tokens, Updated)))
+I recently completed a major refactoring of how the generated Token API works in JavaCC 21. Though this constitutes a quite revolutionary set of changes under the hood it, may actually not be all that noticeable to many (or most) users. I think there are basically two groups of users (not mutually exclusive) who will be affected by updating the Token API:
+
+*   People who have upgraded from legacy JavaCC to JavaCC 21 with quite minimal changes to their grammar(s) and codebase, in particular, people who were using the LEGACY_API=true setting (which is now gone, by the way!)
+*   People who were doing very tricky things with token chaining. In particular, this would involve setting the next field in various token objects, most likely inside of a token hook method.
+
+In this section, I will just outline what the main changes that were made to the Token API. At a later time, I will explain in more detail how this new API allows you to write much more robust, elegant code yourself! But first, a brief summary of the (ancient) history that led to this point.
+
+==== In the beginning...
+
+(((Tokens, History of)))
+When it comes to understanding JavaCC, and its current incarnation JavaCC 21, it is important -- or useful, at the very least -- to understand the historical timeline. As I outline here, the original JavaCC was mostly written in 1996, against JDK 1.0, which had had its first non-beta version in January of that same year. As I write these lines, we are about a month away from the 26th anniversary of that event. Moreover, JavaCC is just about as old as Java itself, written when Java was a very new, experimental language.
+
+This was a point in time when the best practices and conventions in Java programming were not yet established and that really should be borne in mind when looking at the original JavaCC and the forward evolution there has been from that point. So, getting down to some of the nitty-gritty, let us consider the field layout defined in the Token.java (((Tokens, structure, legacy JavaCC)))that the legacy tool generates:
+----
+ public class Token {
+   public int kind, beginLine, beginColumn, endLine, endColumn;
+   public String image;
+   public Token next, specialToken;
+   ...
+ }
+----
+
+Most people reading this surely know that code like this, made up of publicly accessible fields, is considered to be very poor practice nowadays. The consensus is that these fields should be encapsulated (hidden behind accessors, a.k.a. getter/setter methods) to prevent developers from writing code that depends on the specifics of those fields. 
+
+Well, be that as it may, let's review this original disposition. Here, the Token object stores 8 fields, specifically:
+----
+    5 int fields
+    1 String field
+    2 Token fields
+----
+Of those, four of the five integer fields store location information: beginLine, beginColumn, endLine, endColumn. The remaining integer field, kind, is the token's "type" for parsing purposes. Again, this is vintage 1990's Java code. It is hard to imagine any recent Java programming project using a raw integer for this purpose, since it is such an obvious use case for type-safe enums, a language feature introduced in Java 5, released in September of 2004 -- as of this writing, a little over seventeen years ago.
+
+Moving along, the remaining three fields are one String field, image, which stores the text (its image) of the Token, and two fields that are references to other tokens: next and specialToken. Those two fields, in particular the next field have played a significant role in very sophisticated uses of JavaCC. A lot of JavaCC code in the wild makes use of the next field to manipulate the stream of tokens that the parser sees. In this and the articles that follow, we will call this token chaining.
+
+Token chaining is actually very tricky and problematic and the first-best solution (if possible) would be to just say no. However, it seems like it is sometimes necessary. For example, it is hard to imagine an implementation of a grammar for Python that does not make use of it to some extent. Python's lexical grammar basically requires the insertion of imaginary or virtual tokens into the token stream that represent indentation -- and the removal of indentation, i.e. INDENT and DEDENT tokens.
+
+==== You've come a long way, baby!
+
+Now let us fast-forward a couple of decades and take a look at the current JavaCC 21 Token API, as of November of 2021, after the most recent round of refactoring. For a hypothetical Foo language, JavaCC 21 (((Tokens, structure, JavaCC 21)))generates a rather different field layout:
+----
+ public class Token implements FooConstants, Node {
+    private TokenType type;
+    private int beginOffset, endOffset;
+    private FooLexer tokenSource;
+    private boolean unparsed; 
+    private Node parent;
+    ...
+ }
+----
+
+One noteworthy point here is that all of the fields that the Token object stores are now private, and thus the implementation is properly encapsulated. We see that the old
+----
+ public int kind;
+----
+
+is replaced by:
+----
+ private TokenType type;
+----
+
+Aside from being private, the type field is now a type-safe enum called TokenType, that is defined in the generated FooConstants.java file. One field that is in the JavaCC 21 token definition and was not present originally is the parent field. Since a Token is a Node in JavaCC 21 (at least potentially) it needs to "know" what its parent Node is. (There is no need to define any field(s) for child nodes in Token.java, since a Token is assumed to be a terminal node in the tree.)
+
+(((Tokens, TokenType, enums)))
+Aside from the fact that the fields are now encapsulated and the kind int has been replaced by a type-safe enum, it is noteworthy that every last one of the 8 fields in the original Token class has been refactored away. The four fields that held the line/column location information have been replaced by the two fields beginOffset and endOffset, which are the initial/final absolute offsets of this Token in the file it came from. Thus, the Token object no longer stores the line/column information, since it is really simpler and less error-prone to calculate this information on the fly and it delegates that task to the tokenSource object.
+
+(((Tokens, accessor methods)))
+In fact, the various accessor methods getBeginLine(), getEndLine(), etcetera, have a default implementation in the base Node API. For example, default implementation of getBeginLine is as follows:
+----
+ default int getBeginLine() {
+    FooLexer tokenSource = getTokenSource();
+    return tokenSource == null ? 0 : tokenSource.getLineFromOffset(getBeginOffset());                
+ };
+----
+
+(((Tokens, Node objects)))
+Generally speaking, Node objects in JavaCC 21, including Token, which implements Node, delegate the task of figuring out their location in line/column terms to the tokenSource object. That object also is responsible for knowing what the tokens before and after this one are, which is why the next and specialToken fields are gone. 
+
+Actually, the next/specialToken fields in the original JavaCC were always quite tricky and unintuitive. The next field is the next parsed token, while specialToken is the previous unparsed token. All of that is really quite messy conceptually, and I think the new setup that I explain here should be much clearer.
+
+==== Comments about backward compatibility
+
+(((Tokens, backward compatibility)))
+With some frequency, I have found myself in conversations with people in which their primary concern seems to be whether they can use JavaCC 21 as a drop-in for the legacy JavaCC with absolutely no changes. And then I have had to inform people that upgrading to JavaCC 21 is very likely to require some adjustments to their existing grammars. 
+
+In fact, as of the recent round of refactoring, it is not just likely but it is an absolute certainty that you will have to make certain adjustments to upgrade to JavaCC 21. Up until about a month ago, JavaCC 21 had a setting LEGACY_API which kept many of the old quirky things working. 
+
+For example, if you had LEGACY_API=true at the top of a grammar, it would generate a Token.java file in which various fields were publicly visible, just as in legacy JavaCC. And thus, any older code that had things like tok.beginLine or tok.next could still work.
+
+However, with the latest refactoring, it is simply impossible to keep such code working, since the various fields have been refactored away! If the legacy JavaCC had properly encapsulated these fields, the same API could have been kept working indefinitely. 
+
+Suppose, for example, the beginColumn field had only been accessible via a getter:
+----
+ public int getBeginColumn() {
+    return beginColumn;
+ }
+----
+
+that API could have still worked even after removing the beginColumn field. Moreover, many application programmers might not even realize that the field had been removed!
+
+In short, when an API has no such encapsulation and has direct access to public fields, it becomes impossible to do any very significant refactoring without breaking legacy code that relied on these exact fields being present (and publicly accessible.) In such a situation, trying to retain backward compatibility amounts to imposing a straightjacket on oneself that is eventually untenable.
+
+==== The Gigabyte is the new Megabyte Redux
+
+Note that the refactored Token API is much more powerful and expressive than what it replaces. For example, consider the following methods (((Tokens, new methods added)))added to Token recently:
+----
+ Iterator<Token> precedingTokens() 
+ Iterator<Token> followingTokens()
+----
+
+These two methods allow us to scan backwards or forwards from any token in a quite natural way in modern idiomatic Java. We could write something like:
+----
+ tok.followingTokens().forEachRemaining(t->{
+     switch (t.getType()) {
+         case IDENTIFIER : doSomething(t); break;
+         case COMMENT : doSomethingElse(t); break;
+         ...
+     }
+ });
+----
+
+This is one annoying aspect of legacy JavaCC, that it is basically cut off from modern Java idioms. Certainly, one goal of the JavaCC 21 project (though not really its primary goal) is to address this problem.
+
+More importantly though, all of these refactorings are based on a fundamental change of approach: 
+
+*   the original JavaCC assumed that a parser only had access to a small window into the input being parsed, 
+*   JavaCC 21 (((JavaCC 21, read entire file)))assumes that it has access to the entire file in memory. In fact, the first thing it does when parsing input is simply to read the entire file into memory.
+
+In a sense, that is really the "secret sauce" that enables all of these elegant refactorings. Once you have all the input in memory, then certain things can be revisited. For example, strikingly, (((Tokens, JavaCC 21, image field changes))) in JavaCC 21, there is really no need for a token to have an image field, since it can get that information from the tokenSource object. Thus, any Node object can get its source text based on the tokenSource object and its absolute begin/end offsets, so the base Node interface has the method getSource, implemented by default as follows:
+----
+ default String getSource() {
+    FooLexer tokenSource = getTokenSource();
+    return tokenSource == null ? null : tokenSource.getText(getBeginOffset(), getEndOffset());
+ }
+----
+
+[NOTE]
+In this example, Foo is the name of the grammar used to generate the Node source code and was used as part of the lexer's name.
+
+The getSource method works because we have access to the entire file we are parsing. And that is also why the previous example of iterating over the previous tokens works. Since we keep the information in memory, we can just scan backwards over all the preceding tokens and fish out whatever information or do what we want. 
+
+This same capability is not quite true when it comes to scanning forward. The analogous API, followingTokens(), if you are in the middle of a parse, gives you an iterator that goes to the last token that has been scanned (and cached) so far. However, if the parse is finished, you should be able to scan through to the very last token, typically of type EOF.
+
+Now, to be clear, the reason for this major refactoring is not just that memory is now absurdly cheap, but because it also provides the ability to attack more interesting problems -- 21st century problems, if you will -- that require access to all the input in memory. For example, to do error handling/recovery properly, we really need to be able to reset the parsing/tokenizing machinery to any arbitrary point in the file.
+
+So the whole refactoring described here was really designed (quite carefully, by the way!) to make JavaCC 21 a feasible tool to attack problems that previously could not be solved.

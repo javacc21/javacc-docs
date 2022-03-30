@@ -1,0 +1,102 @@
+:imagesdir: ../images
+//JavaCC 21 Now Has a Preprocessor, Feb 1, 2021
+=== JavaCC 21 Has a Preprocessor
+
+(((JavaCC 21, Preprocessor Available))) (((Preprocessor, Available in JavaCC 21)))
+It had been in the back of my mind nagging me for some time, thinking that we would eventually need some sort of preprocessor functionality moving forward, to support output for different programming languages (besides Java) and actually, even different Java targets. I had also been looking more closely at C# recently and finally, I just decided to copy the way the C# preprocessor works, which is much more limited than the full C/C++ preprocessor.
+
+In fact, this JavaCC 21 preprocessor only implements the part of the C# preprocessor that deals with turning on and off regions of the code based on some conditions (conditional symbols) that you define. So, basically, you can write things like:
+----
+ #def testing
+
+  #if foo
+
+   #undef testing
+
+   #define stable
+
+  #endif
+
+  #if !(testing || debug)
+
+     something 
+
+  #elif stable
+
+    And now something else!
+
+  #else
+
+     And now for something completely different!
+
+  #endif
+----
+
+Well, as you probably see already, the preprocessor is its own separate little mini-grammar. (It is expressed in only a couple of hundred lines).
+
+It also has its own rules (that I did not invent) like: 
+
+* all of these pre-processing directives that start with # must be on their own line.
+* the #if-elif..else...#endif structure has to be valid. 
+* if a closing #endif was missing, for example, it will complain. 
+
+Note, however, that these constructs are not really part of the syntactic or lexical grammar of a JavaCC grammar file, even though that's where they appear. All of the preprocessing is best thought of as pre-lexical. 
+
+The preprocessor runs over the source file and simply builds up the information (in a BitSet instance) that marks which lines in the source file are turned and off. And then, when the lexical machinery reads in the code to be lexed (and parsed) the lines that are marked as ignored are simply skipped. Neither the parser nor the lexical machinery sees any of those ignored lines and behaves as if they weren't there. 
+
+Well, there is a key difference. The line number information stored in Tokens and Nodes is correct based on the location in the original file. So if you have:
+----
+ 1. #if false
+ 2. blah blah blah
+ 3. #endif
+ 4. Foobar : "foo" "bar";
+----
+
+the Foobar production and the tokens inside it know that they are on line 4, not on line 1 as they would be if we really stripped out the first three lines and fed the remaining code to the parser.
+
+==== Can I use it?
+
+Some readers may already be wondering whether this is re-usable in their own projects. And the answer is that it basically is. The key point is that the JavaCC grammar uses the Preprocessor grammar to get the BitSet of line markers that turn off the various line ranges.
+
+In fact, I think this is generally useful enough that it is a settings toggle, USE_PREPROCESSOR=true and your DSL will automatically have access to this preprocessor functionality. But it is already not very hard to incorporate this into any other project.
+
+==== Internationalization... Not
+
+(((Preprocessor, Conditionals Use ASCII)))
+At the moment, all the conditional symbols have to be in 7-bit ASCII. The regexp for the conditional symbols currently looks like this:
+----
+ <PP_SYMBOL : (["_", "a"-"z", "A"-"Z"])(["_", "a"-"z", "A"-"Z", "0"-"9"])*>
+----
+
+It would have been easy enough to allow people to have conditional symbols in full Unicode, so as to write things like:
+----
+ #define 你好
+----
+
+Or
+----
+ #if отладка
+  ....
+ #endif
+----
+
+However, there is really still no clean way of including the whole Unicode definition of an identifier for something like this. The whole preprocessor grammar is only a couple of hundred lines and it just felt weird to copy-paste an identifier definition that is longer than that.
+
+I like the idea of treating non-English speakers as full citizens, of course, but I need a cleaner way of reusing the various internationalized definitions of Identifiers that use the full Unicode character set. I anticipate that when I have that in place, this will be one of the first places I apply it.
+
+==== Unsupported Directives
+
+(((Preprocessor, Unsupported Directives)))
+Aside from not currently supporting full Unicode in the conditional symbol names, the various directives such as [.code]##pragma, #line, #region/#regionend and some others are all just ignored at the moment. These are mostly just used internally in C#.
+
+By the way, a directive that does not even exist in C# is just passed through. So the line:
+----
+ #foobar blah blah
+----
+
+is just passed through to JavaCC since there is no [.code]#foobar instruction in the C# preprocessor. On the other hand, the directives that exist in C#, such as the following line:
+----
+ #warning This is a warning!
+----
+
+are ignored, but JavaCC 21 does nothing with it. At least for now...

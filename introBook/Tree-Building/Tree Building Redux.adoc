@@ -1,0 +1,179 @@
+:imagesdir: ../images
+//Tree Building Redux: Nailing another Dmitry Dmitriyevich problem  January 14, 2021
+=== Tree Building Redux
+
+(((JavaCC 21, Comparison of Tree Building Annotations))) (((Tree Building Annotations, Comparisons)))
+From a previous discussion of tree building, there remained a couple of t's that needed crossing and an 'i' or two that needed a dot. Let's see...
+
+First of all, it was a little bit inaccurate when it was stated that the following two constructs were equivalent:
+----
+ Foobar #Foobar : ... ;  
+----
+
+and
+
+----
+ Foobar #Foobar(true) : ... ;
+----
+
+That is not quite true. The first production above will put a new Foobar node on the stack as long as there is at least one new sub-node.
+
+The second one really does create a new node unconditionally, even if it doesn't have any child nodes. In other words, if you have a production like:
+----
+ ZeroOrMoreFoos #ZeroOrMoreFoos(true) : ("foo")* ;
+----
+
+This will create a new ZeroOrMoreFoos node even if it did not consume even one "foo" (it really is empty because it has no child nodes). 
+
+The definite node, like the first example above,
+----
+ ZeroOrMoreFoos #ZeroOrMoreFoos : ("foo")* ;
+----
+
+This will only create a new node only if at least one "foo" was consumed. Well, the two things would be equivalent if the expansion inside was ("foo")+ since we would always match at least one foo anyway, but in the general case they are not quite the same.
+
+So, here is a run-down of that state of affairs: 
+----
+ Foobar #Foobar : ... ;
+----
+
+This is effectively the same as
+
+----
+ Foobar #Foobar(>0) : ... ;
+----
+
+and
+
+----
+ Foobar #Foobar(true) : blahblah... ;
+----
+
+is effectively the same as:
+
+----
+ Foobar #Foobar(> -1) : blahblah... ;
+----
+
+Building a node if you match non-negative number of sub-nodes is effectively the same thing as a true condition, i.e. you always create a new Foobar node. (It would be quite a trick to have a negative number of sub-nodes on the tree building stack!)
+
+The default tree-building behavior is that if you don't write any tree-building annotation
+----
+ Foobar : ... ;
+----
+is effectively the same as:
+----
+ Foobar #Foobar(>1) : ... ;
+----
+
+This whole notation for tree-building was mostly inherited from legacy JJTree and has hardly been revisited at all. Just trying to look at it the other day with newbie eyes made me realize what a horrible Dmitry Dmitryevich (repetitive naming) problem there was in the whole thing.
+
+Like, if the node you are going to create has the exact same name as the production, why should you have to repeat it?
+
+(((JavaCC 21, Tree Building Annotations, Reducing Repetitions))) (((Tree Building Annotations, Streamlining)))
+Now, when the name of the Node is the same as the grammar rule, you no longer need need to repeat it. So:
+----
+  Foobar #Foobar : blahblah... ;
+----
+can now be written more tersely as:
+----
+  Foobar# : ... ;
+----
+
+The # after the name of the production just means that we create a node if there is at least one sub-node on the stack, which could be written not quite as tersely as:
+----
+  Foobar#(>0) : ... ;
+----
+
+Actually, the above is only part of the problem. Frequently you have to repeat the production/node name as a return value, so this leads to...
+
+==== The Dmitry Dmitryevich Dmitryev Problem (Repetitive Naming)
+
+(((Production Rule, Reducing Repetition)))
+So, consider the following production:
+----
+  Foobar Foobar #Foobar : 
+      "foo" (bar)*
+      {
+          return CURRENT_NODE;
+      }
+    ;
+----
+
+Here we had to repeat Foobar three times. The first time specifies the return type of the generated method. The second time is the method name, and the third time is the name of the Node subtype we create (which just happens to be the same as the method's return type.) 
+
+This is actually a very typical pattern. The above method simply returns the node that it just created. The alias for this is CURRENT_NODE. (_Historical note_: In legacy JJTree, CURRENT_NODE is called jjtThis. Actually, that still works, but I prefer CURRENT_NODE as the alias. I think the intent is clearer.)
+
+Well, the astute reader will probably anticipate the dénouement of this story. The above production can now be written as:
+----
+  #Foobar# : 
+     "foo" ("bar")*
+  {
+      return CURRENT_NODE;
+  }
+----
+
+Yes, you guessed it. Now, if the return type is the same as the node type, you can just write # as a shorthand to indicate that.
+
+==== Another little touch-up
+
+Now, as for this business of having to add in this {return CURRENT_NODE;} at the end of a production if we want the generated method to return the current node, let's see...
+
+First point. The main reason one could want this is that it allows us to express certain things very tersely elsewhere in the grammar. We can write:
+----
+  Foobaz :
+  {
+    Foobar foobar = null;
+  }
+     foobar=Foobar
+     {
+         ... do something with the foobar object...
+     }
+  ;
+----
+
+We can write foobar=Foobar because the Foobar method returns a Foobar that we can assign from.
+
+Well, this is actually just syntactic sugar. If the Foobar production had no return type, we would have to write:
+----
+   Foobar
+   {
+       foobar = (Foobar) peekNode();
+       ... do something with the foobar object ...
+   }
+----
+
+Arguably, the whole thing is not worth the candle. But... as things stand, you can now write foobar=Foobar above even if the Foobar method has no return value. The way this is implemented is that if the method actually has no return value, the line:
+----
+ foobar=Foobar
+----
+
+generates:
+----
+Foobar()
+try {
+    foobar = (Foobar) peekNode();
+} catch (ClassCastException cce) {
+    foobar = null;
+}
+----
+
+So, if the Foobar() method does not have a return value, we just try to grab the last value pushed onto the tree-building stack and use that. Of course, it has to be the right type, but if it's not, we just set it to null.
+
+==== Tree Building Annotation Plus One
+
+(((Tree Building Annotations, Plus One)))
+----
+ <IDENTIFIER> ("(" Parameter ("," Parameter)*)#MethodCall(+1)
+----
+
+What the above means that is that the tree-building machinery builds a node that includes all the nodes placed on the node stack for the expansion just prior, plus one. In the above spot, the node built would include include the IDENTIFIER just before opening parentheses. This has been present for some time, and is used in internal development, but I don't recall ever documenting it anywhere, even in a blog post. So I mention it here.
+
+==== Final Note on Tree Building
+
+The above only works from within a grammar production, where JavaCC generates the above code. When you write your own Java code by hand and you want to be able to write:
+----
+ foobar=myParser.Foobar();
+----
+
+then you do need the Foobar production to have the return CURRENT_NODE; at the end.

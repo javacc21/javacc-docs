@@ -1,0 +1,258 @@
+
+=== Reducing Visual Clutter 
+
+==== Introducing a New Streamlined Syntax for JavaCC 21
+
+(((Streamlined Syntax, Introduced)))
+The overarching design goal of the JavaCC 21 project (dating back from when it was still called FreeCC) is to transform the legacy JavaCC tool into something more useful and useable. Having a clean syntax does not in itself make a tool more useful, but it is surely a key part of making it more useable.
+
+While it is possible for a language syntax to be too terse and cryptic, it seems pretty clear that JavaCC has always suffered from the opposite problem. JavaCC's legacy syntax is just plagued with these various visual clutter issues that make grammars harder to write, and probably more importantly, to read.
+
+Well, they say a picture tells a thousand words, so just take a look at a JSON grammar written in the newer streamlined syntax:
+(((Streamlined Syntax, JSON Example)))
+----
+ Root : JSONObject <EOF> ;
+
+ JSONObject : "{" [KeyValuePair ("," KeyValuePair)*] "}" ;
+
+ KeyValuePair : <STRING_LITERAL> ":" Value ;
+
+ Array : "["  [ Value ("," Value)* ] "]" ;
+
+ Value : "true" | "false" | "null" | <STRING_LITERAL> | <NUMBER> | Array | JSONObject;
+
+ // Lexical specifications
+ // Since this is meant to be a minimal grammar, we just define 
+ // the the string literals like "true", "null" etc
+ // implicitly in the grammar part.
+
+ SKIP : <WHITESPACE : (" "| "\t"| "\n"| "\r")+>;
+----
+(JSON Grammer continued on next page)
+----
+ TOKEN :
+    <#ESCAPE1 : "\\" (["\\", "\"", "/","b","f","n","r","t"])>
+    |
+    <#ESCAPE2 : "\\u" (["0"-"9", "a"-"f", "A"-"F"]) {4}>
+    |
+    <#REGULAR_CHAR : ~["\u0000"-"\u001F","\"","\\"]>
+    |
+    <STRING_LITERAL : "\"" (<REGULAR_CHAR>|<ESCAPE2>|<ESCAPE1>)* "\"">
+    |
+    <#ZERO : "0">
+    |
+    <#NON_ZERO : (["1"-"9"])(["0"-"9"])*>
+    |
+    <#FRACTION : "." (["0"-"9"])+>
+    |
+    <#EXPONENT : ["E","e"]["+","-"](["1"-"9"])+>
+    |
+    <NUMBER : ("-")?(<ZERO>|<NON_ZERO>)(<FRACTION>)?(<EXPONENT>)?>
+ ;
+----
+If you want to eyeball a more complex example, here is the Java grammar in the newer syntax(https://github.com/javacc21/javacc21/blob/master/examples/java/Java.javacc). Uhh, yes, this is the Java grammar that is now being used internally!
+
+Now, I know what some people reading this are thinking!
+
+Well, the answer is no. This newer streamlined syntax is not the result of consciously imitating ANTLR. Not that there would be anything wrong with that, mind you, but no, it just turns out that if you analyze the legacy JavaCC syntax and aggressively take advantage of every opportunity to get rid of unnecessary visual clutter, then you end up with something that resembles ANTLR quite a bit! I suppose it is of some interest to compare the grammar above with the JSON grammar provided by the ANTLR project.
+
+A far more important point is that use of the newer syntax is entirely optional. All of the older syntax is supported and will be for the foreseeable future.
+
+So, here are some of the outstanding issues that the newer syntax addresses:
+Repeating a Lookahead Expansion in Syntactic Lookahead
+
+This issue has been resolved for several months. With legacy JavaCC syntax, you frequently find yourself writing something like:
+----
+ LOOKAHEAD(Foo()) Foo() 
+----
+
+though it can get far worse. You write things like:
+----
+  LOOKAHEAD(Foo() [Bar()] (Baz())+) Foo() [Bar()] (Baz())+
+----
+
+This has already been fixed in JavaCC 21, so the above two lines could be written as:
+----
+ LOOKAHEAD Foo()
+----
+
+and
+
+----
+ LOOKAHEAD Foo() [Bar()] (Baz())+
+----
+
+respectively. This is because if we don't write a separate lookahead expansion, we default to the case where the expansion to be matched and the one used by the lookahead are one and the same.
+
+==== Superfluous Empty Parentheses
+
+(((Streamlined Syntax, Superfluous Empty Parentheses)))
+In legacy JavaCC syntax, we always have to write something like:
+----
+ Foo() Bar() Baz()
+----
+
+even in situations where writing:
+----
+Foo Bar Baz
+----
+
+would not cause any ambiguity. Removing the need to write these empty parentheses would allow us to write the second LOOKAHEAD above even more simply:
+
+We go from:
+----
+(1) LOOKAHEAD(Foo() [Bar()] (Baz())+) Foo() [Bar()] (Baz())+
+----
+
+to
+
+----
+(2) LOOKAHEAD Foo() [Bar()] (Baz())+
+----
+
+finally to
+
+----
+(3) LOOKAHEAD Foo [Bar] (Baz)*
+----
+
+and actually, I decided to introduce the shorter keyword SCAN so we can write
+----
+(4) SCAN Foo [Bar] (Baz)*
+----
+
+Added note as of 24 July 2020: As of the last streamlining cycle, it was decided that, since this kind of construct is so common in practice, where you want to scan ahead indefinitely for the expansion to be parsed,  the above could now be written simply as:
+----
+ => Foo [Bar] (Baz)*
+----
+
+==== Superfluous Production Return Type void 
+
+(((Streamlined Syntax, Superfluous Void Return Type)))
+In a typical grammatical production that will generate a Java method with no return type (i.e. void) there is no point in making the grammar author write void in all these spots. Thus, the grammatical production in legacy syntax:
+----
+ void FooBar() : 
+ {}
+ {
+     Foo() Bar()
+ }
+----
+
+can be written more tersely as:
+----
+ FooBar : 
+ {}
+ {
+     Foo Bar
+ }
+----
+
+The above, of course, makes use of the fact that we no longer need to write all the superfluous empty parentheses. Of course, the perceptive reader will realize that the above production still contains visual clutter, namely…
+
+==== Superfluous Empty Java Code Block
+
+(((Streamlined Syntax, Superfluous Java Block)))
+In JavaCC, you can optionally start any grammatical production with a Java code block, in order to define and/or initialize any variables that your Java code needs. This is quite useful generally, but if you don't need to do this, legacy JavaCC still requires you to write that Java code block, even though it is empty. The latest version of the JavaCC 21 parser is smart enough to allow you to omit the opening code block. So legacy JavaCC requires you to write: 
+----
+ FooBar : 
+ { }
+ { 
+   Foo Bar
+ }
+----
+
+even though that first code block was empty. The previous production can now be written:
+----
+ FooBar :
+ {
+    Foo Bar
+ }
+----
+
+In fact, many people (probably in order to see more of their file on screen) would prefer to write:
+----
+ FooBar : {Foo Bar}
+----
+
+Given this, I decided that it would be clearer to have an alternative syntax that dispensed completely with the braces. In general, in the newer streamlined syntax, we mostly just use braces (i.e.{...}) when injecting actual Java code into our parser.
+
+So, with the newer streamlined, the preferred way to write the last version of the production would be:
+----
+  FooBar : Foo Bar;
+----
+
+IMPORTANT: if you use this alternative, braces-free syntax, you must end your production with a semicolon.
+
+Note that all of the legacy non-streamlined constructs still work. Most of this streamlined syntax is just the result of making certain elements optional that were previously mandatory. The older syntax will work for the foreseeable future, but I really anticipate that, for most people, it will be an easy decision whether to write:
+
+----
+    void FooBar() :
+    {}
+    {
+        Foo() Bar()
+    }
+----
+
+or
+----
+   FooBar : Foo Bar;
+----
+
+==== ADDENDUM: Ambiguities in the Streamlined Syntax
+
+(((Streamlined Syntax, Ambiguities)))
+There are a few ambiguities, corner cases really, that the newer streamlined syntax introduced.
+
+For example, consider the following construct:
+----
+  Foo (Bar | Baz)
+----
+I suspect that most readers would express surprise that there is any ambiguity here. It looks quite clear what this is: a grammatical expansion that represents a Foo followed by either a Bar or a Baz.
+
+But it is ambiguous. The vertical bar "|"" in the parentheses could be parsed as the bitwise OR of two integers, Bar and Baz or could be parsed as an expansion with a choice between Bar and Baz. In other words, the above construct could be parsed alternatively as:
+
+* A reference to a single Non-terminal Foo in which the value of Bar | Baz is being passed in as an argument. (Here Bar and Baz would have to be integer types of some sort and the | is the Java/C bitwise OR operator.)
+* A reference to the Foo production with no args, followed by another expansion in parentheses, (Bar | Baz), i.e. a choice between Bar and Baz. (Here Bar and Baz would have to be non-terminals in the grammar and the | here is the JavaCC choice operator.)
+
+Now, as a practical question, the intent of the author will be the second case about 99.99% of the time. So, the solution is simply to parse this construct as the second case above.
+
+Now, in the very rare occasion that you really did want Bar | Baz to be an integer passed in as an argument, you could easily disambiguate by writing it as:
+----
+  Foo(0 + Bar | Baz)
+----
+
+This disambiguates because it is now quite clear that the expression inside the parentheses is some integer value. Certainly, it cannot be parsed as a grammar expansion.
+
+However, I daresay that this case would be so rare that, as a practical matter, very few JavaCC users would ever run into this, and if they did, the above solution does not look very onerous.
+
+Another ambiguity is when you write something like:
+
+----
+  Foo(Bar)
+----
+
+In theory, this could be interpreted as:
+
+* The non-terminal production Foo(…) being invoked with a single argument Bar, which is presumably some variable defined in the Java code.
+
+or
+
+* The non-terminal Foo followed by the non-terminal Bar.
+
+The solution I have opted for is simply to interpret this as the first case, since the parentheses are completely superfluous and it would just make more sense to write the second case as:
+----
+ Foo Bar
+----
+
+Note also that the following constructs:
+----
+Foo (Bar)? 
+
+Foo (Bar)*
+
+Foo (Bar)+
+----
+
+are not ambiguous, since the parser can (and does) simply scan ahead for the '?', '*', or'+' and disambiguates this way. It is only the plain Foo (Bar) that is ambiguous, and that can always be better written as simply Foo Bar
+
+This is a gotcha that people are more likely to run into than the previous one, since the use of the bitwise operator in that spot to pass in an arg would be quite rare. Still, given that the solution for disambiguating this case involves simply writing the code more clearly (i.e. deleting the superfluous parentheses if you don't intend for Bar to be an argument that is passed in) it seems that introducing this extra wrinkle, given all of the extra clarity and brevity that we can achieve, seems like a good tradeoff.

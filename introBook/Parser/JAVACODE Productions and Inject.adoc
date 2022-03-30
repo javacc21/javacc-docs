@@ -1,0 +1,91 @@
+:imagesdir: ../images
+//JAVACODE Productions Redux 10-18-2020
+=== JAVACODE Productions and Inject
+
+Legacy JavaCC has this thing called a JAVACODE "production" that JavaCC 21 does not have because, yes, I did rip out this "feature". The decision to remove JAVACODE requires a bit more explanation, starting with the obvious question probably on the minds of most people who have come across this and don't even known what we're talking about. Namely:
+
+==== WTF is a JAVACODE production?
+
+(((JAVACODE, Plain Old Java Method)))
+A JAVACODE production is just a plain old Java method (hereafter _POJM_) that you can put anywhere in your grammar where you would normally put a BNF production -- a.k.a. a _real_ grammatical production. You can also refer to it in your grammar as if it was a regular grammatical production. But, again, it is just a _POJM_.
+
+In legacy JavaCC, you define a "JAVACODE production" by simply putting a Java method where you would normally put a regular grammar production and prefacing the _POJM_ with the keyword JAVACODE. Something like:
+----
+ JAVACODE
+ void Bar() {...}
+----
+
+So, then you can use this Java method Bar elsewhere in your grammar as if it was a regular grammatical production, like:
+----
+ Foo() Bar() Baz()
+----
+
+But, in reality, the above is exactly the same as writing:
+----
+ Foo() {Bar();} Baz()
+----
+
+You see, again, Bar is just a _POJM_ and in JavaCC (and in JavaCC 21 as well, of course) you can put any block of Java code in an expansion in your grammar, simply by enclosing it inside curly braces and adding the semicolon so it is a legal Java statement. So, one characterization of JAVACODE is that it is just syntactic sugar. The first snippet above is the same as the second one, but is a whole 3 characters shorter.
+
+Using a JAVACODE production, however, comes at a certain cost. It now means that anybody reading the grammar has to jump to where Bar is defined to see that it is actually a _POJM_ masquerading as a grammatical production. With the second snippet above, it is readily obvious that Foo and Baz are regular grammatical productions and Bar is a java method.
+
+Now, in the interests of absolute fairness, I would point out that the first snippet above does potentially offer another advantage besides the saving of 3 characters. However, it is really only an advantage in the case of legacy JavaCC. You see, if you simply made Bar() a regular Java method, it would have to be defined it in the PARSER_BEGIN...PARSER_END section up top in your grammar, which might mean that it is defined quite far from where it is used. If it is defined as a JAVACODE production, on the other hand, it can be placed right next to the part of the grammar where it is used.
+
+However, this advantage does not apply to JavaCC 21, since in JavaCC 21, you can place a code injection wherever you want in the grammar. Thus, for example, you can place an injection like the following:
+----
+ INJECT PARSER_CLASS : {
+    void Bar() {...}
+ }
+----
+
+anywhere you want in the grammar -- top, bottom, middle... -- while in JavaCC, all such code must be in this PARSER_BEGIN...PARSER_END section right at the top of your grammar.
+
+Consider this use of JAVACODE from the JSqlParser grammar. The only change needed to make this work is to replace:
+----
+ JAVACODE
+ OracleHint getOracleHint() {
+     ....
+ }
+----
+
+by 
+----
+ INJECT PARSER_CLASS : {
+     OracleHint getOracleHint() {
+        ...
+     }
+ }
+----
+
+and it should work as before. Actually, there are two other JAVACODE productions in the JSqlParser grammar: One is a java method called error_skipto which, like getOracleHint is only ever used as a _POJM_. The other JAVACODE production in the file is called captureRest and actually is used as (fake) grammar production like so:
+----
+ tokens=captureRest()
+----
+
+However, the only thing needed to get this working with JavaCC 21 would be to rewrite this as:
+----
+ {tokens=captureRest();} 
+----
+
+==== Concluding Remarks on JAVACODE
+
+(((JAVACODE, Removed in JavaCC 21)))
+I hope the above explains why JAVACODE productions were removed. The whole "issue" is really much ado about nothing because this whole JAVACODE "feature" is not much of a feature.
+
+Not only is the whole JAVACODE concept not useful, it's confusing, because people seem to think that this is an actual feature that... like... does something...
+
+Well, maybe that is my fault. I did use this violent language of ripping out, which might make one think that something of some real substance was being extirpated. But no. Again, a JAVACODE production is just a Java method -- a _POJM_ that can masquerade as a grammatical production, i.e you can reference it as if it was a regular grammatical production. What this means concretely is that you can, at some points write:
+----
+ Foo()
+----
+
+instead of 
+----
+ {Foo();}
+----
+
+a slight syntactical convenience at the cost of making it unclear to anybody reading the code that Foo is just a _POJM_. 
+
+In any case, given that JavaCC 21 allows you to place a code injection anywhere in a grammar that you want, the only advantage that the whole JAVACODE production concept ever had no longer is present. And since it creates confusion and is not that widely used anyway, and when it is used, it is not hard to update one's code...
+
+It is now gone!

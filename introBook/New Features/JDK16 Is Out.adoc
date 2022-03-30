@@ -1,0 +1,112 @@
+=== JDK 16 Changes Added to JavaCC 21
+
+(((JDK 16 Changes, JavaCC 21)))
+The changes added to JDK 16 (released March 2021) came down to two new features:
+
+*   Pattern matching for instanceof
+*   Records
+
+==== Pattern Matching for Instanceof
+
+(((Instanceof))) (((Pattern Matching, Instanceof)))
+The first change turned out to be quite trivial. For those of you unfamiliar with pattern matching for instanceof, here's some of the information from JEP 394, the JDK Enhancement Proposal that defined its goals and behaviors.
+
+*    Pattern matching allows common logic in a program, namely the conditional extraction of components from objects, to be expressed more concisely and safely.
+*   Nearly every program includes some sort of logic that combines testing if an expression has a certain type or structure, and then conditionally extracting components of its state for further processing.
+*   This pattern is straightforward and understood by all Java programmers, but is suboptimal for several reasons. 
+**  It is tedious; doing both the type test and cast should be unnecessary (what else would you do after an instanceof test?).
+**  This boilerplate — in particular, the three occurrences of the type String — obfuscates the more significant logic that follows.
+**   Most importantly, the repetition provides opportunities for errors to creep unnoticed into programs.
+
+Java programmers are familiar with the instanceof-and-cast idiom:
+----
+ if (obj instanceof String) {
+    String s = (String) obj;    // grr...
+    ...
+ }
+----
+
+The refactored version of the code follows:
+----
+ if (obj instanceof String s) {
+    // Let pattern matching do the work!
+    ...
+ }
+----
+
+If obj is an instance of String, then it is cast to String and the value is assigned to the variable s.
+
+==== Records and Restricted Keywords
+
+(((Keywords, Contextual/Soft/Restricted)))
+The new record feature was a little bit trickier to implement because the word "record" (like "yield" or "var") is a _restricted keyword_, i.e. a keyword in certain contexts, but outside of those cases, it is just a regular identifier. 
+
+NOTE: _Soft keywords_ and _contextual keywords_ have also been used to describe words that can be either a keyword or an identifier depending on the context they are being used in.
+
+Well, the long and short of it really is that these _restricted keywords_ can be variable names, but not type names. Of course, the whole concept of the _restricted keyword_ only exists for the purpose of backward compatibility. Surely, if all of this was designed from scratch, record would just be a regular keyword, like class or interface. But all of this has led to some rather strange corners of the syntax. For example, the following is a perfectly valid statement:
+----
+ yield yield;
+----
+
+No biggie. The first yield is the keyword and the second one is a regular identifier. Or, for example, this statement is also valid:
+----
+ var var = var();
+----
+
+However, interestingly enough, the following is not permissible:
+----
+ record record ...
+----
+
+Since record is a _restricted keyword_ it cannot be used as a type name. So class record... or interface record... is also a no-no.
+
+Well, all of this is quite funky really, but is actually a real blessing for JavaCC development, since these corners in the syntax constitute a somewhat challenging testbed for the capabilities of a parser generator. Support for yield was first available for JDK 14 but since then it has been streamlined and shortened. This is how it is now implemented:
+----
+ YieldStatement : 
+   SCAN {getToken(1).getImage().equals("yield") 
+         && isInProduction("SwitchExpression")}#
+   => <IDENTIFIER> Expression ";"
+ ;
+----
+
+Well, basically, it seemed like more bother than it was worth to define a separate keyword yield, so the way I dealt with the yield statement (part of the newer switch expressions that is a stable feature since JDK 14) was simply to use semantic lookahead. Well, the upshot is that, in the lexical grammar, there is no yield token. I deal with this ad hoc as you see above.
+
+But I took a different approach with record, defining it as a keyword, but then creating a TOKEN_HOOK method that replaces the keyword with an identifier if we are not in a context where record is a keyword. Following is the key part here:
+----
+ INJECT PARSER_CLASS : {
+   private Token TOKEN_HOOK(Token tok) {
+    TokenType type = tok.getType();
+    if (type != RECORD && (type != IDENTIFIER || !tok.getImage().equals("record"))) {
+       return tok;
+    }
+    TokenType desiredType = inTypeDeclaration() ? RECORD : IDENTIFIER;
+    if (type == desiredType) return tok;
+    Token result = Token.newToken(desiredType, "record", tok.getInputSource());
+    result.copyLocationInfo(tok);
+    return result;
+   }
+ }
+----
+
+Basically, the above token hook method expresses the idea that if we're not in a type declaration, the record token should really be a plain identifier, so our token hook method replaces it with one. A side effect of this way of implementing things is that something like:
+----
+ class record {...}
+----
+
+does not parse because we are in a type declaration so record is treated as a keyword, but the grammar rule specifies that the token after class must be an identifier. However, the statement:
+----
+ int record = 7;
+----
+
+parses okay, since, because we are not directly in a type declaration, the record token was replaced by an Identifier, so the above statement parses. Well, my point is that the generated parser does the right thing (record can be a variable or method name, but not a class name!) with these constructs because of the little touch of magic provided by the relatively terse TOKEN_HOOK method above. What this means is that there is no need to muddy up the syntactic grammar specifying these gnarly details. All of this is possible because of some enhancements added to JavaCC 21 over the last few months. 
+
+It appears that JDK 17 is due out in September of this year. I don't actually know what new language features are in store for JDK 17, but judging from the past few cycles, it doesn't seem that it is very much work to commit to staying up-to-date with Java language evolution. 
+
+The last 3 releases, 14, 15 and 16, brought us the switch expressions, multi-line string literals, and the two new features described above and I do not believe I spent very much time adding support for those four features. Actually, it should get easier over time, since JavaCC 21 (like Java itself!) is not standing still, but getting more powerful and expressive, so supporting new syntactical constructs just keeps getting easier.
+
+NOTE: New Java releases are coming twice a year, with Long Term Support (LTS) versions originally scheduled to be released every 3 years. LTS versions are now scheduled to be released every 2 years. JDK 8, 11, and 17 are all LTS versions.
+
+Two final points:
+
+*   the Java grammar I describe is the one used internally by JavaCC 21, so all of these newer syntactical elements can be used in code actions and injections within your grammars. 
+*   the Java grammar is free to use (include) in your own projects so there's no need to make your own version or kludge together some subset of full Java. 

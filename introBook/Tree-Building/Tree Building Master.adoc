@@ -1,0 +1,15 @@
+== Tree Building in JavaCC 21
+
+JavaCC 21 has made node tree/Abstract Syntax Tree (AST) building a first class citizen. In legacy JavaCC, a separate program (JJTree) processed a special grammar (with a .jjt extension) and separate rules which generated a JavaCC-compatible grammar (with a .jj extension). That generated grammar would then be processed by JavaCC to build the parser with the AST structured with the nodes specified in the JJTree grammar. Unfortunately, the JavaCC grammar frequently required tweaks or changes, which meant either the JJTree grammar had to be updated appropriate (if possible) and rerun by JJTree, or the JavaCC grammar had to be hand-modified to produce the desired grammar file to produce the desired grammar.
+
+JavaCC has simplified the whole process by automatically generating the AST. There is now only one grammar file to maintain and one set of rules to follow. 
+
+The rest of this chapter covers the details of building the AST and the usability and generation enhancements added to JavaCC 21.
+
+include::Tree Building Enhancements.adoc[]
+
+include::More Tree Building Enhancements.adoc[]
+
+include::Tree Building Redux.adoc[]
+
+//include::Tree Building Annotations.adoc[]

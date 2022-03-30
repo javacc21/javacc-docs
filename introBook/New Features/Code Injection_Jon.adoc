@@ -1,0 +1,48 @@
+=== Code Injection
+
+(((Code Injection, Introduction)))
+JavaCC 21 has added the INJECT statement that does not exist in legacy JavaCC. INJECT allows you to specify extra code that will be placed (or “injected”) in generated Java code. It can appear anywhere in your grammar where you could place a BNF production or Token production. It can be written in one of two forms.
+
+==== An INJECT Block that Specifies the Class Name
+
+(((INJECT, Class Specified)))
+This form a class (or interface) name and looks something like this:
+----
+ INJECT Foobar : 
+    import foo.bar.IFoobar; 
+    implements IFoobar;
+    { 
+     private Foo value;
+     public Foo getValue() { return value; }
+     void setValue(Foo value) { this.value = value; }
+    }
+----
+In the above snippet, the INJECT statement specifies the class in which to inject the code. In this example, it is Foobar. The first block after the colon is a prologue in which you can specify imports as well as extends and/or an implements clause. The second block contains the actual code to be injected in the type declaration itself.
+
+Since an INJECT block can be placed anywhere in your grammar file where you could put a production, you would naturally tend to place the above snippet next to the relevant BNF production, which would, of course, be the Foobar production.
+
+==== The INJECT Block with No Type Specified
+
+(((INJECT, No Type Specified)))
+The other form of writing INJECT does not specify the class into which the code will be injected. That looks something like this:
+----
+ INJECT : {
+    import foo.bar.Edible;
+    import foo.bar.Eater;
+
+    public Token implements Edible {
+
+        public void eatMe(Eater e) {
+            e.eat(this);
+        }
+    }
+ }
+----
+The above code causes the code within the block to be injected inside the generated Token.java file - in this example, it would be presumably so that the Token object can implement the foo.bar.Edible interface.
+
+==== Using Injected Code Is Incompatible with Post-Editing the Files
+
+(((Code Injection, Post-Editing Incompatible)))
+It is important to realize that post-editing generated files and using INJECT are mutually exclusive - well, at least on a file by file basis. JavaCC 21 assumes that any file into which you inject code _will be regenerated_ each time. Thus, any changes you make by post-editing the generated source would be overwritten. Of course, that said, the INJECT feature was designed to supersede the need for post-editing of generated files, which is basically... evil.
+
+NOTE: the other way of altering the generated code (that is also unavailable in Legacy JavaCC) is to provide custom FreeMarker templates. However, that should only be necessary quite rarely.

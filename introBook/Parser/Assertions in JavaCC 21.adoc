@@ -1,0 +1,84 @@
+:imagesdir: ../images
+=== JavaCC 21 Assertions!
+
+(((Assertions))) (((JavaCC 21, Assertions)))
+JavaCC 21 now has assertions. There are actually two kinds of assertions:
+
+*   The assertion condition is expressed in Java code.
+*   The assertion condition is a lookahead expansion.
+
+The first kind of condition looks like this:
+----
+ ASSERT {someCondition()}
+----
+
+Optionally, the assertion can have a message, as in:
+----
+ ASSERT {x!=y} : "At this point, x and y cannot be the same!"
+----
+
+Note that this kind of assertion is only applied when parsing, not inside a lookahead routine. That is unless you put in a # character that indicates that it also applies when scanning ahead, as in:
+----
+ ASSERT {x != y}#
+----
+
+The other kind of assertion looks like:
+----
+ ASSERT ("foo" "bar")  : "Expecting \"foo\" followed by \"bar\" here."
+----
+
+The assertion fails if the next two tokens are not "foo" followed by "bar".
+
+The expansion must be within parentheses and is optionally prefixed by a ~ meaning that the condition is negated. (((Assertions, Negative)))
+----
+ ASSERT ~(",") : "A comma cannot occur here!"
+----
+
+==== Semantics of Failed Assertion
+
+(((Assertion Failed, Parsing vs Scanning)))
+One notable aspect of assertions in JavaCC 21 is that an assertion failing has a completely different meaning, depending on whether you are in a regular parsing mode or in a lookahead routine. This is analogous to the semantics of the FAIL statement.
+
+If you hit a FAIL instruction in regular parsing, this means that a ParseException is thrown and processing is aborted. However, if you reach a FAIL directive in a lookahead, that just means that the lookahead routine fails. See the Section about FAIL in Chapter 2 for more information.
+
+NOTE: If fault-tolerant parsing is turned on, the error recovery machinery will get invoked and the parser will try to resync.
+
+The same applies to an assertion failing. If you are in regular parsing, this is really a parsing failure. If you are in a lookahead routine, it just means that the lookahead fails.
+
+==== JavaCC 21 Already had Assertions
+
+A little secret is that the above-described feature is really a sort of syntactic sugar. The following:
+
+ASSERT {someCondition()}
+
+is really a shorthand for:
+----
+ [
+    SCAN {!someCondition()} => FAIL
+ ]
+----
+
+and similarly:
+----
+ ASSERT (Foobar) : "Expecting a Foobar here"
+----
+
+could already be expressed this way:
+----
+ (
+    SCAN Foobar => {}
+    |
+    FAIL "Expecting a Foobar here"
+ )
+----
+
+I think most people would prefer to write it the previous way. In fact, now that assertions can be expressed in such a terse manner, I would anticipate people peppering their code with ASSERT statements to verify how the parser they're developing is actually working.
+
+(((Assertions, Always Enabled )))
+Well, one feature that Java assertions have that is not in JavaCC 21 is the ability to enable and disable them with a command-line switch. Frankly, I don't know what the point of disabling assertions is. I guess some people like to live dangerously! 
+
+Okay, I understand that checking the various assertions has some run-time execution penalty, but it is usually pretty low. I mean, if an assertion failing really means that there is some problem in your code, then further processing really should abort. 
+
+Though, granted, that might depend on whether the app was a game or an online banking app. Or if it was the software that controls some life-support machinery. (And in that case, further processing would depend on whether there is any backup system in place!)
+
+So, okay, one's parameters can vary. As things stand, I didn't see much value in being able to disable the assertions. I just tend to think that if you assert that something is true at some point, and it isn't, you should be alerted to it as soon as possible.

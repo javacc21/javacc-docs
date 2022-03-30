@@ -1,0 +1,161 @@
+:imagesdir: ../images
+//The New SCAN Construct, July 24, 2020
+= Project Structure
+Jonathan Revusky
+2020-07-24
+:jbake-type: page
+:jbake-tags: announcements, roadmap
+:jbake-status: published
+=== The New SCAN Statement
+
+(((Scanning, Introduction)))
+JavaCC 21 introduced a new SCAN statement that was designed to provide a superset of the features available in legacy LOOKAHEAD. It is a key part of the newer streamlined syntax available in JavaCC 21. 
+
+Like LOOKAHEAD, SCAN exists to specify conditions at choice points (see the section on Choice Points in Chapter 5 for more information). The new SCAN construct provides a superset of the functionality of LOOKAHEAD while also being more succinct and readable.
+
+Note, however, that the older LOOKAHEAD syntax still works and will work for the foreseeable feature. Here is a rundown of the differences between SCAN and the older LOOKAHEAD.
+
+==== SCAN Parameters are not Enclosed in Parentheses 
+
+(((Scanning, Parentheses Not Required)))
+Previously, LOOKAHEAD required parentheses around any parameters. Thus, where you previously wrote:
+----
+ LOOKAHEAD(3) Foo()
+----
+
+you would now write:
+----
+ SCAN 3 Foo
+----
+
+Where you previously wrote things like:
+----
+ LOOKAHEAD("foo" ("bar"|"baz")) FooBar()
+----
+
+you now write:
+----
+ SCAN "foo" ("bar"|"baz") => FooBar
+----
+
+(((=>, Disambiguate Expansion)))
+Note that the arrow ( => ) is necessary in the above to separate the lookahead expansion from the expansion to be parsed. You can also write:
+----
+ SCAN 3 => Foo
+----
+
+but the arrow is optional because it is not necessary to disambiguate anything.
+
+==== SCAN Parameters are not Separated by a Comma
+
+(((Scanning, Parameters Not Comma Separated)))
+Legacy JavaCC required a comma between parameters, if there was more than one parameter.
+
+Thus, where you previously wrote:
+----
+LOOKAHEAD(Foo(), {someCondition()}) FooBar()
+----
+
+you now write:
+----
+ SCAN {someCondition()} Foo => FooBar
+----
+
+NOTE: the parameter order was changed because in actual code, the semantic lookahead is actually evaluated first. At least in my implementation!)
+
+Where you would previously write:
+----
+ LOOKAHEAD(1, {someCondition}) Foo()
+----
+
+you now write:
+----
+ SCAN 1 {someCondition} => Foo
+----
+
+==== Indefinite Scanahead
+
+A little point to note is that the new SCAN construct assumes _indefinite_ scanahead by _default_. Thus, with the legacy LOOKAHEAD: 
+----
+ LOOKAHEAD({someCondition}) Foo()
+----
+
+is the equivalent of writing:
+----
+ SCAN 0 {someCondition} => Foo
+----
+
+In the legacy lookahead, if you only have semantic lookahead, the number of tokens to be scanned is assumed to be zero, i.e. if the semantic condition is true, you automatically go into the following expansion. 
+
+==== The SCAN Construct Allows Backward Scanning
+
+The new SCAN construct allows you to scan backwards in the lookahead/call stack. This can only be used in conjunction with the newer SCAN statement, not with the legacy LOOKAHEAD construct. See the section on Lookbehind scanning later in this chapter.
+
+==== Addendum: the SCAN-less SCAN? 
+
+Even the newer SCAN construct has some redundancies. There is no obvious reason to oblige anybody write even:
+----
+ SCAN 3 Foobar
+----
+
+We could permit:
+----
+ 3 Foobar
+----
+
+It is trivial to allow this, but I have refrained for now, since I think there is a balance to be drawn between overly verbose constructs and the overly cryptic. I think that legacy JavaCC syntax, by and large, is overly verbose, and there has been a clear need to streamline it, but I don't want to go too far, such as the following. 
+
+----
+ 3 => Foobar
+----
+
+As of this writing, you can write:
+----
+ SCAN 3 Foobar
+----
+
+to mean, scan forward three tokens and if Foobar is matched, evaluate it. This scan could also be written as
+----
+ SCAN 3 => Foobar
+----
+
+In general, the possibility of making even the word SCAN optional is quite clear in some cases. What was previously written as:
+----
+ LOOKAHEAD(Foo()) Foo()
+----
+
+can now be written as:
+----
+ SCAN => Foo
+----
+
+or even more succinctly written as: 
+----
+ SCAN Foo
+----
+
+(((=>, Simplified SCAN Statement)))
+Which can be written more tersely as:
+----
+ => Foo
+----
+
+In this case, because I think it is such a common need, we decided to allow this super simplified construct. And, in fact, this SCAN construct is already used in internal development.
+
+==== SCAN Instruction Recap 
+
+The new SCAN instruction in JavaCC 21 totally supersedes the legacy tool's LOOKAHEAD (which remains available). SCAN allows you to specify in the following order:
+
+. *numerical* lookahead. The maximum number of tokens to scan ahead.
+
+. *semantic lookahead*. Arbitrary java code enclosed in {..}.
+
+. *contextual predicates*. The predicate that expresses the condition to be searched for
+
+. *syntactic* lookahead. Scan forward until the specified syntax is located
+
+*Caveats:*
+
+* The SCAN construct can specify all (or none) of the above, except that _numerical_ lookahead and _syntactic_ lookahead are mutually exclusive.
+
+* If no numerical or syntactic lookahead is specified, the generated code will scan ahead an unlimited number of tokens. This differs from the legacy tool.

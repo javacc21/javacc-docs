@@ -1,0 +1,209 @@
+[comment]
+--
+= How JavaCC 21 Works
+
+JavaCC 21 is all-Java application that generates code for a parser based on the grammar that you provide to it. The code for the parser can then be compiled using javac to produce a runnable Java program that will read the input source(s) that you provide to it. Any source that doesn't conform to the rules in your grammar will be identified.
+
+== The Code for JavaCC 21
+
+To follow along with this article, clone the latest repository of JavaCC 21 from GitHub into a folder of your choice. Open a terminal window and issue the following command: 
+-----
+ git clone https://github.com/javacc21/javacc21.git
+-----
+Unlike many other parser projects, JavaCC 21 makes extensive use of templates to generate the parser code. The template engine (FreeMarker) is a Java class library (jar file) that generates text output based on templates. Using templates simplifies the logic needed to analyze your grammar and allows the developer to operate at a higher logic level; instead of copying/pasting/modifying hundreds of println statements that output the desired code, the templates mix $(interpolations), <#directives>, ${expressions}, [#macros] and Java statements to generate the desired code output. As an added bonus, the use of templates makes it easier to incorporate the new features included with each new release of Java.
+
+The ParserProductions.java.ftl template in src/ftl folder is the heart of the parser's code generation logic. Roughly speaking, the parser generates two types of methods: parsing methods and lookahead methods or predicates. 
+--
+=== FreeMarker Parsing Methods 
+
+(((FreeMarker, Parsing Methods))) (((FreeMarker, Templates)))
+Let's talk about parsing methods first. ParserProductions.java.ftl contains a macro called Productions. Note that the following template code was current at the time this document was written and may have been updated since then. Also note that the template examples shown in this document use square brackets for directives ("alternative tag syntax" available since FreeMarker 2.3.4) instead of angle brackets; i.e. [#if ... ] instead of <#if ...>. 
+----
+ [#macro Productions] 
+  [#list grammar.parserProductions as production]
+   [@CU.firstSetVar production.expansion/]
+   [#if !production.onlyForLookahead]
+    [#set currentProduction = production]
+    [@ParserProduction production/]
+   [/#if]
+  [/#list]
+  [#if grammar.faultTolerant]
+    [@BuildRecoverRoutines /]
+  [/#if]
+ [/#macro]
+----
+
+The first line of code above declares the beginning of the Productions macro (similar to a function or method declaration). The next line is a list directive that works much like the for-each loop in Java and iterates through a list of items, repeatedly performing the actions between the [#list ...] and [/#list] markers on each item in the list. The collection of items represented by grammar.parserProductions is built/invoked by getParserProductions in Grammar.java.
+
+Next, the imported CommonUtility.firstSetVar macro (imported as namespace CU) is invoked to get that item's name and token type. Then, if this isn't a lookahead process, work is delegated to another macro called ParserProduction, defined later in ParserProductions.java.ftl. This macro generates the Java code method signature (accessModifier, return type, method name, etc). Each method that represents a BNF Production throws ParseException (potentially) and if there are other declared exceptions (which is probably rare in practice) they are also added. 
+
+At the end of ParserProduction, the BuildCode macro is invoked. And in that macro is where we really begin to enter the bowels of the beast.
+
+BuildCode is the outer skeleton for building the code to parse an expansion. This macro is made more complicated because of the fault-tolerant logic which is still being developed so it's not critical to have it all figured out.
+----
+ [#macro BuildCode expansion]
+   [#if expansion.simpleName != "ExpansionSequence" && expansion.simpleName != "ExpansionWithParentheses"]
+  // Code for ${expansion.simpleName} specified at:
+  // ${expansion.location}
+   [/#if]
+     [@CU.HandleLexicalStateChange expansion false]
+       [#if grammar.faultTolerant && expansion.requiresRecoverMethod && !expansion.possiblyEmpty]
+         if (pendingRecovery) {
+           //if (debugFaultTolerant) LOGGER.info("Re-synching to expansion at: ${expansion.location?j_string}");
+            ${expansion.recoverMethodName}();
+         }
+       [/#if]
+       [@TreeBuildingAndRecovery expansion]
+         [@BuildExpansionCode expansion/]
+       [/@TreeBuildingAndRecovery]
+     [/@CU.HandleLexicalStateChange]
+ [/#macro]
+----
+
+The BuildCode macro begins with an empty [#if] directive block. It then invokes the CommonUtility.HandleLexicalStateChange to respond to lexical state changes, which begins with an [#if] directive block for fault tolerant parsing, followed by a call to the TreeBuildingAndRecovery macro which manages creating and correctly configuring parsed nodes. As part of this macro, the BuildExpansionCode macro is called which is a skeleton macro that generates parser logic for any expansion. When BuildExpansionCode completes, the TreeBuildingAndRecovery macro completes, which completes the HandleLexicalStateChange macro, which completes the BuildCode macro.
+
+So let's take a look at BuildExpansionCode. As mentioned before, it is really a skeleton macro that delegates its work to other macros.
+----
+ [#macro BuildExpansionCode expansion]
+    [#var classname=expansion.simpleName]
+    [#var prevLexicalStateVar = CU.newVarName("previousLexicalState")]
+    [#if classname = "ExpansionWithParentheses"]
+       [@BuildExpansionCode expansion.nestedExpansion/]
+    [#elseif classname = "CodeBlock"]
+       ${expansion}
+    [#elseif classname = "UncacheTokens"]
+         uncacheTokens();
+    [#elseif classname = "Failure"]
+       [@BuildCodeFailure expansion/]
+    [#elseif classname = "TokenTypeActivation"]
+       [@BuildCodeTokenTypeActivation expansion/]
+    [#elseif classname = "ExpansionSequence"]
+       [@BuildCodeSequence expansion/]
+    [#elseif classname = "non-terminal"]
+       [@BuildCodenon-terminal expansion/]
+    [#elseif expansion.isRegexp]
+       [@BuildCodeRegexp expansion/]
+    [#elseif classname = "TryBlock"]
+       [@BuildCodeTryBlock expansion/]
+    [#elseif classname = "AttemptBlock"]
+       [@BuildCodeAttemptBlock expansion /]
+    [#elseif classname = "ZeroOrOne"]
+       [@BuildCodeZeroOrOne expansion/]
+    [#elseif classname = "ZeroOrMore"]
+       [@BuildCodeZeroOrMore expansion/]
+    [#elseif classname = "OneOrMore"]
+        [@BuildCodeOneOrMore expansion/]
+    [#elseif classname = "ExpansionChoice"]
+        [@BuildCodeChoice expansion/]
+    [#elseif classname = "Assertion"]
+        [@BuildAssertionCode expansion/]
+    [/#if]
+ [/#macro]
+----
+
+I think it's worth looking at a few of these macros. The simplest is CodeBlock, I suppose, because if the expansion in question is a block of Java code (which is considered as a kind of Expansion in the logic of the code ...) we just insert it there without changes. So this is an "expansion", but in fact, it is just a trivial insertion. By the way, at this point, we were able to parse this block of code, but we don't know if it compiles. This is the compiler's job and the responsibility of the author of the CodeBlock's to provide compilable code. We wash our hands!
+
+BuildCodeRegexp is pretty straightforward too; it is the code to process a Token and invoke consumeToken (ignoring for now the fault-tolerant details). In fact, anywhere you see an invocation of consumeToken in a generated Parser, it was generated by this macro! In the 40,000+ lines of code that were generated for JavaCCParser.java, there is more than 500 hundred invocations of consumeToken().
+
+NOTE: If src/java/com/javacc/parser/JavaCCParser.java doesn't exist, you will have to build it using Ant. In the root folder of your cloned Javacc 21 repository, type  "ant" and the default target will be run and generate JavaCCParser.java as well as a number of other files.
+
+Go ahead and look at the file. It's huge but he won't bite you. :-) It will contain more than 500 calls to consumeToken (you don't have to look at them all to get the idea). Each line that has consumeToken (IDENTIFIER) was generated by this BuildCodeRegexp macro in ParserProductions.java.ftl. 
+
+Let's look at some more stuff. BuildCodeSequence is simple; it is invoked when the expansion is a sequence.
+
+Let's say your grammar contains a sequence of three Tokens, like:
+----
+ “Foo” “bar” “baz”.
+----
+
+The BuildCodeSequence macro will be invoked. That macro is shown below: 
+----
+ [#macro BuildCodeSequence expansion]
+    [#list expansion.units as subexp]
+        [@BuildCode subexp/]
+    [/#list]        
+ [/#macro]
+----
+
+This macro invokes the BuildCode logic on the sub-expansions, which in this case is the sequence of three Tokens, which are the terminal expansions of a grammar whatever. But BuildCode in turn invokes BuildCodeRegexp three consecutive times and finally generate something like:
+----
+ consumeToken (FOO);
+ consumeToken (BAR);
+ consumeToken (BAZ);
+----
+
+Code similar to the following would be generated in a file named <grammar name>Parser.java after running JavaCC against a grammar with just that sequence of three token: 
+----
+ if (false) throw new ParseException("Never happens!");
+ // Code for RegexpStringLiteral specified at:
+ // seq.javacc:3:6
+ consumeToken(TokenType.FOO);
+ // Code for RegexpStringLiteral specified at:
+ // seq.javacc:3:12
+ consumeToken(TokenType.BAR);
+ // Code for RegexpStringLiteral specified at:
+ // seq.javacc:3:18
+ consumeToken(TokenType.BAZ);
+----
+
+But what if the sub-expansions were more complex? Well, it's ... more complex. For example, if our grammar had: 
+----
+ “foo” “bar” [“baz”]
+----
+
+In this example, ["baz"] is an optional item; "baz" can appear once or not at all (it could also have been written  (“baz”)? ). The first two items are the same and will invoke BuildCodeSequence as described above (and will produce the same two lines of consumeToken), but for the third item, the BuildCodeZeroOrOne macro will be invoked (shown below). 
+----
+ [#macro BuildCodeZeroOrOne zoo]
+    [#if zoo.nestedExpansion.alwaysSuccessful
+      || zoo.nestedExpansion.class.simpleName = "ExpansionChoice"]
+       [@BuildCode zoo.nestedExpansion /]
+    [#else]
+       if (${ExpansionCondition(zoo.nestedExpansion)}) {
+          ${BuildCode(zoo.nestedExpansion)}
+       }
+    [/#if]
+ [/#macro]
+----
+
+The macro begins by checking for two specific conditions (alwaysSuccessful or ExpansionChoice) and if either of those conditions are met, the BuildCode macro is invoked. If those conditions are not met, the else part is executed. Note that the else part combines Java code (if (....) with $(interpolations) (think substituting contents of a variable) to produce the actual code which will be used, which is a zero or one instance of "baz". The net result is the BuildCode macro will be invoked which will delegate to BuildCodeRegexp which will generate something like consumeToken (BAZ). So for all three items, the following code (pseudo-code) will be produced: 
+----
+ consumeToken (FOO);
+ consumeToken (BAR);
+ If (someCondition) {
+    consumeToken (BAZ);
+ }
+----
+
+If we had specified a zero-or-more condition, like the following:
+----
+ “Foo” “bar” (“baz”) *
+----
+
+instead of delegating to BuildCodeZeroOrOne, it would delegate to the BuildCodeZeroOrMore, which would generate code that would look more like:
+
+ consumeToken (FOO);
+ consumeToken (BAR);
+ while (someCondition) {
+   consumeToken (BAZ);
+ }
+
+Again, someCondition is pseudo-code; it generates the code to know if you stay in the loop or jump out.
+
+In the examples above, the code was pretty straightforward, but in actual grammars the regular expressions can be arbitrarily nested. For example:
+
+    “Bat” [“foo” (“bar” | “baz”) *]
+
+Or much more complicated, of course. But from the examples we have viewed in detail so far, we can see that the code generation logic for an arbitrarily nested expansion would be relatively straight-forward (although highly recursive) replacement of the nested expansions with the appropriate Java code. 
+
+[comment]
+--
+=== Lookahead Methods or Predicates 
+NOTE: Back in the beginning, we said that there are two main types of methods: parsing methods and Lookahead/predicate methods. We covered parsing methods - should we also cover lookahead methods? What about assertion methods?
+
+Lookahead methods (scan methods) differ from parsing methods in that they don't change the parser's current position in the source file that it is parsing. 
+
+etc, etc, etc
+
+UNKNOWN - WILL WE ADD TO THIS MATERIAL IF WE KEEP THIS CHAPTER????
+--
+

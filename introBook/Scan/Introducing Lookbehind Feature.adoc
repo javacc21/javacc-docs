@@ -1,0 +1,116 @@
+=== Introducing the New Lookbehind Feature!
+
+(((Lookbehind, Introduction))) (((Scanning, Backwards, Introduction)))
+The Lookbehind feature was implemented because I realized that there was a very common thing people want to do in a JavaCC grammar that simply cannot be done in a simple, robust way. Lookbehind was not actually implemented as a new keyword in JavaCC. Lookbehind is just an informal way of referring to a new feature that allows scanning to move backwards through the token stream.
+
+In JavaCC, certain constructs and productions are naturally _re-entrant_ and others are not. So if you do not want a grammatical production to nest recursively, how can this be done with JavaCC? I guess a very typical way to deal with this would be to create a variable to keep track of whether we are already in a certain kind of grammatical production.
+
+For example, suppose we define a variable called inFoo. In JavaCC 21, you would naturally use the INJECT feature:
+----
+ INJECT PARSER_CLASS : {boolean inFoo;}
+----
+
+Then, in the Foo production, you set (and later unset) the variable. In legacy JavaCC syntax, this would look similar to the following:
+----
+ Foo :
+  {inFoo = true;}
+  ...
+  {inFoo = false;}
+ ;
+----
+
+which allows you to use semantic lookahead elsewhere, with something like the following: 
+----
+ [SCAN {inFoo} => Foo]
+----
+
+Even using the streamlined syntax, it is still a rather cumbersome disposition. It requires you to have code in three different places: you inject the variable definition in your XXXParser class, you set and unset the variable in your Foo production, and then you use the variable elsewhere as "semantic lookahead".
+
+Well, it should work. Most of the time, anyway. Unfortunately, if you use a deeply nested LOOKAHEAD from a point before the parser has even entered the Foo production, then the inFoo variable, when it is checked within the lookahead routine, has not been set!
+
+So, here is how we could express the above with the new "lookbehind" feature:
+----
+ [SCAN ~\...\Foo => Foo]
+----
+
+In the above statement, the ~ negates the expression and the \ (backslashes) specify backwards scanning. These are discussed in more detail in the Lookbehind Syntax section.
+
+Anyway, this statement expresses a condition (a predicate, more formally speaking) that we only enter Foo if, scanning backwards from where we are now, we do NOT (the ~ negates the lookbehind) find a Foo. In other words, the above "lookbehind" disallows recursive re-entry into Foo. (At least in this exact spot.) 
+
+Note also, that aside from the advantage of only having to express this in ONE place instead of three, it also works reliably from any deeply nested scanahead.
+
+This example shows a typical Lookbehind use case. JavaCC's LOOKAHEAD/SCAN instruction is a classic example of a construct that does not nest. You cannot (at least for now, _never say never_. . .) define a LOOKAHEAD or SCAN statement when you are already in one. Thus, we have a lookbehind to disallow it.
+----
+ SCAN ~\...\Lookahead
+ =>
+ la=Lookahead
+----
+
+Note that you can perfectly well combine _lookbehind_ with other _predicates_ such as syntactic and semantic lookahead. 
+
+The order of the new SCAN directive is:
+----
+ SCAN 
+  (optional integer to indicate maximum tokens to scan ahead) 
+  (optional java code expression to indicate so-called semantic lookahead)
+  (optional lookbehind expression) (optional syntactic lookahead)
+=> Expansion
+----
+
+By the way, _lookbehind_ can only be used with the newer SCAN keyword. In general, any new lookahead/lookbehind features (or any new features generally) will, from hereon, typically only be available if you use the newer syntax.
+
+==== Lookbehind Syntax
+
+(((Lookbehind Syntax)))
+The syntax of _lookbehind_ expressions is fairly simple. 
+
+* If the expression starts with a tilde (~) the expression is negated. 
+* If the expression starts with (leaving aside any tilde) a backslash (\) it means you are scanning from the current production up to the root. 
+* If it starts with a forward slash ('/') then it starts with the root production and goes in the other direction. 
+
+So, if you were in Java code, let's say, you could have a statement like:
+----
+ SCAN \MethodDeclaration\ClassDeclaration\CompilationUnit/ => Expansion
+----
+
+This would mean that we only enter the expansion if we entered the root production (CompilationUnit by convention) and then entered ClassDeclaration and then entered a MethodDeclaration and then our current production (whatever it is) and now we are deciding whether to enter some Expansion.
+
+The above could also be equivalently expressed going forwards as:
+----
+ SCAN /CompilationUnit/ClassDeclaration/MethodDeclaration\
+----
+
+The final slash above means that the current grammatical production must have been invoked from a MethodDeclaration directly. No intervening grammatical productions. If we wanted to permit intervening productions, we could write:
+----
+ SCAN /CompilationUnit/ClassDeclaration/MethodDeclaration\...\
+----
+
+But actually, if we just leave off the final bit, it means the same as the above, so you could typically write:
+----
+ SCAN /CompilationUnit/ClassDeclaration/MethodDeclaration
+----
+
+for the same effect.
+
+So, another use case would be if we didn't want to allow a construct to be an an inner class. In this case, we would write something like:
+----
+ SCAN ~\...\ClassDeclaration\...\ClassDeclaration =>
+----
+
+The ... means that we can have an arbitrary number of intervening calls.
+
+==== Lookbehind Addendum
+
+I came about the idea for this feature in a rather serendipitous manner. The generated parser now maintains a call stack of the non-terminals you enter but I did not have this "lookbehind" feature in mind at all! I added that call stack to be able to generate better error messages. However, at some point, it occurred to me that the call stack could also be used for this feature, scanning back to see how we arrived at the current production and using this information to form lookbehind predicates!
+
+It is possible to enhance the lookbehind "mini-language" here to make it more powerful, but it has not yet been implemented. If there is end user feedback expressing a need for enhancements with genuine well motivated use cases, then it will be enhanced.
+
+One thing that is currently not implemented either with _lookbehind_ or the conventional syntactic _lookahead_ is the ability to combine more than one in a predicate. There is no obvious reason not to be able to chain more than one of them. For example: 
+----
+ SCAN ~\...\MethodDeclaration & /CompilationUnit/.../InterfaceDeclaration
+----
+
+There is actually no obvious reason not to be able to chain multiple syntactic lookahead expansions this way either!
+
+But that is currently not implemented. Again, if there is significant end-user demand for this I suppose it will be added in short order! Lookbehind is already being used in internal JavaCC 21 development, so if other enhancements are needed to improve internal development, these enhancements will be added. 
+. 

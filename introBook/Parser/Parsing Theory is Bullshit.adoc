@@ -1,0 +1,173 @@
+:imagedir: ../images
+//Is all This Parsing Theory Bullshit? 11/19/2020
+=== Parsing Theory, Ambiguity, and Dangling Else
+
+Since I started my work on resuscitating the JavaCC project, at least a couple of people have asked me how I can do this work if I have no theoretical background in computer science, specifically all this theory behind grammars and parsers. My response has typically amounted to saying: Watch me!
+
+However, it was always in the back of my mind to fill in the various holes in my knowledge, so I would try to read some of the theoretical treatises on parsing. Typically, I'd plow through a few paragraphs and... give up. In most cases, I couldn't quite decide whether the text was elaborating some very complex, sophisticated concepts that I could not get my head around, or just saying trivial, dead-simple things using a very pretentious, impenetrable jargon.
+
+==== Ambiguities
+
+(((Ambiguities in the Grammar))) (((Grammar File, Ambiguities)))
+Some of the most horrible code in the legacy JavaCC codebase existed to warn the user of "ambiguities" in the grammar. For example, if you wrote something like:
+----
+ ("foo")* "foo" "bar"
+----
+
+you would be warned that there was an ambiguity in your grammar because the one-or-more construct starts with "foo" and so does the expansion that immediately follows it.
+
+Now, granted, there is a problem with the above construct -- like, duh, it just doesn't work! But where is the ambiguity?
+
+The JavaCC convention is greedy matching, so the initial ("foo")* in the input will consume as many "foo"'s in a row as it possibly can. So that means that the next Token cannot possibly be a "foo"! So, the code doesn't work, but it is hardly ambiguous!
+
+By the same token, the following code is probably erroneous -- I mean, in the sense that it does not express what its author intended:
+----
+ while (x > 0) {
+     ....
+ }
+ if (x > 0) {
+     ...
+ }
+----
+
+The second block after (x>0) is unreachable since x cannot possibly be greater than zero in this spot. But does anybody think there is any ambiguity?
+
+==== The Infamous "Dangling Else" Problem
+
+(((Grammar File, Dangling Else))) (((Dangling Else Problem)))
+The Dangling Else problem can be shown in the following code:
+----
+ if (cond1) if (cond2) foo(); else bar();
+----
+
+there is allegedly an ambiguity. Supposedly one could think that the above means:
+----
+ if (cond1) {
+    if (cond2) foo(); else bar();
+ }
+----
+
+Or it might alternatively mean:
+----
+if (cond1) {
+    if (cond2) foo();
+} else bar();
+----
+
+In other words, the "else bar()" statement could be associated with the first (outer) if or the second (inner) if.
+
+However, I suppose everybody reading this knows that the else in the code samples above is always parsed as being associated with the second if.
+
+And why is that?
+
+The principle of greedy matching, that's why!
+
+==== Principle 1: Greedy Matching
+
+(((Grammar File, Greedy Matching)))(((Greedy Matching)))
+Once we have entered the inner if statement, it will match as much input as it possibly can. So the inner if consumes the else bar().
+
+Why does it do that? Because it can!
+
+So if the inner if consumes the else, it's not there for the outer if to consume. Or, in other words, there is no "dangling" else!
+
+This is just how the established conventions work. We have greedy matching. Any construct in our grammar consumes as much of the input as it can. So the fact that the else in the above dangling else (Ersatz) problem is associated with the second, inner if is just a trivial consequence of greedy matching.
+
+Or, in other words: the dangling else "problem" is only a problem if you ignore the perfectly standard convention of greedy matching.
+
+Consider the following arithmetic expression:
+----
+ 2 + 2 * 2
+----
+
+It is arguably just as ambiguous, since it could be interpreted as:
+----
+ (2 + 2) * 2
+----
+
+i.e. 8, or:
+----
+ 2 + (2 * 2)
+----
+
+i.e. 6.
+
+Oddly enough, however, there is no Wikipedia page devoted to this ambiguity in basic arithmetic.
+
+In fact, nobody thinks there is any ambiguity. Every schoolchild knows (or at least is taught) that 2 + 2 * 2 is 6. Why? Because multiplication has precedence over addition. (Duh!)
+
+Aside from ignoring the basic principle of greedy matching the other way to talk of non-existent ambiguities is by feigning ignorance of a second basic principle:
+
+==== Principle 2: The first match wins!
+
+(((Grammar File, First Match is Selected)))
+If two (or more) alternative rules match the input, the first one specified is the one that is applied. Suppose we have two productions:
+----
+ Foobar : ("foo" | "bar") blah;
+
+ Foobaz : ("foo" | "baz") blahblah;
+----
+
+Elsewhere, we have:
+----
+ Foobar | Foobaz
+----
+
+Legacy JavaCC will complain here because both the Foobar and the Foobaz productions can start with "foo". Ambiguity alert! Call Homeland security!
+
+Well, it would be an ambiguity if Foobar and Foobaz had the exact same priority. Then, if the next token was "foo", we would not know whether to enter Foobar or Foobaz.
+
+BUT... if two (or more) rules (or productions or expansions or whatever you want to call these things) match, then we have our basic disambiguating rule: the first match wins!
+
+In this case, that is Foobar since it comes first. (Duh!)
+
+(((Ambiguities Code Removed)))
+Well, to cut to the chase here, I decided, on reflection that all of this stuff about "ambiguities" was just wrong, so I simply removed about 1000 lines of unreadable code written in the last century that I was still carrying forward in 2020.
+
+So, all those warnings are (for better or worse) no longer emitted. In my own work internally on JavaCC, I have not at all missed these so-called ambiguity checks.
+
+Now, one point to make about all this is that, on occasion, these things are marginally useful -- but not because they are really warning about ambiguities, but simply because they are reporting that you have dead code. For example:
+----
+ if (2+2==5) {
+     blahblah();
+ }
+----
+
+is not ambiguous. It is wrong and unreachable, but it is not ambiguous. However, the blahblah() within the block is clearly dead code and it might well be worthwhile for a compiler to warn you about something like that. (Though compilers typically do not warn of such things.) By the same token, in the following:
+----
+ ("foo" | "bar") blah
+ |
+ "foo" blahblah
+----
+
+the second choice will never be matched, so the second line is effectively dead code, but it is not ambiguous!
+
+I anticipate that I may well put in some code to warn the user about cases where it is easily proven that a given expansion can never be reached, i.e. generates dead code. However, it is not currently a high priority because it really only seems to be quite marginally useful anyway.
+
+==== Further Reflections on Ambiguities
+
+All of this stuff seems to emerge from some theory of "Context-Free Grammars". In that pure theory I guess there really is a dangling else problem. And these various other "ambiguities" really are a problem. In theory...
+
+However, from my perspective, they are only a problem on a purely theoretical level. On the pragmatic level of implementation of a tool like JavaCC (or any other parser generator, as far as I can see) these things are simply not a problem. Once you understand that we have the rule that the earlier specified match has priority and matching is greedy, there is no ambiguity in these cases.
+
+And I think that gets to a deeper problem that pervades this parser generator space. Certainly, it's a problem with JavaCC. There are a whole host of things that have been broken in JavaCC for as long as it has existed. For example:
+
+*   Nested Syntactic Lookahead not working. This has been fixed in JavaCC 21.
+*   The CommonTokenAction hook does not really work in the general case because the method is invoked in the wrong place.This has been fixed in JavaCC 21.
+*   No ability to write error-handing code that works in conjunction with LOOKAHEAD because Java code actions are always taken to return true in a lookahead routine. This has been solved in JavaCC 21.
+*   In general, syntactic lookahead does not really work correctly in conjunction with lexical states. (It might or might not work, depending on the case, but in general, it does not work, and I'm still working on a general solution for that.)
+
+Due to these things not really working correctly, a lot of things that should work in legacy JavaCC simply do not. Yet strangely, the JavaCC user community largely tolerates all these things not working. It is very hard to find any mention out there of any of the above-mentioned bugs being described forthrightly as bugs.
+
+Well, what I think happens is that when things are all wrapped up in all these layers of mumbo-jumbo and their project doesn't work, they tend to blame themselves rather than the buggy tool they are using!
+
+==== Closing Reflections on Parsing Theory
+
+From a pragmatic viewpoint, all this academic parsing theory looks pretty useless for the most part. Or at best, divorced from the reality of how parsing is actually implemented.
+
+(((Parsing Theory Not Progressing)))
+Regardless, there also seems to be the problem that this application space is surprisingly stagnant. Perhaps the pure theory of parsing, in ivory tower academic settings, is advancing along very well, but it does not seem to be reflected in very much progress in terms of actual useful tools that practitioners can actually make use of.
+
+As a personal example, when I abandoned my JavaCC work (then called FreeCC) in early 2009 and then picked it up over a decade later, it surprised me that FreeCC didn't seem obsolete. If I had thought that it was, I would never have resumed work on it.
+
+Perhaps the deeper point here is that my own goals in this space are about empowering people -- in this case, by providing a more robust, capable, usable tool. As such, I am naturally in opposition to any mystification of straightforward things, shrouding them in some veil of pretentious theoretical jargon.

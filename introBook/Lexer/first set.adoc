@@ -1,0 +1,32 @@
+=== Expansion's First Set
+
+(((Expansions, First Set))) (((First Set)))
+An expansion's _first set_ is simply the set of all tokens that can begin the expansion.
+
+The most trivial example imaginable is any expansion that begins with a single token. Thus, the first set of:
+----
+"foo" "bar" "baz"
+----
+
+is simply a set with one element, “foo”.
+
+The first set of
+----
+("foo" | "bar") "baz"
+----
+
+has two elements, “foo” and “bar”. The above expansion must necessarily begin with one of those two tokens.
+
+For example, if the production Foobar is defined as:
+----
+Foobar : "foo" | "bar";
+----
+
+then the _first set_ of the expansion:
+----
+[ Foobar ] "baz"
+----
+
+contains the three tokens, “foo”, “bar” , and “baz. To say that a grammar is LL(1) is equivalent to saying that, at any choice point, the expansion's _first set_ is enough to decide whether or not to enter the expansion.
+
+NOTE: The corresponding feature, _final set_, is also available for expansions, but it begins with the last token in the expansion and lists the tokens in reverse order.

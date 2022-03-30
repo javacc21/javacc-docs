@@ -1,0 +1,29 @@
+== New Features in JavaCC 21
+
+include::Convention Over Config.adoc[]
+
+include::INCLUDE Statement_jon.adoc[]
+
+include::Code Injection_Jon.adoc[]
+
+include::Context-Sensitive Tokenization.adoc[]
+
+include::Contextual Predicates.adoc[]
+
+include::Contextual Keywords.adoc[]
+
+include::ATTEMPT RECOVER.adoc[]
+
+include::The FAIL Construct.adoc[]
+
+include::New Switch Syntax.adoc[]
+
+include::Nice to Have Features.adoc[]
+
+include::JavaCC Has Preprocessor.adoc[]
+
+include::JDK16 is Out.adoc[]
+
+include::JavaCC 21 Supports Full Unicode.adoc[]
+
+include::Code Too Large.adoc[]

@@ -1,0 +1,184 @@
+=== JavaCC is Not a Java App
+
+One of my longstanding interests is language learning -- I mean, human languages like Russian or Chinese, not computer languages. One striking thing about language learning is the extreme variability in people's results. One observes that certain people, frequently very capable in other fields, will have some ongoing project of learning a language, Spanish for example, and they just never get anywhere.
+
+Now, one thing that should be obvious is that there are must be much more and less efficient ways of attacking the language learning problem. Granted, there are different schools of thought on this question, and different people's brains may be wired differently, such that a particular learning style might be more or less effective for them. However, notwithstanding all of that, it just seems like common sense to me that if you are not getting any results doing whatever it is you are doing, you should really consider changing tack! (Duh!) So what I have been struck by is that people will attack the problem in a specific way and never change their approach. So they fail again and again, or at least, have very very poor results. But they don't revisit their basic approach and will typically attribute their lack of success to their own deficiencies.
+
+I just have no talent for foreign languages.
+
+I am just too lazy.
+
+Well, maybe so, but even the most lazy, untalented people all managed to learn their first language. So, can it really be that?
+
+Well, I think that, for a lot of people who are monolingual into adulthood, learning a foreign language has such a mystique around it that somehow, they are completely intimidated and it just has this demoralizing or crippling effect. As a result, they don't react in a pro-active manner, which would be to consider some other approach when their current approach is not yielding results.
+
+Now, getting to the matter at hand, I've been wondering about some broad similarities. This whole parser generator domain definitely seems to have some sort of mystique built up around it. I suppose that some (or a lot) of this is due to the very obfuscated theoretical jargon that pervades the whole space. However, even leaving that aside, it is also true that getting one's head around how a tool like JavaCC works does pose some special challenges.
+
+I have to admit that I do not yet have a big sample size to draw inferences from. At the time of this writing, there is really only one person who has put any significant energy into learning the JavaCC21 codebase. I won't mention that individual by name, as I'm not really in the business of trying to embarrass anybody (well, unless they really deserve it, in which case...) but all that said, I have to make a simple point about this and I don't know how to say it any more delicately than this...
+
+I am convinced that this person could have made much more progress on getting into the codebase if he grasped a key concept from the very start:
+
+JavaCC21 is NOT a Java app!
+
+JINAJA for short. Granted, that statement may seem paradoxical. Also, it does depend on one's precise definition of "Java app". Thus:
+
+JavaCC21 is a Java app in two basic senses:
+
+    It compiles down to java bytecode and runs on the JVM.
+    Some part of the code is written directly in Java.
+
+However, JavaCC21 is not a Java app in this basic sense:
+
+    It is mostly not written in Java.
+
+Now, as for the first point, an app written entirely in Kotlin or in Scala is a Java app in the basic sense of it running on the JVM -- even if the project does not contain a single line of Java code. That said, I am sure that many (or possibly even most) projects that use an alternative JVM-based language as their main language still contain some Java code. Obviously there is no precise threshold but surely we could all agree that if 90%, say, of your code is in Kotlin, and the other 10% in Java, this is a Kotlin app, not a Java app!
+Now you see it, now you don't!
+
+I don't know about you, dear reader, but whenever I check out the code of an open source project from GitHub or Sourceforge, the first thing I do is try to figure out how big the thing is. How much code is it? Or that might be the second thing I do. In that case, the first thing would be just to see whether I can do a build without much fuss. With JavaCC21, these initial steps should be easy enough. You need a JDK version 8 or higher and Apache Ant. Like so:
+
+ git clone https://github.com/javacc21/javacc21.git
+ cd javacc21
+ ant full-jar
+
+Nonetheless, trying to get a rough sense of the scale of the codebase would be one of the first things I do. It just seems quite natural to ask oneself: how many lines of Java code are there in the src directory? Here is a rather old school way of getting the answer to that question, at least if you have a UNIX-y command shell:
+
+wc -l $(find src -name "*.java")
+
+At the moment (I updated this recently, on 22/6/21), the answer I get is that there is are a total of 68,659 lines of Java code. Well, let's say 68k LOC. To put that in perspective, the total line count of the core java.* classes in JDK 8 is more like 10 times as many lines as that. But 68k LOC is still plenty more lines of Java code than one would care to shake a stick at, no?
+
+But here is the first special characteristic of this project, as compared to a typical Java project: the vast majority of that Java code is generated. Now, let's do this:
+
+ant clean
+
+And now the same magic incantation as before:
+
+wc -l $(find src -name "*.java")
+
+At this moment, I get the answer that there are 5118 lines of Java code. Now you see it, now you don't! (Actually, since all of these source files have about 30 lines of legalese up at the top, that should not be counted, the actual line count is more like 4.5K.)
+
+So, in the compilation step of the build, we handed off about 68K LOC of Java code to the compiler, but well over 90% of that code was generated -- output by a set of FreeMarker templates.
+The Lay of the Land
+
+Now, if JavaCC21 is not a Java app, in the sense that it is mostly not written in Java, then what is it? Here is one possible answer...
+
+JavaCC21 is written in 3 languages:
+
+    FreeMarker, i.e. FreeMarker Template Language, or FTL for short
+    JavaCC21 itself.
+    Java
+
+The FreeMarker templates live in the src/ftl/java directory. At the moment, there is about 6.4K LOC of FTL there. Leaving aside the license boilerplate at the top of the files, the FTL totals about 5.7K lines.
+
+The JavaCC grammar is in the src/javacc directory. The JavaCC.javacc grammar is itself a bit under 3000 lines. It embeds a Java grammar that is used internally but is also separately usable. It is not actually clear whether to count the Java grammar as part of the core JavaCC code. But if we do, we count maybe 5500 lines of JavaCC code.
+
+So, here are some raw data at the time of this writing. The JavaCC codebase is made up of:
+
+    5700 lines of FTL
+    5500 lines of JavaCC
+    4700 lines of Java
+
+So, yes, that does tell us clearly that most of the codebase is not written in Java. However, that actually understates the case. For one thing, in the evolution of the JavaCC21 codebase, the general trend has been for the Java part to shrink continually. That has been dramatic, in fact: the legacy JavaCC codebase has something like 25k LOC of Java (and obviously, zero lines of FTL!). So, in the course of an evolution of the codebase in which quite a few new features have been added, the Java part of the codebase has shrunk by over 80%! (Interestingly, when I wrote the initial draft of this article (9/12/21) I said that there was 7500 lines of Java code in the system and I anticipated that it would shrink down to less than 5k lines. Now (22/6/21) I am updating this essay a bit and, in fact, the Java code is below 5000 lines!)
+
+Furthermore, what Java code remains is increasingly just relatively trivial glue code that connects the JavaCC and FTL layers. So, let us venture an answer to the following key question. If JavaCC (21) is not a Java app, then what is it?
+)
+How about this?
+
+JavaCC (21) is best thought of as a code generator that is written in (a) itself AND (b) a set of FreeMarker templates.
+
+I started talking about how some things develop this mystique around them. Another way of putting this is that people somehow fail to acquire a conceptual model of how the thing works -- i.e. they do not succeed in demystifying the thing.
+
+The basic conceptual model one should form of how JavaCC21 work is something like this:
+
+    JavaCC contains a parser that parses a JavaCC grammar file and builds an abstract syntax tree. (AST)
+    There is some manipulation of that tree to build the data structures that are exposed to the FreeMarker templates.
+    The app's output, the various generated .java files, is a result of merging the FreeMarker templates with the data structures we built up in the prior two steps, resulting in the output of the various .java files.
+
+So, broadly speaking, when you understand the JavaCC.javacc file, you understand step 1, which is the input stage. The result of the first step is an AST (Abstract Syntax Tree). Step 3 is the output stage, where the data (perhaps a bit cooked or manipulated in a middle step) is exposed to the various FreeMarker templates. So, as the codebase has evolved, and the JavaCC tool itself has become ever more powerful and refined, there has been this general tendency for the middle step to become increasingly trivial. The Java code that corresponds to that middle step tends to just melt away. Most likely, it will never melt away completely, but increasingly, one's conceptual model of how the overall system works is almost entirely the first and last step: we build up a tree and we expose that tree to the various templates and the Java code gets generated!
+
+Now, getting back to where I started in this post, the approach of trying to get one's head around the JavaCC21 codebase as if it was a classic Java app is a very natural trap to fall into, particularly for a veteran Java developer as this person I mentioned is. But again, this approach is very unlikely to be efficient -- at least if one does not take into account some of the special characteristics in this space. This sort of app, in which most of the actual Java code is generated does pose some significant conceptual problems.
+
+When this colleague told me that the way he was trying to learn the code was by stepping through it in a debugger, I was initially quite uneasy, because just intuitively, I knew that this was not a promising approach. I'm pretty sure I told him this, but he responded that this was his way of learning his way around a codebase and it had always served him well.
+
+I sensed that this was not a good learning strategy, but I was uncomfortable about pressing the question much more. I later thought to write an email explaining the situation as best I could but finally, I realized that this was something that would come up again and again, so I needed to attack this question in an article, which you are reading at this very moment!
+
+In short, the approach of stepping through the code in a debugger is far more promising if all of it was hand coded by an actual human. When the code is generated by a tool, not so much. Well, okay, you're seeing what the code does. But the question that really needs demystification is where this code came from! How was it generated?
+
+Or, in other words, I felt that he was taking an approach designed to attack the wrong question. However, I was still at something of a loss to state clearly what the core issue was. Finally, I realized that the real overarching problem was what I say in the very title here: JavaCC21 is NOT a Java App!
+Looking for Love in all the wrong places
+
+There is a classic anecdote about a man who has lost his keys on some darkly lit street. He is seen searching for his keys under a street lamp. Somebody asks him:
+
+"But is this where you lost your keys?"
+
+The man answers:
+
+"No, but this is the only place that is well lit where I can search!"
+
+That strikes one as a very bizarre story, but properly understood, does it not characterize certain self-defeating behaviors in which people commonly engage?
+
+Here is how this relates to learning the JavaCC21 codebase: as explained above, JavaCC21 is really written in 3 languages -- JavaCC itself, FTL, and Java. However, of those three languages, only one has good tooling.
+
+Guess which one!
+
+Yes, there are all kinds of sophisticated tools to work with Java code, but unfortunately, the other two aforementioned languages have just about no tooling. When you also consider that a seasoned Java developer has reached a high comfort level working with Java source code, and the other two languages not so much... Well, one sees how one can fall into the trap that is akin to looking for one's keys in a well-lit place even though that is not where you lost your keys!
+Key Implications of JINAJA (JavaCC21 is not a Java app)
+
+Now, to recap a bit, JavaCC (21) is not really a Java app, so conventional approaches to learning the codebase are not promising. Or, at the very least, they would require quite a bit of adjustment. Still, it is tempting for a Java hacker to concentrate on the part of the codebase written directly in Java, in particular because there is so much tooling oriented towards Java, and practically nothing for the other two languages.
+
+So, here are two key observations:
+
+    In the long run, a key project goal must be to remedy the lack of tooling.
+    In the short run, however, this state of affairs has to be accepted and anybody getting into the project must understand that most of his task in learning the code is understanding the JavaCC and FTL components -- notwithstanding the current lack of tooling.
+
+Addendum: the question of test coverage
+
+I have found myself in an ongoing debate about the need for more testing. The unnamed person I mentioned above would frequently profess to find the lack of tests to be quite alarming. In response, I would tell him that his concerns were largely overblown.
+
+Actually, all of this is a rather delicate matter because I would say that I, of all people, am quite aware that just about any software project out there is usually quite lacking in two things:
+
+    documentation
+    test coverage
+
+It is not hard to understand why this is so. Most code hackers (myself included) find both tasks (writing docs and tests) rather boring. Now, as for the first of those two things, even this very blog post could be considered a step in that direction. I intend to follow up with a more detailed explanation of how the various parts of the codebase fit together. So, this post, explaining JINAJA (JavaCC is not a Java app), is a kind of preamble to a more detailed explanation of how the code works.
+
+But, getting to this discussion of testing, it seems like I did not really explain my position clearly i those discussions. Finally, it seemed necessary to write this longish explanation of JINAJA to make it clear. My position is most certainly not that testing is a bad thing. Of course, it is a good thing -- not just "good", more like "indispensable". However, since (sorry to repeat myself...) JavaCC is not a Java app, JINAJA, there is a need to think a bit more about how to go about the question of having reasonably good test coverage.
+
+So, getting to first principles... why do we need testing? Well, surely the main reason is that we want a situation where, if we make a mistake, it is in our faces immediately. However, the problem is that, since the core logic of JavaCC is not (mostly not, anyway...) expressed in Java code, bugs that crop up will almost always be in the non-Java part of the codebase. Meanwhile, we have these elaborate unit test frameworks that are mostly designed to test Java code.
+
+So, my position is that the question of how to go about having meaningful test coverage for this kind of codebase requires some serious thought. Here is my thinking on this:
+
+Currently, the main test coverage we have is via a set of large-scale, integrated functional tests. For example, one such test is that the standalone Java grammar creates a parser that can handle the full source code of the JDK 15. Let us call this the integrated Java test. If we had similar integrated tests for a few other popular programming languages, such as Typescript, Python, C# (just off the top of my head) based on grammars for those languages that leverage all the most recent features of JavaCC21, this would constitute a test suite, such that we would have a pretty strong degree of confidence in any build that passes it.
+
+Having a suite of unit tests, heavily biased towards testing the Java code, where we rarely have regressions anyway, strikes me as being of far less value. The other consideration is that having robust parsers for the aforementioned languages is independently useful! It is something we can go announce on the relevant forums and so on. We can announce, to great fanfare, that we have a Typescript grammar that anybody can freely use, on all the relevant forums. We cannot go around announcing that we have unit tests in place! ("Yeah, man, that's cool...")
+
+Another point that I had difficulty conveying in that discussion is that the current testing situation, though surely not perfect, is not all that bad. This is largely because of the nature of the project itself, how it self-bootstraps. The ability to re-bootstrap the build constitutes a pretty demanding integrated test of the system. I mean, if we do:
+
+ant clean jar 
+
+And then we use the jarfile that we just created to rebuild and test:
+
+cp javacc.jar bin
+ant clean jar test
+
+Moreover, any snapshot of the code passes the integrated Java test, being able to parse the 17,619 files in the JDK 15 src.zip, as well as the re-bootstrap test, the ability to rebuild/retest the tool itself using the jarfile we just built. Also, a key component of the system, the FreeMarker template engine, is itself built using JavaCC, so a full re-bootstrap involves rebuilding FreeMarker using the latest jarfile. Thus, actually, the complete re-bootstrap test is:
+
+    Rebuilding the jarfile and running existing tests, including the full Java test
+    Using the jarfile we just built to rebuild FreeMarker and seeing that it passes FreeMarker's tests
+    Swapping in the javacc.jar and freemarker.jar jarfiles we just built and seeing if we can rebuild/retest
+
+It stands to reason that not many newly introduced bugs can survive this process undetected. Granted, that does not mean that we should not be trying to improve test coverage. However, as best I can figure, the best way to do that is to work on having similar integrated, functional tests to what we have for Java, for other common programming languages.
+
+The above is the best way that occurs to me of having ever better confidence in our builds. Also, given how severely undermanned this project is, the best way forward is surely to kill two (or maybe even more!) birds with one stone. If we improve test coverage and can offer a Typescript/Python/PHP/C# etc grammar that is useful for other projects, this is an approach that is bound to add more value than sitting down and writing unit tests that are not separately useful. (Note that I am not saying that unit tests are a bad thing. I'm just really pondering where best to apply our limited manpower at this juncture!)
+Coming Soon...
+
+I close this post here. I grant that this article may be a bit unsatisfying because it leaves perhaps the most important question unanswered. I take care to explain JINAJA, i.e. the reason why this codebase requires a different approach. However, I have not explained what that approach is! How is one to sink one's teeth into the code? Well, all I can say now is that I am aware I have left that unanswered and you can expect some later articles to get into this question.
+
+Well, I guess I can say, broadly speaking, that since we don't have the tooling at the moment to approach learning the codebase the way we would approach a conventional Java app, it's probably going to be a bit messier and more uncomfortable. What I think we'll do is have a sort of 3-window approach in which you end up reconciling:
+
+    which JavaCC code corresponds to...
+    which generated Java code...
+    which was, in turn, generated by which parts of which FreeMarker template.
+
+I anticipate that having a large monitor and/or a dual monitor setup might be quite useful for this. But, if not, then I guess you'll have to do your best without that!
+
+So, stay tuned...

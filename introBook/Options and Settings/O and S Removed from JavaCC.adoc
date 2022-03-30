@@ -1,0 +1,96 @@
+=== Legacy Options and Settings Removed in JavaCC 21
+This table lists the options that are no longer supported in JavaCC 21. For the most part these options were removed because they don't make sense in modern computing environments or because the enhanced capabilities of JavaCC 21 make these options unnecessary.
+// descriptions come from https://doku.javacc.com/doku.php?id=deprecated_settings&s. 
+
+.Legacy JavaCC Options Removed in JavaCC 21
+[cols="2,4,4"]
+|===
+|Option | Description | Comments
+
+|STATIC 
+|The STATIC option was intended as a performance enhancement in legacy JavaCC. JavaCC 21 does not support static parsers.
+|Any performance improvements are almost unmeasurable on modern computer systems.
+|LOOKAHEAD
+|Legacy JavaCC allowed you to specify a default (global) numerical lookahead other than 1 token that was always used when parsing. In JavaCC 21, this setting is gone and LOOKAHEAD is always effectively equal to 1.
+|A numerical LOOKAHEAD other than 1 can still be inserted in your grammar at specified choice points as needed.
+|CHOICE_AMBIGUITY +
+_CHECK 
+|This was a option in legacy JavaCC that allowed you to specify how far to scan ahead when checking for “ambiguities” in the grammar. Most of the conditions reported as “choice ambiguities” were not really ambiguities in the grammar anyway. The logic of JavaCC is that if more than one choice matches, the first one wins. 
+|At some point, we may put in some code to check for unreachable code (at least the simple cases that can be statically proven) but it is not a high priority since the whole thing is of very marginal use-value.
+|OTHER_AMBIGUITY_ +
+CHECK 
+|The same comments basically apply here as to CHOICE_AMBIGUITY_CHECK. The code for these so-called "ambiguity checks" has been ripped out.
+|In real world praxis, nobody was ever using these settings anyway.
+|FORCE_LA_CHECK
+|Frankly, we are unsure what this setting ever did. At least in this case, ignorance is bliss. So the setting was removed.
+|LOOKAHEAD was always fundamentally broken in legacy JavaCC anyway, so all of these sophisticated checks were surely all for nothing anyway!
+|UNICODE_INPUT 
+|Effectively, this is now always set to true, so it is superfluous, and thus ignored.
+|See the section on Unicode being fully functional in JavaCC 21.
+|USER_CHAR_ +
+STREAM
+|This option allowed you to define your own implementation of the CharStream interface. In JavaCC 21, this whole concept is irrelevant, since by default, the generated parser just slurps the whole file into memory at once anyway.
+|See The Gigabyte is the new Megabyte for more info.
+|BUILD_TOKEN_ + 
+MANAGER 
+|This option allowed legacy JavaCC users to skip the step where the lexer was built, presumably to by-pass a slow or resource-intensive step. On modern hardware, a full rebuild of both the parser and lexer is not very expensive.
+|On modern hardware, this kind of option does not seem to have any value and is really just confusing.
+|BUILD_PARSER 
+|Another bizarrely pointless setting really. If all you want to do is build a lexer, and not a parser, then just don't define any grammatical productions in your grammar and all we build is a lexer!
+|May have been intended as a time saving option but on modern hardware this option does not seem to have any value.
+|DEBUG_TOKEN_ +
+MANAGER 
+|This setting, along with DEBUG_PARSER are removed as of mid-December 2021. 
+|It is very hard to imagine current-day developers using this sort of approach, as opposed to using an actual debugger!
+|DEBUG_PARSER
+|This is now gone. It is actually not so hard to debug the generated parser since the code is much more readable than before and contains location info to trace back where in the grammar file the generated code originated.
+|It is very hard to imagine current-day developers using this sort of approach, as opposed to using an actual debugger!
+|KEEP_LINE_COL 
+|JavaCC21 always puts location information in Tokens and Node objects. (Really, why would you ever want to throw away location info?)
+|For more thoughts on this issue, see The Gigabyte is the new Megabyte.
+|ERROR_REPORTING
+|This was an option that was true by default, but you could turn it off in order to generate a somewhat smaller .class file, except that error messages would be much less informative because of information being thrown away. I did some experimenting and found that the generated XXXParser.class was typically about 10% smaller with ERROR_REPORTING off. The tradeoff looks terrible and, as with KEEP_LINE_COL, it looks utterly foolish to ever turn this off. So, the setting is now gone and the option is always effectively on.
+|Further note. All the legacy error reporting code is practically rewritten anyway. The prior comment applies in any case. There is no reason for any sane person to want to turn it off.
+|SANITY_CHECK 
+|By default, the parser generator would do some various sanity checks before generating the various files. This setting in the legacy JavaCC tool allowed you to turn this off.
+|This option may have existed to reduce JavaCC processing time but with modern hardware this options doesn't seem to make any sense. This setting is gone and is now effectively always true.
+|CACHE_TOKENS 
+|I never even understood what the point of this setting was. It must have been some kind of speculative peephole optimization, except I don't think it was even correct. There would be problems with switches of lexical state in some cases. Also, I doubt it offered any noticeable performance gain. 
+|The setting is now gone and is always effectively false. (Which was the default before, which everybody was using anyway.)
+|TOKEN_FACTORY 
+|This setting has been removed (as of 11/11/2021) since it is really not very useful now that we have INJECT. 
+|There is little evidence that this option was widely used (or used at all).
+|TRACK_TOKENS 
+|There is no real reason for this setting to exist any more, since, by default, Tokens are added to the AST and they have their line/column information. 
+|Tokens implement the Node interface and all Node objects have line/column information.
+|USER_TOKEN +
+MANAGER 
+|Allowed users to hand-code or otherwise provide their own Lexer (Token_Manager).
+|This setting was removed in October 2021.
+|NODE_EXTENDS +
+TOKEN_EXTENDS 
+|Since JavaCC21 has INJECT, there is no need for these two legacy configuration options to exist. If you want to specify that your BaseNode class extends some specific class, simply use code injection to specify it.
+|For example: INJECT BaseNode : extends SomeClass
+
+In general, code injection can be used to specify that any generated class should extend a given class or implement whatever interface(s). There is no need for a plethora of configuration settings for this.
+|VISITOR 
+|JJTree option that when set to true, makes several changes to the files output by JJTree that aid traversal of AST by client code.
+|No longer required in JavaCC 21.
+|VISITOR_DATA_TYPE 
+|JJTree Visitor methods normally have the second method argument be of type Object. If the type of the second argument will always be the same type, that type can be specified by this option.
+|No longer required in JavaCC 21.
+|OUTPUT_FILE 
+|JJTree option that allows a different file name to be specified for output from JJTree. The output file name is normally the same as the input file name but with the file extension changed from .jjt to .jj.
+|For example, jjtree -OUTPUT_FILE="foo.jj" barbaz.jjt   will produce an output file named foo.jj instead of basing it on the input file name of barbaz.jjt.
+|NODE_SCOPE_HOOK
+|When true, JJTree inserts calls user defined methods when a node scope is entered or exited.
+|JavaCC 21 allows code to be inserted into grammars where ever required, making this option unneeded. 
+|VISITOR_EXCEPTION
+|JJTree option that changes the visitor method signature to include a custom named exception.
+|For example: VISITOR_EXCEPTION="MyException" changes the visit signature to: +
+public Object visit(NodeType node, Object data) throws MyException;
+|VISITOR_RETURN_ +
+TYPE
+|JJTree option that changes the return type for visit methods from Object to a user-selected type.
+|For example, VISITOR_RETURN_TYPE="MyClass" changes the return type for all visit methods to MyClass.
+|===
