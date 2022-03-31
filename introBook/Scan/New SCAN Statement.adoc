@@ -1,11 +1,13 @@
 :imagesdir: ../images
 //The New SCAN Construct, July 24, 2020
+ifdef::blog[]
 = Project Structure
 Jonathan Revusky
 2020-07-24
 :jbake-type: page
 :jbake-tags: announcements, roadmap
 :jbake-status: published
+endif::[]
 === The New SCAN Statement
 
 (((Scanning, Introduction)))

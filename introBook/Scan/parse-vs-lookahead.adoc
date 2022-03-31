@@ -2,6 +2,7 @@
 //[[ ]] is an inline anchor to make arbitrary content referenceable 
 //[[[]]] triple brackets are bibliographic references
 [[parsing-vs-scanning]]
+ifdef::blog[]
 = CongoCC
 Jonathan Revusky
 2021-04-01
@@ -9,6 +10,7 @@ Jonathan Revusky
 :jbake-tags: announcements, roadmap
 :jbake-status: published
 == SCAN and LOOKAHEAD
+endif::[]
 === Parsing vs. Scanning
 
 (((Parsing vs Scanning)))
